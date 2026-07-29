@@ -1,0 +1,23 @@
+name = "vcjobs-clicks"
+main = "index.js"
+compatibility_date = "2026-01-01"
+
+[vars]
+# Origins allowed to POST /click. Blank = allow any, which is fine for a first deploy
+# but should be set to your real site once you know its URL.
+#   e.g. "https://yourname.github.io,http://localhost:4173"
+ALLOWED_ORIGINS = ""
+
+# "1" once you have run your first sync: clicks are then only counted for jobs the
+# sync has loaded, and no request can create a row in `jobs`.
+STRICT = "0"
+
+# Fill database_id in from the output of:
+#   npx wrangler d1 create vcjobs
+[[d1_databases]]
+binding = "DB"
+database_name = "vcjobs"
+database_id = ""
+
+# ADMIN_TOKEN guards GET /counts. It is a secret, so it is NOT set here — run:
+#   npx wrangler secret put ADMIN_TOKEN

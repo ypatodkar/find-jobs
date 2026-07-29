@@ -1,0 +1,68 @@
+name: Scrape and deploy
+
+on:
+  schedule:
+    # Every 6 hours. Job boards move on the order of hours, and a full pass makes
+    # ~500 outbound requests to Ashby/Greenhouse/Lever — running it more often risks
+    # rate limiting for data that hasn't changed. GitHub's shared runners also delay
+    # scheduled jobs by 5-20 minutes, so treat this as "roughly every 6 hours".
+    - cron: "0 */6 * * *"
+  push:
+    branches: [main]
+  workflow_dispatch: # lets you force a scrape from the Actions tab
+
+# Pages needs id-token to deploy; nothing here writes to the repo.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# A scheduled run and a manual run must not deploy over each other. Queue rather than
+# cancel, so an in-flight scrape isn't thrown away half-done.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Scrape all boards
+        run: node scrape.js
+
+      - name: Build static site
+        run: node build.js
+
+      # Optional: only runs once you add a CLOUDFLARE_API_TOKEN secret. Keeps the D1
+      # jobs table in step with the scrape so click counts resolve to real roles.
+      # Never touches clicks or first_seen.
+      - name: Sync job metadata to D1
+        if: env.CF_TOKEN != ''
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          node sync-jobs.js
+          npx --yes wrangler d1 execute vcjobs --remote --file=sync.sql -y
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

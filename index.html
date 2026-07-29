@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Engineering roles at VC-backed companies</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧭</text></svg>" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="wrap">
+
+      <header class="masthead">
+        <div class="masthead-top">
+          <div class="nav-links"><a class="backlink" href="firms.html">Browse by investor →</a></div>
+          <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">
+            <span class="theme-icon" aria-hidden="true">◐</span>
+          </button>
+        </div>
+        <p class="eyebrow">Every portfolio · one list</p>
+        <h1 class="title">All engineering roles</h1>
+        <p class="dek">Every role across all 16 scraped portfolios in a single list, deduplicated — a company backed by several investors appears once, tagged with each of them. San Francisco, New York, and San Diego only.</p>
+        <div class="stats" id="all-stats"></div>
+
+        <div class="refresh-bar">
+          <button id="refresh-btn" class="refresh-btn" type="button">Refresh all boards</button>
+          <span id="refresh-status" class="refresh-status"></span>
+        </div>
+        <div id="refresh-progress" class="refresh-progress" hidden>
+          <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
+          <p id="progress-log" class="progress-log"></p>
+        </div>
+      </header>
+
+      <div class="controls" id="job-controls" hidden>
+        <div class="search-wrap">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+            <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.3"/>
+            <line x1="10.2" y1="10.2" x2="14" y2="14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <input id="job-search" type="search" placeholder="Search title or company…" aria-label="Search roles" autocomplete="off" />
+        </div>
+        <div class="filter-grid" id="picker-row"></div>
+
+        <div class="filter-tail">
+          <label class="sort-wrap"><span>Posted</span><select id="date-select" aria-label="Filter by date posted"></select></label>
+          <label class="sort-wrap"><span>Salary</span><select id="salary-select" aria-label="Filter by minimum salary"></select></label>
+          <label class="sort-wrap"><span>Sort</span>
+            <select id="sort-select" aria-label="Sort roles">
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="salary">Highest salary</option>
+              <option value="company">Company A–Z</option>
+              <option value="title">Title A–Z</option>
+            </select>
+          </label>
+          <button type="button" class="reset-btn" id="reset-filters" hidden>Reset filters</button>
+        </div>
+      </div>
+
+      <figure class="chart" id="activity-chart" hidden>
+        <figcaption class="chart-caption">
+          <span class="chart-title">Roles posted per day</span>
+          <span class="chart-sub" id="chart-sub"></span>
+        </figcaption>
+        <div class="chart-plot" id="chart-plot" role="img" aria-label="Bar chart of roles posted per day over the last 30 days"></div>
+        <div class="chart-axis"><span id="chart-axis-start"></span><span id="chart-axis-end"></span></div>
+        <div class="chart-tooltip" id="chart-tooltip" hidden></div>
+      </figure>
+
+      <p class="results-meta" id="job-count"></p>
+      <div id="job-list" class="job-list"></div>
+      <button type="button" id="show-more" class="show-more" hidden>Show more</button>
+      <div id="all-message" class="firm-message" hidden></div>
+
+      <footer>
+        <div>
+          <h3>About this list</h3>
+          <p id="all-note">Roles are merged across every scraped portfolio and deduplicated on company, title, and city. Where a company publishes to its own applicant tracking system, that live listing is preferred over the investor's board.</p>
+        </div>
+        <div>
+          <h3>Refresh</h3>
+          <p>Job data is scraped on demand. Use <strong>Refresh all boards</strong> above to re-scrape every portfolio.</p>
+        </div>
+      </footer>
+
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="jobs-ui.js"></script>
+  <script src="refresh.js"></script>
+  <script src="all.js"></script>
+  <script src="track.js"></script>
+</body>
+</html>
