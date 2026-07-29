@@ -3,10 +3,11 @@ main = "index.js"
 compatibility_date = "2026-01-01"
 
 [vars]
-# Origins allowed to POST /click. Blank = allow any, which is fine for a first deploy
-# but should be set to your real site once you know its URL.
-#   e.g. "https://yourname.github.io,http://localhost:4173"
-ALLOWED_ORIGINS = ""
+# Origins allowed to POST /click. An ORIGIN, not a URL: scheme and host only, never a
+# path. The site lives at https://ypatodkar.com/find-jobs/ — because a custom domain on
+# the ypatodkar.github.io user site pulls project sites under it too — so the origin is
+# the bare domain. Getting this wrong 403s every click and reports nothing anywhere.
+ALLOWED_ORIGINS = "https://ypatodkar.com,http://localhost:4173"
 
 # "1" once you have run your first sync: clicks are then only counted for jobs the
 # sync has loaded, and no request can create a row in `jobs`.
