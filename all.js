@@ -31,7 +31,7 @@
     .then((r) => r.json())
     .then((data) => {
       // No server to scrape on demand once deployed.
-      if (data.static && refresh) refresh.hide("Refreshed automatically every 6 hours");
+      if (data.static && refresh) refresh.hide("Refreshed automatically twice a day");
       const jobs = data.jobs || [];
       if (!jobs.length) {
         stats.innerHTML = "<span>No data yet</span>";

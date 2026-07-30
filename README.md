@@ -17,7 +17,7 @@ Hit **Refresh all boards** to scrape live. A full pass takes ~90 seconds and wri
 
 ## Deploy
 
-Static site on GitHub Pages, scraped by GitHub Actions on a 6-hour cron
+Static site on GitHub Pages, scraped by GitHub Actions twice daily
 (`.github/workflows/deploy.yml`). Free: unmetered Actions minutes on a public repo,
 and 100 GB/month of Pages bandwidth against ~435 KB gzipped per visit.
 
@@ -48,7 +48,11 @@ each scrape; without it that step is skipped.
 
 Two things to know. GitHub disables cron workflows after 60 days of repository
 inactivity — it emails you, and re-enabling is one click. And scheduled runs on shared
-runners are routinely 5–20 minutes late, so "every 6 hours" is approximate.
+runners are routinely 5–20 minutes late, so the scrape times are approximate.
+
+The schedule is `0 18,0 * * *` — 18:00 and 00:00 UTC, i.e. late morning and end of the
+working day on the US west coast. GitHub cron is UTC-only with no timezone support, so
+those land at 11am/5pm PDT in summer and 10am/4pm PST in winter.
 
 ## Pages
 

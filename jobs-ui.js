@@ -191,7 +191,7 @@
       query: "", range: "all", salary: "all", sort: "newest",
       selected: {}, // dimension key -> Set of chosen values
       jobs: [], shown: cfg.pageSize,
-      view: "grouped",            // "grouped" (by company) | "flat"
+      view: "flat",               // "flat" (every role) | "grouped" (by company)
       expanded: new Set(),        // company names currently open
       groupsShown: cfg.groupPageSize,
     };
@@ -682,7 +682,7 @@
       });
     }
 
-    if (el.viewGrouped) el.viewGrouped.classList.add("active");
+    if (el.viewFlat) el.viewFlat.classList.add("active");
 
     return {
       setJobs(jobs, opts) {

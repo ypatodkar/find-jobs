@@ -31,9 +31,7 @@
           <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
           <p id="progress-log" class="progress-log"></p>
         </div>
-      </header>
-
-      <figure class="chart" id="activity-chart" hidden>
+        <figure class="chart" id="activity-chart" hidden>
         <figcaption class="chart-caption">
           <span class="chart-title">Roles posted per day</span>
           <span class="chart-sub" id="chart-sub"></span>
@@ -42,6 +40,9 @@
         <div class="chart-axis"><span id="chart-axis-start"></span><span id="chart-axis-end"></span></div>
         <div class="chart-tooltip" id="chart-tooltip" hidden></div>
       </figure>
+
+      </header>
+
 
       <div class="controls" id="job-controls" hidden>
         <div class="search-wrap">
@@ -71,8 +72,8 @@
       </div>
 
       <div class="view-tabs" role="group" aria-label="List view">
-        <button type="button" class="seg" id="view-grouped" aria-pressed="true">By company<span class="seg-n" id="count-grouped"></span></button>
-        <button type="button" class="seg" id="view-flat" aria-pressed="false">Flat list<span class="seg-n" id="count-flat"></span></button>
+        <button type="button" class="seg" id="view-flat" aria-pressed="true">Flat list<span class="seg-n" id="count-flat"></span></button>
+        <button type="button" class="seg" id="view-grouped" aria-pressed="false">By company<span class="seg-n" id="count-grouped"></span></button>
       </div>
 
       <div class="results-bar">

@@ -2,11 +2,19 @@ name: Scrape and deploy
 
 on:
   schedule:
-    # Every 6 hours. Job boards move on the order of hours, and a full pass makes
-    # ~500 outbound requests to Ashby/Greenhouse/Lever — running it more often risks
-    # rate limiting for data that hasn't changed. GitHub's shared runners also delay
-    # scheduled jobs by 5-20 minutes, so treat this as "roughly every 6 hours".
-    - cron: "0 */6 * * *"
+    # Twice a day: late morning and end of the working day on the US west coast, which
+    # is when boards actually post. A full pass makes ~600 outbound requests to
+    # Ashby/Greenhouse/Lever, so there is no point spending them overnight.
+    #
+    # Cron here is UTC and GitHub has no timezone support, so these are fixed UTC and
+    # shift by an hour against the wall clock at each DST changeover:
+    #   18:00 UTC -> 11am PDT (summer) / 10am PST (winter)
+    #   00:00 UTC ->  5pm PDT (summer) /  4pm PST (winter)
+    # Nudge to "0 19,1 * * *" if you would rather the winter times be the exact ones.
+    #
+    # Shared runners also delay scheduled jobs by 5-20 minutes, so treat these as
+    # approximate either way.
+    - cron: "0 18,0 * * *"
   push:
     branches: [main]
   workflow_dispatch: # lets you force a scrape from the Actions tab
