@@ -20,7 +20,7 @@
         </div>
         <p class="eyebrow">Every portfolio · one list</p>
         <h1 class="title">All engineering roles</h1>
-        <p class="dek">Every role across all 16 scraped portfolios in a single list, deduplicated — a company backed by several investors appears once, tagged with each of them. San Francisco, New York, and San Diego only.</p>
+        <p class="dek">Every role across all 16 scraped portfolios in a single list, deduplicated — a company backed by several investors appears once, tagged with each of them. Covers 19 US metros; San Francisco, New York and San Diego are selected to start.</p>
         <div class="stats" id="all-stats"></div>
 
         <div class="refresh-bar">
@@ -32,6 +32,16 @@
           <p id="progress-log" class="progress-log"></p>
         </div>
       </header>
+
+      <figure class="chart" id="activity-chart" hidden>
+        <figcaption class="chart-caption">
+          <span class="chart-title">Roles posted per day</span>
+          <span class="chart-sub" id="chart-sub"></span>
+        </figcaption>
+        <div class="chart-plot" id="chart-plot" role="img" aria-label="Bar chart of roles posted per day over the last 30 days"></div>
+        <div class="chart-axis"><span id="chart-axis-start"></span><span id="chart-axis-end"></span></div>
+        <div class="chart-tooltip" id="chart-tooltip" hidden></div>
+      </figure>
 
       <div class="controls" id="job-controls" hidden>
         <div class="search-wrap">
@@ -51,6 +61,7 @@
               <option value="newest">Newest first</option>
               <option value="oldest">Oldest first</option>
               <option value="salary">Highest salary</option>
+              <option value="count">Most roles</option>
               <option value="company">Company A–Z</option>
               <option value="title">Title A–Z</option>
             </select>
@@ -59,17 +70,18 @@
         </div>
       </div>
 
-      <figure class="chart" id="activity-chart" hidden>
-        <figcaption class="chart-caption">
-          <span class="chart-title">Roles posted per day</span>
-          <span class="chart-sub" id="chart-sub"></span>
-        </figcaption>
-        <div class="chart-plot" id="chart-plot" role="img" aria-label="Bar chart of roles posted per day over the last 30 days"></div>
-        <div class="chart-axis"><span id="chart-axis-start"></span><span id="chart-axis-end"></span></div>
-        <div class="chart-tooltip" id="chart-tooltip" hidden></div>
-      </figure>
+      <div class="view-tabs" role="group" aria-label="List view">
+        <button type="button" class="seg" id="view-grouped" aria-pressed="true">By company<span class="seg-n" id="count-grouped"></span></button>
+        <button type="button" class="seg" id="view-flat" aria-pressed="false">Flat list<span class="seg-n" id="count-flat"></span></button>
+      </div>
 
-      <p class="results-meta" id="job-count"></p>
+      <div class="results-bar">
+        <p class="results-meta" id="job-count"></p>
+        <div class="group-actions" id="group-actions">
+          <button type="button" class="linkish" id="expand-all">Expand all</button>
+          <button type="button" class="linkish" id="collapse-all">Collapse all</button>
+        </div>
+      </div>
       <div id="job-list" class="job-list"></div>
       <button type="button" id="show-more" class="show-more" hidden>Show more</button>
       <div id="all-message" class="firm-message" hidden></div>

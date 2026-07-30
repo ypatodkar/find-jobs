@@ -24,6 +24,16 @@
         <div class="stats" id="firm-stats"></div>
       </header>
 
+      <figure class="chart" id="activity-chart" hidden>
+        <figcaption class="chart-caption">
+          <span class="chart-title">Roles posted per day</span>
+          <span class="chart-sub" id="chart-sub"></span>
+        </figcaption>
+        <div class="chart-plot" id="chart-plot" role="img" aria-label="Bar chart of roles posted per day over the last 30 days"></div>
+        <div class="chart-axis"><span id="chart-axis-start"></span><span id="chart-axis-end"></span></div>
+        <div class="chart-tooltip" id="chart-tooltip" hidden></div>
+      </figure>
+
       <div class="controls" id="job-controls" hidden>
         <div class="search-wrap">
           <svg class="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
@@ -42,6 +52,7 @@
               <option value="newest">Newest first</option>
               <option value="oldest">Oldest first</option>
               <option value="salary">Highest salary</option>
+              <option value="count">Most roles</option>
               <option value="company">Company A–Z</option>
               <option value="title">Title A–Z</option>
             </select>
@@ -50,17 +61,18 @@
         </div>
       </div>
 
-      <figure class="chart" id="activity-chart" hidden>
-        <figcaption class="chart-caption">
-          <span class="chart-title">Roles posted per day</span>
-          <span class="chart-sub" id="chart-sub"></span>
-        </figcaption>
-        <div class="chart-plot" id="chart-plot" role="img" aria-label="Bar chart of roles posted per day over the last 30 days"></div>
-        <div class="chart-axis"><span id="chart-axis-start"></span><span id="chart-axis-end"></span></div>
-        <div class="chart-tooltip" id="chart-tooltip" hidden></div>
-      </figure>
+      <div class="view-tabs" role="group" aria-label="List view">
+        <button type="button" class="seg" id="view-grouped" aria-pressed="true">By company<span class="seg-n" id="count-grouped"></span></button>
+        <button type="button" class="seg" id="view-flat" aria-pressed="false">Flat list<span class="seg-n" id="count-flat"></span></button>
+      </div>
 
-      <p class="results-meta" id="job-count"></p>
+      <div class="results-bar">
+        <p class="results-meta" id="job-count"></p>
+        <div class="group-actions" id="group-actions">
+          <button type="button" class="linkish" id="expand-all">Expand all</button>
+          <button type="button" class="linkish" id="collapse-all">Collapse all</button>
+        </div>
+      </div>
       <div id="job-list" class="job-list"></div>
       <button type="button" id="show-more" class="show-more" hidden>Show more</button>
       <div id="firm-message" class="firm-message" hidden></div>
@@ -68,7 +80,7 @@
       <footer>
         <div>
           <h3>About these roles</h3>
-          <p id="footer-note">Roles are pulled live from this firm's portfolio job board and filtered to engineering titles in San Francisco, New York, or San Diego.</p>
+          <p id="footer-note">Roles are pulled from this firm's portfolio and from each company's own job board, filtered to engineering titles across 19 US metros.</p>
         </div>
         <div>
           <h3>Refresh</h3>

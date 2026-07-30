@@ -9,3 +9,6 @@ sync.sql
 node_modules/
 .DS_Store
 .wrangler/
+
+# Local tooling config, not part of the project.
+.claude/

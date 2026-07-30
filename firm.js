@@ -72,7 +72,7 @@
           : `Roles come from the investor's portfolio board.`);
 
       if (jobs.length === 0) {
-        showMessage(`<p>No engineering roles in San Francisco, New York, or San Diego matched on this board right now.</p>`);
+        showMessage(`<p>No engineering roles in the tracked metros matched on this board right now.</p>`);
         return;
       }
       el.controls.hidden = false;
