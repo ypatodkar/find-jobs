@@ -1,11 +1,10 @@
-// The scrape pipeline and the read payloads, extracted so there is exactly one
-// implementation behind two front doors: `server.js` (live, SSE progress) and
-// `scrape.js` / `build.js` (headless, for CI).
+// The scrape pipeline and read payload builders shared by the scheduled scraper,
+// local development server, and static build.
 //
 // Nothing here touches the filesystem or HTTP — callers decide where results go.
 
 const { scrapeFirm } = require("./scraper");
-const { BOARDS, DEFAULT_CITIES } = require("./boards");
+const { BOARDS } = require("./boards");
 const { detectAts, isSupported, buildRegistry, fetchAll } = require("./ats");
 const { dedupe } = require("./match");
 
@@ -13,7 +12,7 @@ const BOARD_DELAY_MS = 250; // be polite to the upstream boards
 
 /**
  * Run all three phases and return the results object.
- * `onEvent(type, data)` mirrors the SSE contract the browser already understands:
+ * `onEvent(type, data)` lets the CLI and automation report:
  * "start" | "progress" | "phase" | "done".
  */
 async function runScrape(onEvent = () => {}) {
@@ -165,7 +164,6 @@ function allJobsPayload(data) {
   return {
     scrapedAt: data.scrapedAt,
     enrichment: data.enrichment || null,
-    defaultCities: DEFAULT_CITIES,
     jobs: [...merged.values()],
   };
 }
@@ -176,13 +174,12 @@ function allJobsPayload(data) {
  */
 function firmPayload(data, id) {
   const firm = (data.firms || {})[id];
-  if (firm) return { scrapedAt: data.scrapedAt, defaultCities: DEFAULT_CITIES, ...firm };
+  if (firm) return { scrapedAt: data.scrapedAt, ...firm };
 
   const cfg = BOARDS[id];
   if (cfg && !cfg.platform) {
     return {
       scrapedAt: data.scrapedAt,
-      defaultCities: DEFAULT_CITIES,
       firmId: id,
       status: "unsupported",
       reason: cfg.reason,

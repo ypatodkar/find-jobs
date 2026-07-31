@@ -1,29 +1,45 @@
-# VC Job Directory
+# Find Jobs
 
 Tracks 37 US venture firms and scrapes their portfolio job boards for engineering
-roles in **San Francisco, New York, and San Diego**.
+roles across **19 US metros**.
 
 ## Run it
 
 ```bash
-node scrape.js     # populate results.json (~90s); or skip and use the button below
+node scrape.js     # populate results.json
 node server.js
 ```
 
 Then open <http://localhost:4173>. No dependencies — Node 18+ only.
 
-Hit **Refresh all boards** to scrape live. A full pass takes ~90 seconds and writes
-`results.json`, which is served back on subsequent loads.
-
 ## Deploy
 
-Static site on GitHub Pages, scraped by GitHub Actions twice daily
-(`.github/workflows/deploy.yml`). Free: unmetered Actions minutes on a public repo,
-and 100 GB/month of Pages bandwidth against ~435 KB gzipped per visit.
+Hosted on **Cloudflare Pages**, scraped and redeployed by GitHub Actions twice daily
+(`.github/workflows/deploy.yml`).
+
+Cloudflare rather than GitHub Pages because this repo is private, and GitHub will not
+publish Pages from a private repo on a free plan. Cloudflare Pages will, and its
+bandwidth is unmetered.
 
 ```bash
-node build.js      # -> dist/
+node build.js                                   # -> dist/
+npx wrangler pages deploy dist --project-name=find-jobs
 ```
+
+| | |
+|---|---|
+| Project | `find-jobs` |
+| Default URL | <https://find-jobs-cf5.pages.dev> |
+| Custom domain | <https://jobs.ypatodkar.com> |
+
+The workflow uploads `dist/` directly rather than using Cloudflare's Git integration —
+a direct upload needs no OAuth link between Cloudflare and GitHub, so the repo stays
+private, and the twice-daily cron stays in one place. It needs two repository secrets:
+
+| Secret | |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | token with **Cloudflare Pages: Edit** |
+| `CLOUDFLARE_ACCOUNT_ID` | `3fcdcde298fb0fbf4c9ba274e19bb40f` |
 
 `build.js` writes the three read endpoints as real files at the *same relative paths*
 `server.js` answers dynamically:
@@ -35,16 +51,10 @@ node build.js      # -> dist/
 | `api/firm/<id>.json` | one per firm, all 37 |
 
 That symmetry is the whole trick — the pages fetch one set of relative URLs and work
-unchanged in both places. Relative rather than root-absolute because Pages serves a
-project repo from a subdirectory (`/find-jobs/`), where a leading `/` would miss.
+unchanged in both places.
 
-Each built payload carries `static: true`, which the pages use to hide the **Refresh
-all boards** trigger: there is no server to scrape on demand once deployed. `dist/`
-ships only browser files — `pipeline.js`, `scraper.js` and `ats.js` stay out of it.
-
-To set it up: **Settings → Pages → Source: GitHub Actions**, then push. Add a
-`CLOUDFLARE_API_TOKEN` secret and the workflow will also sync job metadata to D1 after
-each scrape; without it that step is skipped.
+`dist/` ships only browser files — `pipeline.js`, `scraper.js` and `ats.js` stay
+out of it.
 
 Two things to know. GitHub disables cron workflows after 60 days of repository
 inactivity — it emails you, and re-enabling is one click. And scheduled runs on shared
@@ -57,8 +67,8 @@ those land at 11am/5pm PDT in summer and 10am/4pm PST in winter.
 ## Pages
 
 - `index.html` — **home.** Every role across every portfolio in one deduplicated list.
-  A company backed by several investors appears once, tagged with each of them. The
-  scrape trigger lives here. Renders 300 rows at a time with a Show more button.
+  A company backed by several investors appears once, tagged with each of them.
+  Results are paginated at 65 roles per page.
 - `firms.html` — the 37 investors, with a role count per firm. Clicking anywhere on a
   card opens that firm's page; links inside the card still open the external board.
 - `firm.html?id=<firm>` — one page per firm listing just its roles.
@@ -74,11 +84,9 @@ Seniority, Company, Industry, Company size, Funding, Investor** (Investor only o
 
 Cities come from `METROS` in `boards.js` — 19 metros, each with the query values the
 two board platforms accept plus a pattern that buckets raw location strings (so
-`Bellevue, WA` lands under Seattle and `Palo Alto` under Bay Area). The three flagged
-`default: true` are pre-selected; the rest are one tick away. Add or retire a metro by
-editing that array. Because the pre-selection is a baseline rather than a user filter,
-it doesn't count toward "Reset N filters", and Reset returns to it rather than
-clearing to every city.
+`Bellevue, WA` lands under Seattle and `Palo Alto` under Bay Area). No city is
+pre-selected: an empty City filter means all tracked metros. Add or retire a metro by
+editing that array.
 
 Filters combine with **AND** across dropdowns and **OR** within one, and they
 **cascade**: each dropdown only offers values that still return rows under every other
@@ -198,6 +206,56 @@ SELECT COALESCE(firm, '(all roles)') AS page, COUNT(*) FROM clicks GROUP BY 1 OR
 ```
 
 Counts are raw — your own clicks and reloads inflate them.
+
+## Accounts
+
+Sign in with GitHub or Google to carry your "opened" history (`track.js`'s Seen store)
+across devices. Same Worker and D1 database as click tracking above — no second
+backend. `auth.js` is the browser half; like `track.js` it is **inert until you set
+`ENDPOINT`**.
+
+| Route | Purpose | Access |
+|---|---|---|
+| `GET /auth/:provider/start` | redirect to GitHub/Google's consent screen | public |
+| `GET /auth/:provider/callback` | exchange the code, open a session, redirect back | public, state-checked |
+| `GET /auth/me` | `{ user: {...} \| null }` for the current session | cookie |
+| `POST /auth/logout` | end the session | cookie |
+| `GET`/`POST /auth/seen` | the signed-in user's server-side "seen" map | cookie |
+
+Accounts are keyed by `(provider, provider_user_id)` and never merged by email — see
+the comment in `schema.sql`. Sessions are opaque tokens checked against the `sessions`
+table on every request, not signed/decoded, so revoking one is just deleting the row.
+
+Setup, once `vcjobs-clicks` from the click-tracking section above is deployed:
+
+1. **Register an OAuth app with each provider**, using the Worker's URL (its
+   `*.workers.dev` address, or your custom domain once step 3 is done):
+   - GitHub → Settings → Developer settings → OAuth Apps → New OAuth App.
+     Authorization callback URL: `https://<worker-domain>/auth/github/callback`.
+   - Google → Cloud Console → APIs & Services → Credentials → Create OAuth client ID
+     (type: Web application). Authorized redirect URI:
+     `https://<worker-domain>/auth/google/callback`.
+2. **Set the four values each provider gives you**, in `worker/wrangler.toml`
+   (`GITHUB_CLIENT_ID`, `GOOGLE_CLIENT_ID` — not secret, they're visible in the
+   redirect URL anyway) and via Wrangler (the two client secrets):
+   ```bash
+   cd worker
+   npx wrangler secret put GITHUB_CLIENT_SECRET
+   npx wrangler secret put GOOGLE_CLIENT_SECRET
+   ```
+3. **Put the Worker on a custom domain that's a subdomain of your site** (Cloudflare
+   dashboard: Workers & Pages → `vcjobs-clicks` → Settings → Domains & Routes → Add
+   Custom Domain, e.g. `clicks.ypatodkar.com`). This isn't optional in practice: the
+   session cookie needs to be first-party to survive browsers' third-party-cookie
+   blocking. Once set, update `SITE_ORIGIN` and `COOKIE_DOMAIN` in
+   `worker/wrangler.toml` (`COOKIE_DOMAIN = ".ypatodkar.com"`, leading dot) and update
+   both OAuth apps' callback URLs to the new domain.
+4. **Apply the schema and deploy**:
+   ```bash
+   npx wrangler d1 execute vcjobs --remote --file=schema.sql
+   npx wrangler deploy
+   ```
+5. Set `ENDPOINT` in `auth.js` to the same URL you set in `track.js`.
 
 ## Editing
 

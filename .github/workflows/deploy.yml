@@ -19,20 +19,19 @@ on:
     branches: [main]
   workflow_dispatch: # lets you force a scrape from the Actions tab
 
-# Pages needs id-token to deploy; nothing here writes to the repo.
+# Hosting is Cloudflare Pages, not GitHub Pages: Pages will not publish a private
+# repo on a free plan, and this repo is private. Nothing here writes to the repo.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # A scheduled run and a manual run must not deploy over each other. Queue rather than
 # cancel, so an in-flight scrape isn't thrown away half-done.
 concurrency:
-  group: pages
+  group: deploy
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -61,16 +60,11 @@ jobs:
           node sync-jobs.js
           npx --yes wrangler d1 execute vcjobs --remote --file=sync.sql -y
 
-      - uses: actions/upload-pages-artifact@v3
+      # Direct upload of dist/, the same thing `wrangler pages deploy` does locally.
+      # No Cloudflare Git integration needed, so the repo can stay private.
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
         with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=find-jobs --branch=main

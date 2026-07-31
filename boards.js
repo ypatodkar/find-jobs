@@ -54,14 +54,15 @@ const BOARDS = {
 // pattern that buckets a raw location string — which is what the ATS phase uses,
 // since a company's own board is filtered locally rather than by query.
 //
-// `default: true` marks the metros pre-selected in the UI. Order matters: the first
-// matching pattern wins, so Seattle sits above Washington DC ("Seattle, Washington").
+// Order matters: the first matching pattern wins, so Seattle sits above Washington
+// DC ("Seattle, Washington"). The UI starts with no city selected, which means all
+// tracked metros.
 const METROS = [
-  { city: "San Francisco", default: true, re: /san\s*francisco/i,
+  { city: "San Francisco", re: /san\s*francisco/i,
     consider: ["San Francisco, California"], getro: ["San Francisco, CA, USA"] },
-  { city: "New York", default: true, re: /new\s*york|\bnyc\b|brooklyn|manhattan/i,
+  { city: "New York", re: /new\s*york|\bnyc\b|brooklyn|manhattan/i,
     consider: ["New York, New York", "Brooklyn, New York"], getro: ["New York, NY, USA", "Brooklyn, NY, USA"] },
-  { city: "San Diego", default: true, re: /san\s*diego/i,
+  { city: "San Diego", re: /san\s*diego/i,
     consider: ["San Diego, California"], getro: ["San Diego, CA, USA"] },
 
   { city: "Bay Area", re: /palo alto|mountain view|menlo park|sunnyvale|santa clara|redwood city|san jose|oakland|berkeley|cupertino|fremont|foster city|san mateo|burlingame|milpitas/i,
@@ -90,8 +91,6 @@ const METROS = [
   { city: "Nashville", re: /nashville/i, consider: ["Nashville, Tennessee"], getro: ["Nashville, TN, USA"] },
 ];
 
-const DEFAULT_CITIES = METROS.filter((m) => m.default).map((m) => m.city);
-
 const LOCATIONS = {
   consider: METROS.flatMap((m) => m.consider),
   getro: METROS.flatMap((m) => m.getro),
@@ -112,4 +111,4 @@ const ROLE_PATTERNS = [
 // Non-engineering roles that slip through the platform's own function filter.
 const EXCLUDE_TITLE = /\b(recruit\w*|sourcer|talent partner|sales|account executive|account manager|marketing|brand|designer|design lead|people ops|human resources|controller|accountant|counsel|legal|paralegal|customer support|customer success|program manager|product manager|product marketing|community|content writer|copywriter|executive assistant|office manager|business development|solutions consultant recruiter)\b/i;
 
-module.exports = { BOARDS, METROS, DEFAULT_CITIES, LOCATIONS, CITY_MATCHERS, ROLE_PATTERNS, EXCLUDE_TITLE };
+module.exports = { BOARDS, METROS, LOCATIONS, CITY_MATCHERS, ROLE_PATTERNS, EXCLUDE_TITLE };

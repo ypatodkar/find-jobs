@@ -7,18 +7,42 @@ compatibility_date = "2026-01-01"
 # path. The site lives at https://ypatodkar.com/find-jobs/ — because a custom domain on
 # the ypatodkar.github.io user site pulls project sites under it too — so the origin is
 # the bare domain. Getting this wrong 403s every click and reports nothing anywhere.
-ALLOWED_ORIGINS = "https://ypatodkar.com,http://localhost:4173"
+ALLOWED_ORIGINS = "https://jobs.ypatodkar.com,https://find-jobs-cf5.pages.dev,https://ypatodkar.com,http://localhost:4173"
 
 # "1" once you have run your first sync: clicks are then only counted for jobs the
 # sync has loaded, and no request can create a row in `jobs`.
 STRICT = "0"
+
+# Where /auth/*/callback sends the browser back to after signing in. No trailing slash.
+SITE_ORIGIN = "https://jobs.ypatodkar.com"
+
+# Session cookie's Domain attribute. Leave blank while testing against a *.workers.dev
+# URL (the cookie is then host-only, fine for same-origin testing). Once this Worker is
+# on a custom domain that's a subdomain of SITE_ORIGIN (see below), set this to the
+# parent domain with a leading dot, e.g. ".ypatodkar.com" — that's what lets the cookie
+# be read on both the Worker's subdomain and the site itself.
+COOKIE_DOMAIN = ""
+
+# OAuth client IDs are not secret (they're visible in the browser's redirect URL
+# anyway) so they live here as plain vars. The matching client *secrets* are real
+# secrets — see below.
+GITHUB_CLIENT_ID = "Ov23liiRfIJQ6hzbltzj"
+GOOGLE_CLIENT_ID = "115646459364-vkoi18fadrmn1o23s21bjn8g7mggfked.apps.googleusercontent.com"
 
 # Fill database_id in from the output of:
 #   npx wrangler d1 create vcjobs
 [[d1_databases]]
 binding = "DB"
 database_name = "vcjobs"
-database_id = ""
+database_id = "9a1455be-4a64-4c81-b555-b058b728723b"
 
-# ADMIN_TOKEN guards GET /counts. It is a secret, so it is NOT set here — run:
-#   npx wrangler secret put ADMIN_TOKEN
+# Secrets — none of these are set here, they're pushed straight to Cloudflare so they
+# never touch this repo:
+#   npx wrangler secret put ADMIN_TOKEN            # guards GET /counts
+#   npx wrangler secret put GITHUB_CLIENT_SECRET   # from your GitHub OAuth App
+#   npx wrangler secret put GOOGLE_CLIENT_SECRET   # from your Google OAuth client
+#
+# Redirect URIs to register with each provider (must match exactly, including the
+# eventual custom domain once you set one up):
+#   GitHub: https://<this-worker's-domain>/auth/github/callback
+#   Google: https://<this-worker's-domain>/auth/google/callback

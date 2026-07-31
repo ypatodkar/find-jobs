@@ -9,9 +9,6 @@
 //   dist/api/all-jobs.json
 //   dist/api/firm/<id>.json      (one per firm, including the unscrapeable ones)
 //
-// `static: true` goes into each payload so the pages know to hide the Refresh button —
-// there is no server to scrape on demand once deployed.
-
 const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
@@ -27,7 +24,7 @@ const RESULTS_FILE = path.join(ROOT, "results.json");
 const ASSETS = [
   "index.html", "firms.html", "firm.html",
   "styles.css",
-  "data.js", "jobs-ui.js", "all.js", "app.js", "firm.js", "refresh.js", "track.js",
+  "data.js", "jobs-ui.js", "presets.js", "all.js", "app.js", "firm.js", "track.js", "visitor.js", "viewed.js", "auth.js",
 ];
 
 async function writeJson(rel, body) {
@@ -68,14 +65,14 @@ async function main() {
 
   // --- data ---
   let bytes = 0;
-  bytes += await writeJson("api/results.json", { ...resultsPayload(data), static: true });
-  bytes += await writeJson("api/all-jobs.json", { ...allJobsPayload(data), static: true });
+  bytes += await writeJson("api/results.json", resultsPayload(data));
+  bytes += await writeJson("api/all-jobs.json", allJobsPayload(data));
 
   let firmCount = 0;
   for (const id of Object.keys(BOARDS)) {
     const payload = firmPayload(data, id);
     if (!payload) continue;
-    bytes += await writeJson(`api/firm/${id}.json`, { ...payload, static: true });
+    bytes += await writeJson(`api/firm/${id}.json`, payload);
     firmCount++;
   }
 

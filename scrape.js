@@ -2,8 +2,8 @@
 //
 //   node scrape.js
 //
-// Same pipeline the Refresh button runs, writing the same results.json — the only
-// difference is that progress goes to stdout instead of down an SSE stream.
+// Runs the shared pipeline and writes results.json as a one-shot process suitable
+// for local use and scheduled automation.
 
 const fsp = require("fs/promises");
 const path = require("path");

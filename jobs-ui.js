@@ -13,7 +13,6 @@
     frontend: "Frontend",
     swe: "Software Eng",
   };
-  const CITIES = ["San Francisco", "New York", "San Diego"];
   const DATE_RANGES = [
     { k: "all", label: "Any time", days: null },
     { k: "7", label: "Last 7 days", days: 7 },
@@ -37,8 +36,9 @@
     "201-1000": "201–1,000", "1000+": "1,000+",
   };
   const SIZE_ORDER = ["1-10", "11-50", "51-200", "201-1000", "1000+"];
-  const CHART_DAYS = 30;
   const DAY_MS = 86400000;
+  const JOBS_PER_PAGE = 45;
+  const COMPANIES_PER_PAGE = 40;
 
   const $ = (id) => document.getElementById(id);
   const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
@@ -79,10 +79,12 @@
 
     function updateSummary(available) {
       const n = selected.size;
-      summary.textContent =
+      const value =
         n === 0 ? `All (${available})`
         : n === 1 ? opts.labelFor([...selected][0])
         : `${n} selected`;
+      summary.textContent = value;
+      summary.setAttribute("aria-label", `${opts.label} filter: ${value}`);
       root.classList.toggle("has-selection", n > 0);
       clear.hidden = n === 0;
     }
@@ -171,13 +173,13 @@
   }
 
   function createJobsView(config) {
-    const cfg = Object.assign({ showFirms: false, firmLabel: (id) => id, pageSize: 300, groupPageSize: 40 }, config);
+    const cfg = Object.assign({ showFirms: false, firmLabel: (id) => id, contextLabel: null }, config);
 
     // Every multi-select filter is a "dimension": a key, how to read its values off a
     // job, and how to label them. Filters combine with AND across dimensions and OR
     // within one (ticking two cities means either city).
     const DIMENSIONS = [
-      { key: "city", label: "City", values: (j) => [j.city], order: CITIES },
+      { key: "city", label: "City", values: (j) => [j.city] },
       { key: "role", label: "Role", values: (j) => j.roles || [], labelFor: (v) => ROLE_LABELS[v] || v },
       { key: "seniority", label: "Seniority", values: (j) => (j.seniority ? [j.seniority] : []), labelFor: (v) => SENIORITY_LABELS[v] || v, order: SENIORITY_ORDER },
       { key: "company", label: "Company", values: (j) => [j.company] },
@@ -190,22 +192,11 @@
     const state = {
       query: "", range: "all", salary: "all", sort: "newest",
       selected: {}, // dimension key -> Set of chosen values
-      jobs: [], shown: cfg.pageSize,
+      jobs: [], page: 1,
       view: "flat",               // "flat" (every role) | "grouped" (by company)
       expanded: new Set(),        // company names currently open
-      groupsShown: cfg.groupPageSize,
     };
     DIMENSIONS.forEach((d) => (state.selected[d.key] = new Set()));
-
-    // Cities are pre-selected (SF / NY / San Diego) while every other metro stays
-    // available in the dropdown. Applied once, so a refresh doesn't stomp on the
-    // user's own selection.
-    let defaultsApplied = false;
-    function applyDefaults() {
-      const cities = cfg.defaultCities || [];
-      state.selected.city.clear();
-      cities.forEach((c) => state.selected.city.add(c));
-    }
 
     const el = {
       search: $("job-search"),
@@ -214,15 +205,9 @@
       salarySelect: $("salary-select"),
       resetBtn: $("reset-filters"),
       sortSelect: $("sort-select"),
-      chart: $("activity-chart"),
-      chartPlot: $("chart-plot"),
-      chartSub: $("chart-sub"),
-      chartTooltip: $("chart-tooltip"),
-      axisStart: $("chart-axis-start"),
-      axisEnd: $("chart-axis-end"),
       count: $("job-count"),
       list: $("job-list"),
-      more: $("show-more"),
+      pagination: $("job-pagination"),
       viewGrouped: $("view-grouped"),
       viewFlat: $("view-flat"),
       countGrouped: $("count-grouped"),
@@ -230,7 +215,10 @@
       groupActions: $("group-actions"),
       expandAll: $("expand-all"),
       collapseAll: $("collapse-all"),
+      mobileFilterToggle: $("mobile-filter-toggle"),
     };
+
+    if (el.expandAll) el.expandAll.textContent = "Expand visible";
 
     // ---- filtering ----
     // `skip` omits one dimension so that dimension's own dropdown can be populated
@@ -264,11 +252,26 @@
       const arr = jobs.slice();
       const t = (j) => (j.posted ? new Date(j.posted).getTime() : 0);
       const pay = (j) => j.salaryMax || j.salaryMin || 0;
-      if (state.sort === "newest") arr.sort((a, b) => t(b) - t(a));
-      else if (state.sort === "oldest") arr.sort((a, b) => t(a) - t(b));
-      else if (state.sort === "salary") arr.sort((a, b) => pay(b) - pay(a) || t(b) - t(a));
-      else if (state.sort === "company") arr.sort((a, b) => a.company.localeCompare(b.company) || a.title.localeCompare(b.title));
-      else if (state.sort === "title") arr.sort((a, b) => a.title.localeCompare(b.title));
+      const byTitle = (a, b) => a.title.localeCompare(b.title) || a.company.localeCompare(b.company);
+      if (state.sort === "newest") arr.sort((a, b) => t(b) - t(a) || byTitle(a, b));
+      else if (state.sort === "oldest") arr.sort((a, b) => t(a) - t(b) || byTitle(a, b));
+      else if (state.sort === "salary") arr.sort((a, b) => pay(b) - pay(a) || t(b) - t(a) || byTitle(a, b));
+      else if (state.sort === "count") {
+        // In a flat list, "Most roles" means roles from companies with the most
+        // matches under the current filters. It is therefore useful without having
+        // to switch to the grouped view.
+        const counts = new Map();
+        arr.forEach((j) => counts.set(j.company, (counts.get(j.company) || 0) + 1));
+        arr.sort((a, b) =>
+          (counts.get(b.company) || 0) - (counts.get(a.company) || 0) ||
+          t(b) - t(a) ||
+          byTitle(a, b)
+        );
+      } else if (state.sort === "company") {
+        arr.sort((a, b) => a.company.localeCompare(b.company) || a.title.localeCompare(b.title));
+      } else if (state.sort === "title") {
+        arr.sort(byTitle);
+      }
       return arr;
     }
 
@@ -300,6 +303,7 @@
           { root: `pick-${d.key}`, summary: `sum-${d.key}`, list: `list-${d.key}`, search: `q-${d.key}`, clear: `clr-${d.key}`, selectAll: `sa-${d.key}` },
           {
             selected: state.selected[d.key],
+            label: d.label,
             labelFor,
             maxOptions: 60,
             // Counts come from everything *except* this dimension, so an option only
@@ -313,10 +317,11 @@
                 : arr.sort((a, b) => b[1] - a[1] || labelFor(a[0]).localeCompare(labelFor(b[0])));
             },
             onChange: () => {
-              state.shown = cfg.pageSize;
+              state.page = 1;
               renderResults();
               refreshOtherPickers(d.key);
               updateResetBtn();
+              listeners.forEach((fn) => fn());
             },
           }
         ),
@@ -331,52 +336,6 @@
 
     function refreshAllPickers() {
       pickers.forEach((p) => p.picker.markDirty(0));
-    }
-
-    // ---- chart ----
-    function renderChart(jobs) {
-      const today = startOfDay(Date.now());
-      const buckets = [];
-      for (let i = CHART_DAYS - 1; i >= 0; i--) buckets.push({ day: today - i * DAY_MS, count: 0 });
-
-      let dated = 0;
-      jobs.forEach((j) => {
-        const a = ageInDays(j.posted);
-        if (a === null || a < 0 || a >= CHART_DAYS) return;
-        buckets[CHART_DAYS - 1 - a].count++;
-        dated++;
-      });
-
-      if (dated === 0) { el.chart.hidden = true; return; }
-      el.chart.hidden = false;
-
-      const max = Math.max(...buckets.map((b) => b.count));
-      const fmt = (ms) => new Date(ms).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-
-      el.chartSub.textContent = `${dated} of ${jobs.length} shown roles posted in the last ${CHART_DAYS} days · peak ${max}/day`;
-      el.axisStart.textContent = fmt(buckets[0].day);
-      el.axisEnd.textContent = "Today";
-
-      el.chartPlot.innerHTML = buckets.map((b) => {
-        const pct = max ? Math.round((b.count / max) * 100) : 0;
-        const h = b.count === 0 ? 2 : Math.max(pct, 6); // zero days keep a hairline
-        return `<div class="bar-slot" data-count="${b.count}" data-day="${escapeHtml(fmt(b.day))}" tabindex="0" role="presentation"><div class="bar${b.count === 0 ? " bar-zero" : ""}" style="height:${h}%"></div></div>`;
-      }).join("");
-
-      const showTip = (slot) => {
-        const c = slot.dataset.count;
-        el.chartTooltip.textContent = `${slot.dataset.day} · ${c} role${c === "1" ? "" : "s"}`;
-        el.chartTooltip.hidden = false;
-        const pb = el.chartPlot.getBoundingClientRect();
-        const sb = slot.getBoundingClientRect();
-        el.chartTooltip.style.left = Math.round(sb.left - pb.left + sb.width / 2) + "px";
-      };
-      el.chartPlot.querySelectorAll(".bar-slot").forEach((slot) => {
-        slot.addEventListener("mouseenter", () => showTip(slot));
-        slot.addEventListener("focus", () => showTip(slot));
-        slot.addEventListener("blur", () => { el.chartTooltip.hidden = true; });
-      });
-      el.chartPlot.addEventListener("mouseleave", () => { el.chartTooltip.hidden = true; });
     }
 
     // ---- result rows ----
@@ -402,8 +361,8 @@
       const meta = [j.city, j.remote ? "Remote OK" : null, relativeDate(j.posted)]
         .filter(Boolean).map(escapeHtml).join(" &middot; ");
       const pay = compactPay(j);
-      const payLine = pay
-        ? `<p class="job-salary"${j.salary ? ` title="${escapeHtml(j.salary)}"` : ""}>${escapeHtml(pay)}</p>`
+      const payBit = pay
+        ? `<span class="job-salary"${j.salary ? ` title="${escapeHtml(j.salary)}"` : ""}>${escapeHtml(pay)}</span>`
         : "";
       // data-* here is read by track.js, which delegates off document — this row is
       // replaced wholesale on every filter change, so per-row listeners wouldn't survive.
@@ -412,17 +371,19 @@
           ` data-job-id="${escapeHtml(j.job_id || "")}" data-company="${escapeHtml(j.company)}"` +
           ` data-city="${escapeHtml(j.city || "")}">${escapeHtml(j.title)}</a>`
         : `<span class="job-title">${escapeHtml(j.title)}</span>`;
-      const backers = !inGroup && cfg.showFirms && (j.firms || []).length
-        ? `<p class="job-backers">${j.firms.map((f) => escapeHtml(cfg.firmLabel(f))).join(" · ")}</p>`
-        : "";
-      const companyLine = inGroup ? "" : `<p class="job-company">${escapeHtml(j.company)}</p>`;
+      // Investors are deliberately absent from the row: they repeat on every job at a
+      // company and crowd the title. The company card's header still lists them, and
+      // the Investor filter still works.
+      const companyBit = inGroup ? "" : `<span class="job-company">${escapeHtml(j.company)}</span>`;
+      // Company and salary share one line. Inside a company card the company name is
+      // in the header, so the line carries the salary alone — and is dropped entirely
+      // when there is neither, rather than leaving an empty gap.
+      const subLine = companyBit || payBit ? `<p class="job-sub">${companyBit}${payBit}</p>` : "";
       return `
         <article class="job">
           <div class="job-main">
             ${title}
-            ${companyLine}
-            ${backers}
-            ${payLine}
+            ${subLine}
           </div>
           <div class="job-side">
             <div class="job-tags">${roleTags}${src}</div>
@@ -453,7 +414,8 @@
       for (const j of jobs) {
         let g = map.get(j.company);
         if (!g) {
-          g = { company: j.company, jobs: [], cities: new Map(), newest: 0, payMax: 0,
+          g = { company: j.company, jobs: [], cities: new Map(), newest: 0, oldest: Infinity,
+                titleFirst: j.title, payMax: 0,
                 size: j.size, stage: j.stage, markets: j.markets || [] };
           map.set(j.company, g);
         }
@@ -461,22 +423,28 @@
         g.cities.set(j.city, (g.cities.get(j.city) || 0) + 1);
         const t = j.posted ? new Date(j.posted).getTime() : 0;
         if (t > g.newest) g.newest = t;
+        if (t && t < g.oldest) g.oldest = t;
+        if (j.title.localeCompare(g.titleFirst) < 0) g.titleFirst = j.title;
         const pay = j.salaryMax || j.salaryMin || 0;
         if (pay > g.payMax) g.payMax = pay;
         if (!g.size && j.size) g.size = j.size;
         if (!g.stage && j.stage) g.stage = j.stage;
       }
       const groups = [...map.values()];
-      if (state.sort === "company" || state.sort === "title") {
+      if (state.sort === "company") {
         groups.sort((a, b) => a.company.localeCompare(b.company));
+      } else if (state.sort === "title") {
+        // Alphabetize companies by the first job title they contain. This keeps
+        // Title A–Z genuinely title-based instead of duplicating Company A–Z.
+        groups.sort((a, b) => a.titleFirst.localeCompare(b.titleFirst) || a.company.localeCompare(b.company));
       } else if (state.sort === "salary") {
-        groups.sort((a, b) => b.payMax - a.payMax || b.jobs.length - a.jobs.length);
+        groups.sort((a, b) => b.payMax - a.payMax || b.jobs.length - a.jobs.length || a.company.localeCompare(b.company));
       } else if (state.sort === "count") {
         groups.sort((a, b) => b.jobs.length - a.jobs.length || a.company.localeCompare(b.company));
       } else if (state.sort === "oldest") {
-        groups.sort((a, b) => a.newest - b.newest);
+        groups.sort((a, b) => a.oldest - b.oldest || a.company.localeCompare(b.company));
       } else {
-        groups.sort((a, b) => b.newest - a.newest);
+        groups.sort((a, b) => b.newest - a.newest || a.company.localeCompare(b.company));
       }
       return groups;
     }
@@ -530,9 +498,67 @@
         </section>`;
     }
 
+    let currentPageCount = 1;
+
+    function renderPagination(pageCount) {
+      if (!el.pagination) return;
+      // Build the shell once. Previous, Next, and the jump controls are never
+      // replaced during navigation, which keeps keyboard focus predictable.
+      if (!el.pagination.querySelector(".page-prev")) {
+        el.pagination.innerHTML = `
+          <button type="button" class="page-prev">Previous</button>
+          <span class="page-numbers" role="group" aria-label="Choose a results page"></span>
+          <span class="page-status" role="status" aria-live="polite" aria-atomic="true"></span>
+          <button type="button" class="page-next">Next</button>
+          <form class="page-jump" novalidate>
+            <label for="page-input">Go to page</label>
+            <input id="page-input" class="page-input" type="number" min="1" step="1"
+              inputmode="numeric" autocomplete="off" aria-label="Go to page" />
+            <span class="page-total">of 1</span>
+            <button type="submit" class="page-go">Go</button>
+          </form>`;
+      }
+
+      currentPageCount = pageCount;
+      el.pagination.hidden = pageCount <= 1;
+
+      const prev = el.pagination.querySelector(".page-prev");
+      const next = el.pagination.querySelector(".page-next");
+      const numbers = el.pagination.querySelector(".page-numbers");
+      const status = el.pagination.querySelector(".page-status");
+      const input = el.pagination.querySelector(".page-input");
+      const total = el.pagination.querySelector(".page-total");
+
+      prev.disabled = state.page === 1;
+      next.disabled = state.page === pageCount;
+      status.textContent = `Page ${state.page} of ${pageCount}`;
+      total.textContent = `of ${pageCount}`;
+      input.max = String(pageCount);
+      input.setAttribute("aria-label", `Go to page, 1 to ${pageCount}`);
+      // Do not erase a page number while somebody is in the middle of typing it.
+      if (document.activeElement !== input || !input.value) input.value = String(state.page);
+
+      // Page numbers move in blocks: 1–10, 11–20, and so on. Keep the same
+      // buttons mounted while navigating inside a block.
+      const first = Math.floor((state.page - 1) / 10) * 10 + 1;
+      const last = Math.min(first + 9, pageCount);
+      const windowKey = `${first}-${last}`;
+      if (numbers.dataset.window !== windowKey) {
+        numbers.dataset.window = windowKey;
+        numbers.innerHTML = Array.from({ length: last - first + 1 }, (_, i) => {
+          const page = first + i;
+          return `<button type="button" class="page-number" data-page="${page}" aria-label="Page ${page}">${page}</button>`;
+        }).join("");
+      }
+      numbers.querySelectorAll(".page-number").forEach((button) => {
+        const active = Number(button.dataset.page) === state.page;
+        if (active) button.setAttribute("aria-current", "page");
+        else button.removeAttribute("aria-current");
+      });
+    }
+
     function renderResults() {
       const results = sortJobs(filtered());
-      renderChart(results);
 
       const grouped = state.view === "grouped";
       if (el.groupActions) el.groupActions.hidden = !grouped;
@@ -545,45 +571,34 @@
       }
 
       if (!grouped) {
-        const slice = results.slice(0, state.shown);
-        el.count.textContent = results.length > slice.length
-          ? `Showing ${slice.length} of ${results.length} matching roles`
-          : `Showing ${results.length} of ${state.jobs.length} matching roles`;
+        const pageCount = Math.max(1, Math.ceil(results.length / JOBS_PER_PAGE));
+        state.page = Math.min(Math.max(1, state.page), pageCount);
+        const start = (state.page - 1) * JOBS_PER_PAGE;
+        const slice = results.slice(start, start + JOBS_PER_PAGE);
+        el.count.textContent = results.length
+          ? `Showing ${start + 1}–${start + slice.length} of ${results.length} matching roles`
+          : "0 matching roles";
         // Must be an arrow, not `.map(jobHtml)`: map passes the index as the second
         // argument, which would read as `inGroup` for every row after the first.
         el.list.innerHTML = slice.length ? slice.map((j) => jobHtml(j, false)).join("") : `<p class="empty">No roles match those filters.</p>`;
-        if (el.more) {
-          el.more.hidden = results.length <= slice.length;
-          el.more.textContent = `Show ${Math.min(cfg.pageSize, results.length - slice.length)} more`;
-        }
+        renderPagination(pageCount);
         return;
       }
 
       const groups = buildGroups(results);
-      const slice = groups.slice(0, state.groupsShown);
-      el.count.textContent = groups.length > slice.length
-        ? `Showing ${slice.length} of ${groups.length} companies · ${results.length} roles`
-        : `${groups.length} compan${groups.length === 1 ? "y" : "ies"} · ${results.length} roles`;
+      const pageCount = Math.max(1, Math.ceil(groups.length / COMPANIES_PER_PAGE));
+      state.page = Math.min(Math.max(1, state.page), pageCount);
+      const start = (state.page - 1) * COMPANIES_PER_PAGE;
+      const slice = groups.slice(start, start + COMPANIES_PER_PAGE);
+      el.count.textContent = groups.length
+        ? `Showing ${start + 1}–${start + slice.length} of ${groups.length} companies · ${results.length} roles`
+        : "0 companies · 0 roles";
       el.list.innerHTML = slice.length ? slice.map(groupHtml).join("") : `<p class="empty">No roles match those filters.</p>`;
-      if (el.more) {
-        el.more.hidden = groups.length <= slice.length;
-        el.more.textContent = `Show ${Math.min(cfg.groupPageSize, groups.length - slice.length)} more companies`;
-      }
-    }
-
-    // The pre-selected cities are the baseline, not a user filter — they only count
-    // as "active" once the selection differs from the default.
-    function cityIsDefault() {
-      const def = cfg.defaultCities || [];
-      const sel = state.selected.city;
-      return sel.size === def.length && def.every((c) => sel.has(c));
+      renderPagination(pageCount);
     }
 
     function activeCount() {
-      let n = DIMENSIONS.reduce((a, d) => {
-        if (d.key === "city") return a + (cityIsDefault() ? 0 : 1);
-        return a + (state.selected[d.key].size ? 1 : 0);
-      }, 0);
+      let n = DIMENSIONS.reduce((a, d) => a + (state.selected[d.key].size ? 1 : 0), 0);
       if (state.range !== "all") n++;
       if (state.salary !== "all") n++;
       if (state.query.trim()) n++;
@@ -591,28 +606,89 @@
     }
 
     function updateResetBtn() {
-      if (!el.resetBtn) return;
       const n = activeCount();
-      el.resetBtn.hidden = n === 0;
-      el.resetBtn.textContent = `Reset ${n} filter${n === 1 ? "" : "s"}`;
+      if (el.resetBtn) {
+        el.resetBtn.hidden = n === 0;
+        el.resetBtn.textContent = `Reset ${n} filter${n === 1 ? "" : "s"}`;
+      }
+      if (el.mobileFilterToggle) {
+        el.mobileFilterToggle.textContent = n ? `Filters · ${n} active` : "Filters";
+        const expanded = el.mobileFilterToggle.getAttribute("aria-expanded") === "true";
+        el.mobileFilterToggle.setAttribute(
+          "aria-label",
+          `${expanded ? "Hide" : "Show"} filters${n ? `, ${n} active` : ""}`
+        );
+      }
     }
 
+    // Notified after every filter change, so the saved-filters bar can show which
+    // preset (if any) matches the current state.
+    const listeners = [];
+
     function render() {
-      state.shown = cfg.pageSize;
-      state.groupsShown = cfg.groupPageSize;
+      state.page = 1;
       refreshAllPickers();
       renderResults();
       updateResetBtn();
+      listeners.forEach((fn) => fn());
     }
 
     // ---- events ----
     if (el.search) el.search.addEventListener("input", (e) => { state.query = e.target.value; render(); });
     if (el.sortSelect) el.sortSelect.addEventListener("change", (e) => { state.sort = e.target.value; render(); });
-    if (el.more) {
-      el.more.addEventListener("click", () => {
-        if (state.view === "grouped") state.groupsShown += cfg.groupPageSize;
-        else state.shown += cfg.pageSize;
+    if (el.pagination) {
+      const scrollToResults = () => {
+        const anchor = el.count ? el.count.parentElement : el.list;
+        if (anchor && typeof anchor.scrollIntoView === "function") {
+          anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      };
+
+      const goToPage = (page, focusNumber) => {
+        state.page = page;
         renderResults();
+        if (focusNumber) {
+          const active = el.pagination.querySelector('.page-number[aria-current="page"]');
+          if (active) {
+            try { active.focus({ preventScroll: true }); }
+            catch (_) { active.focus(); }
+          }
+        }
+        scrollToResults();
+      };
+
+      el.pagination.addEventListener("click", (e) => {
+        const number = e.target.closest(".page-number");
+        if (number) {
+          goToPage(Number(number.dataset.page), true);
+          return;
+        }
+
+        const button = e.target.closest(".page-prev, .page-next");
+        if (!button || button.disabled) return;
+        goToPage(state.page + (button.classList.contains("page-next") ? 1 : -1), false);
+      });
+
+      el.pagination.addEventListener("input", (e) => {
+        if (e.target.classList.contains("page-input")) e.target.setCustomValidity("");
+      });
+
+      // A form gives the jump field native Enter-key behavior as well as a visible
+      // Go button. Validation is repeated here so programmatic submits are safe too.
+      el.pagination.addEventListener("submit", (e) => {
+        if (!e.target.classList.contains("page-jump")) return;
+        e.preventDefault();
+        const input = e.target.querySelector(".page-input");
+        const page = Number(input.value);
+        input.setCustomValidity("");
+        if (!Number.isInteger(page) || page < 1 || page > currentPageCount) {
+          input.setCustomValidity(`Enter a whole page number from 1 to ${currentPageCount}.`);
+          input.reportValidity();
+          input.focus();
+          input.select();
+          return;
+        }
+        goToPage(page, false);
       });
     }
 
@@ -637,8 +713,6 @@
 
     function setView(view) {
       state.view = view;
-      state.shown = cfg.pageSize;
-      state.groupsShown = cfg.groupPageSize;
       if (el.viewGrouped) {
         el.viewGrouped.classList.toggle("active", view === "grouped");
         el.viewGrouped.setAttribute("aria-pressed", String(view === "grouped"));
@@ -647,14 +721,16 @@
         el.viewFlat.classList.toggle("active", view === "flat");
         el.viewFlat.setAttribute("aria-pressed", String(view === "flat"));
       }
-      renderResults();
+      render();
     }
     if (el.viewGrouped) el.viewGrouped.addEventListener("click", () => setView("grouped"));
     if (el.viewFlat) el.viewFlat.addEventListener("click", () => setView("flat"));
 
     if (el.expandAll) {
       el.expandAll.addEventListener("click", () => {
-        buildGroups(sortJobs(filtered())).slice(0, state.groupsShown).forEach((g) => state.expanded.add(g.company));
+        const start = (state.page - 1) * COMPANIES_PER_PAGE;
+        buildGroups(sortJobs(filtered())).slice(start, start + COMPANIES_PER_PAGE)
+          .forEach((g) => state.expanded.add(g.company));
         renderResults();
       });
     }
@@ -673,7 +749,6 @@
     if (el.resetBtn) {
       el.resetBtn.addEventListener("click", () => {
         DIMENSIONS.forEach((d) => state.selected[d.key].clear());
-        applyDefaults(); // back to the default cities, not to "every city"
         state.range = "all"; state.salary = "all"; state.query = "";
         if (el.search) el.search.value = "";
         if (el.dateSelect) el.dateSelect.value = "all";
@@ -684,15 +759,77 @@
 
     if (el.viewFlat) el.viewFlat.classList.add("active");
 
-    return {
-      setJobs(jobs, opts) {
+    const view = {
+      setJobs(jobs) {
         state.jobs = jobs || [];
-        if (opts && opts.defaultCities) cfg.defaultCities = opts.defaultCities;
-        if (!defaultsApplied) { applyDefaults(); defaultsApplied = true; }
         render();
       },
       state,
+      contextLabel: cfg.contextLabel,
+
+      // ---- saved filters ----
+      // presets.js goes through these rather than poking at `state`, because applying
+      // a set of filters also has to resync the selects and the view tabs — exactly
+      // what the Reset button does. Skip that and the controls silently disagree with
+      // the results being shown.
+
+      /** The current filter state, as plain JSON. */
+      getFilters() {
+        const selected = {};
+        DIMENSIONS.forEach((d) => {
+          if (state.selected[d.key].size) selected[d.key] = [...state.selected[d.key]];
+        });
+        return {
+          selected,
+          query: state.query,
+          range: state.range,
+          salary: state.salary,
+          sort: state.sort,
+          view: state.view,
+        };
+      },
+
+      applyFilters(f) {
+        if (!f) return;
+        DIMENSIONS.forEach((d) => {
+          state.selected[d.key].clear();
+          const vals = (f.selected || {})[d.key];
+          if (Array.isArray(vals)) vals.forEach((v) => state.selected[d.key].add(v));
+        });
+        // An absent or empty city selection intentionally means every city. A preset
+        // saved on the all-roles page can name an Investor dimension that firm pages
+        // don't have; that key has no matching DIMENSIONS entry here and is ignored.
+
+        state.query = f.query || "";
+        state.range = f.range || "all";
+        state.salary = f.salary || "all";
+        state.sort = f.sort || "newest";
+        if (el.search) el.search.value = state.query;
+        if (el.dateSelect) el.dateSelect.value = state.range;
+        if (el.salarySelect) el.salarySelect.value = state.salary;
+        if (el.sortSelect) el.sortSelect.value = state.sort;
+
+        setView(f.view === "grouped" ? "grouped" : "flat");
+      },
+
+      /** Human label for one value, so a preset can name itself after its contents. */
+      labelFor(key, value) {
+        const d = DIMENSIONS.find((x) => x.key === key);
+        return d && d.labelFor ? d.labelFor(value) : value;
+      },
+
+      salaryLabel: (k) => (SALARY_FLOORS.find((s) => s.k === k) || {}).label || null,
+      rangeLabel: (k) => (DATE_RANGES.find((r) => r.k === k) || {}).label || null,
+
+      /** Fires whenever the filter state changes, so the preset bar can highlight
+       *  which saved filter (if any) matches what is on screen. */
+      onChange(fn) { listeners.push(fn); },
     };
+
+    // Wired here rather than from the pages so both get it automatically. presets.js
+    // loads before them, so it is present by the time this runs.
+    if (global.Presets && global.Presets.attach) global.Presets.attach(view);
+    return view;
   }
 
   global.JobsUI = { createJobsView, escapeHtml, relativeDate, ROLE_LABELS };

@@ -3,34 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Investors — VC Job Directory</title>
+  <title>Browse investors — Find Jobs</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧭</text></svg>" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="page">
+  <a class="skip-link" href="#main-content">Skip to investors</a>
+  <main class="page" id="main-content">
     <div class="wrap">
 
       <header class="masthead">
         <div class="masthead-top">
-          <div class="nav-links"><a class="backlink" href="index.html">← All roles</a></div>
-          <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">
-            <span class="theme-icon" aria-hidden="true">◐</span>
-          </button>
+          <div class="nav-links"><a class="backlink" href="index.html">← Find Jobs</a></div>
+          <div class="masthead-actions">
+            <div id="visitor-slot"></div>
+            <div id="account-slot"></div>
+            <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode">
+              <span class="theme-icon" aria-hidden="true">◐</span>
+            </button>
+          </div>
         </div>
-        <h1 class="title">The Software &amp; AI Venture Landscape</h1>
-        <p class="dek">A searchable directory of US venture firms worth tracking for software roles, grouped by how central AI is to each firm's current thesis. Scrapes each firm's portfolio job board for engineering roles in San Francisco, New York, and San Diego.</p>
+        <h1 class="title">Browse by investor</h1>
+        <p class="dek">A searchable directory of US venture firms worth tracking for software roles, grouped by how central AI is to each firm's current thesis. Portfolio job boards are checked twice daily for engineering roles across 19 US metros.</p>
         <div class="stats" id="stats" aria-hidden="true"></div>
-
-        <div class="refresh-bar">
-          <button id="refresh-btn" class="refresh-btn" type="button">Refresh all boards</button>
-          
-          <span id="refresh-status" class="refresh-status">Checking for cached results…</span>
-        </div>
-        <div id="refresh-progress" class="refresh-progress" hidden>
-          <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
-          <p id="progress-log" class="progress-log"></p>
-        </div>
       </header>
 
       <div class="controls">
@@ -46,7 +41,6 @@
 
         <div class="toggle-group">
           <label class="toggle"><input type="checkbox" id="only-board" /> <span>Has a public job board</span></label>
-          <label class="toggle"><input type="checkbox" id="only-list" /> <span>In your original list</span></label>
           <label class="toggle"><input type="checkbox" id="only-jobs" /> <span>Has matching roles</span></label>
         </div>
       </div>
@@ -62,20 +56,28 @@
           <ul>
             <li>Firms marked <span class="no-board-inline">no public board</span> still hire into portfolio companies — check the firm's own careers page or LinkedIn instead of a dedicated board.</li>
             <li>Most dedicated boards (Getro-powered) let you filter by role — search each one for “backend” / “software engineer” directly rather than browsing.</li>
+            <li>The three signal dots show how central AI is to a firm's public investment thesis: more filled dots means a stronger AI focus, not more open jobs.</li>
             <li>AI-signal ratings reflect public reporting as of July 2026 and will shift — treat this as a starting map, not a static ranking.</li>
           </ul>
         </div>
         <div>
-          <h3>About this data</h3>
-          <p>Everything on this page lives in <code>data.js</code> — open it to add, edit, or re-tier a firm and the page updates automatically, no build step required.</p>
+          <h3>Built for a focused search</h3>
+          <p>Find Jobs brings investor portfolios and company career boards into one searchable directory. Listings are updated automatically twice daily.</p>
         </div>
+        <p class="privacy-note">
+          <span aria-hidden="true">*</span> This site stores a random ID in your browser to
+          remember which roles you've opened and the views you've saved, plus your first name
+          if you choose to give one. No email, no password, no IP address, and no account.
+          Clearing your browser's site data erases all of it.
+        </p>
       </footer>
 
     </div>
-  </div>
+  </main>
 
   <script src="data.js"></script>
-  <script src="refresh.js"></script>
   <script src="app.js"></script>
+  <script src="auth.js"></script>
+  <script src="visitor.js"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
-// Local dev server. The scrape itself and the read payloads live in `pipeline.js`,
-// shared with the headless CI path, so this file is only transport.
+// Local dev server. Read payload builders live in `pipeline.js`, shared with the
+// static CI build, so this file is only transport.
 //
 // It answers the same `api/*.json` URLs that `build.js` writes as real files, which is
 // why the pages can fetch one set of relative paths and work both here and on static
@@ -10,7 +10,7 @@ const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
 const { BOARDS } = require("./boards");
-const { runScrape, resultsPayload, allJobsPayload, firmPayload } = require("./pipeline");
+const { resultsPayload, allJobsPayload, firmPayload } = require("./pipeline");
 
 const PORT = process.env.PORT || 4173;
 const ROOT = __dirname;
@@ -23,8 +23,6 @@ const MIME = {
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
 };
-
-let refreshing = false;
 
 async function readResults() {
   try {
@@ -65,32 +63,6 @@ function serveStatic(req, res) {
   });
 }
 
-// Streams one SSE event per firm so the UI can show live progress.
-async function handleRefresh(req, res) {
-  if (refreshing) {
-    sendJson(res, 409, { error: "A refresh is already running" });
-    return;
-  }
-  refreshing = true;
-  res.writeHead(200, {
-    "content-type": "text/event-stream",
-    "cache-control": "no-cache",
-    connection: "keep-alive",
-  });
-
-  try {
-    const results = await runScrape((event, data) => {
-      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-    });
-    await fsp.writeFile(RESULTS_FILE, JSON.stringify(results, null, 2));
-  } catch (err) {
-    res.write(`event: error\ndata: ${JSON.stringify({ reason: err.message })}\n\n`);
-  } finally {
-    res.end();
-    refreshing = false;
-  }
-}
-
 // `/api/all-jobs` and `/api/all-jobs.json` are the same route; the pages use the
 // `.json` form because that is what exists on disk after a build.
 const trimJson = (p) => p.replace(/\.json$/, "");
@@ -98,8 +70,6 @@ const trimJson = (p) => p.replace(/\.json$/, "");
 const server = http.createServer(async (req, res) => {
   const { pathname } = new URL(req.url, "http://localhost");
   const route = trimJson(pathname);
-
-  if (route === "/api/refresh") return handleRefresh(req, res);
 
   if (route === "/api/results") {
     return sendJson(res, 200, resultsPayload(await readResults()));

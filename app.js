@@ -7,10 +7,8 @@
     query: "",
     tier: "all",
     onlyBoard: false,
-    onlyList: false,
     onlyJobs: false,
     results: {},
-    scrapedAt: null,
   };
 
   const grid = document.getElementById("grid");
@@ -19,7 +17,6 @@
   const searchInput = document.getElementById("search");
   const tierFiltersEl = document.getElementById("tier-filters");
   const onlyBoardEl = document.getElementById("only-board");
-  const onlyListEl = document.getElementById("only-list");
   const statsEl = document.getElementById("stats");
 
   function escapeHtml(str) {
@@ -62,9 +59,9 @@
   function signalDots(signal) {
     let dots = "";
     for (let i = 1; i <= 3; i++) {
-      dots += `<i class="${i <= signal ? "on" : ""}"></i>`;
+      dots += `<i class="${i <= signal ? "on" : ""}" aria-hidden="true"></i>`;
     }
-    return `<span class="signal">${dots}</span>`;
+    return `<span class="signal" role="img" aria-label="AI investment signal: ${signal} of 3" title="AI investment signal: ${signal} of 3">${dots}</span>`;
   }
 
   function jobsBadge(firm) {
@@ -72,7 +69,7 @@
     const r = state.results[firm.id];
     if (!r) return "";
     if (r.status === "unsupported") return `<span class="jobs-badge none" title="${escapeHtml(r.reason || "")}">no board</span>`;
-    if (r.status === "error") return `<span class="jobs-badge err" title="${escapeHtml(r.reason || "")}">scrape failed</span>`;
+    if (r.status === "error") return `<span class="jobs-badge err" title="${escapeHtml(r.reason || "")}">update failed</span>`;
     if (r.count === 0) return `<span class="jobs-badge zero">0 roles</span>`;
     return `<a class="jobs-badge has" href="firm.html?id=${encodeURIComponent(firm.id)}">${r.count} roles →</a>`;
   }
@@ -80,7 +77,6 @@
   function cardHtml(firm) {
     const shortBit = firm.short ? ` <span class="short">${escapeHtml(firm.short)}</span>` : "";
     const aumBit = firm.aum ? `<div class="card-aum">${escapeHtml(firm.aum)}</div>` : "";
-    const tagBit = firm.inList ? `<span class="card-tag">in your list</span>` : "";
     const noteBit = firm.note ? `<span class="signal-note">${escapeHtml(firm.note)}</span>` : "";
 
     let linkBit;
@@ -103,7 +99,6 @@
         </div>
         <p class="card-focus">${escapeHtml(firm.focus)}</p>
         <div class="card-signal">${signalDots(firm.signal)}${noteBit}</div>
-        ${tagBit}
         <div class="card-footer">${linkBit}${jobsBadge(firm)}</div>
       </article>
     `;
@@ -114,7 +109,6 @@
     return VC_FIRMS.filter((f) => {
       if (state.tier !== "all" && f.tier !== state.tier) return false;
       if (state.onlyBoard && (!f.url || f.noBoard)) return false;
-      if (state.onlyList && !f.inList) return false;
       if (state.onlyJobs) {
         const r = f.id && state.results[f.id];
         if (!r || r.status !== "ok" || r.count === 0) return false;
@@ -151,6 +145,7 @@
   });
   grid.addEventListener("keydown", (e) => {
     if (e.key !== "Enter" && e.key !== " ") return;
+    if (e.target.closest("a")) return;
     const card = e.target.closest(".card");
     if (!card || !card.dataset.href) return;
     e.preventDefault();
@@ -165,43 +160,9 @@
     state.onlyBoard = e.target.checked;
     render();
   });
-  onlyListEl.addEventListener("change", (e) => {
-    state.onlyList = e.target.checked;
-    render();
-  });
   document.getElementById("only-jobs").addEventListener("change", (e) => {
     state.onlyJobs = e.target.checked;
     render();
-  });
-
-  // --- Scraped job results ---
-  const refreshBtn = document.getElementById("refresh-btn");
-  const refreshStatus = document.getElementById("refresh-status");
-
-  const firmName = (id) => (VC_FIRMS.find((f) => f.id === id) || {}).name || id;
-
-  function totalRoles() {
-    return Object.values(state.results).reduce((n, r) => n + (r.status === "ok" ? r.count : 0), 0);
-  }
-
-  function updateStatus() {
-    if (!state.scrapedAt) {
-      refreshStatus.textContent = "No job data yet — hit refresh to scrape all boards.";
-      return;
-    }
-    const when = new Date(state.scrapedAt).toLocaleString();
-    refreshStatus.textContent = `${totalRoles()} roles across ${Object.values(state.results).filter((r) => r.status === "ok" && r.count > 0).length} firms · last scraped ${when}`;
-  }
-
-  // Scrape trigger + progress bar live in refresh.js, shared with the home page.
-  const refresh = RefreshUI.initRefresh({
-    firmName,
-    onDone: (d) => {
-      state.results = d.firms || {};
-      state.scrapedAt = d.scrapedAt;
-      updateStatus();
-      render();
-    },
   });
 
   function loadResults() {
@@ -209,20 +170,44 @@
     return fetch("api/results.json")
       .then((r) => r.json())
       .then((data) => {
-        // No server to scrape on demand once deployed.
-        if (data.static && refresh) refresh.hide("Refreshed automatically twice a day");
         state.results = data.firms || {};
-        state.scrapedAt = data.scrapedAt;
-        updateStatus();
         render();
       })
-      .catch(() => {
-        refreshStatus.textContent = "No job data — run `node scrape.js` to populate it.";
-        refreshBtn.disabled = true;
-      });
+      .catch(() => {});
   }
 
   buildStats();
   render();
   loadResults();
+
+  // --- Theme toggle ---
+  const themeToggle = document.getElementById("theme-toggle");
+  if (themeToggle) {
+    const saved = localStorage.getItem("vc-directory-theme");
+    const themePreference = window.matchMedia("(prefers-color-scheme: dark)");
+    if (saved === "dark" || saved === "light") document.documentElement.setAttribute("data-theme", saved);
+
+    const currentTheme = () =>
+      document.documentElement.getAttribute("data-theme") || (themePreference.matches ? "dark" : "light");
+
+    const updateThemeToggle = () => {
+      const dark = currentTheme() === "dark";
+      const label = `Switch to ${dark ? "light" : "dark"} mode`;
+      themeToggle.setAttribute("aria-label", label);
+      themeToggle.setAttribute("title", label);
+      themeToggle.setAttribute("aria-pressed", String(dark));
+    };
+
+    updateThemeToggle();
+    themeToggle.addEventListener("click", () => {
+      const current = currentTheme();
+      const next = current === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      localStorage.setItem("vc-directory-theme", next);
+      updateThemeToggle();
+    });
+    themePreference.addEventListener("change", () => {
+      if (!document.documentElement.hasAttribute("data-theme")) updateThemeToggle();
+    });
+  }
 })();
