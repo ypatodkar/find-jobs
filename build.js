@@ -23,7 +23,7 @@ const RESULTS_FILE = path.join(ROOT, "results.json");
 // deliberately absent — shipping them would put the scrape internals on the public site.
 const ASSETS = [
   "index.html", "firms.html", "firm.html",
-  "styles.css",
+  "styles.css", "og.png", "robots.txt", "sitemap.xml", "404.html",
   "data.js", "jobs-ui.js", "presets.js", "all.js", "app.js", "firm.js", "track.js", "visitor.js", "viewed.js", "auth.js",
 ];
 
