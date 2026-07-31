@@ -54,8 +54,14 @@ jobs:
       # Never touches clicks or first_seen.
       - name: Sync job metadata to D1
         if: env.CF_TOKEN != ''
+        # Analytics must never hold the site hostage: if D1 is down or the token is
+        # wrong, the deploy below still ships. The next run re-syncs from scratch.
+        continue-on-error: true
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # Required. Without it wrangler calls /memberships to discover the account,
+          # which a scoped token cannot read — it fails with "Authentication error".
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           node sync-jobs.js
           npx --yes wrangler d1 execute vcjobs --remote --file=sync.sql -y
