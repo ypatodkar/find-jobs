@@ -27,13 +27,12 @@
   // missing or invalid firm URLs.
   const themeToggle = document.getElementById("theme-toggle");
   const savedTheme = localStorage.getItem("vc-directory-theme");
-  const themePreference = window.matchMedia("(prefers-color-scheme: dark)");
   if (savedTheme === "dark" || savedTheme === "light") {
     document.documentElement.setAttribute("data-theme", savedTheme);
   }
 
   const currentTheme = () =>
-    document.documentElement.getAttribute("data-theme") || (themePreference.matches ? "dark" : "light");
+    document.documentElement.getAttribute("data-theme") || "light";
 
   function updateThemeToggle() {
     const dark = currentTheme() === "dark";
@@ -49,9 +48,6 @@
     document.documentElement.setAttribute("data-theme", next);
     localStorage.setItem("vc-directory-theme", next);
     updateThemeToggle();
-  });
-  themePreference.addEventListener("change", () => {
-    if (!document.documentElement.hasAttribute("data-theme")) updateThemeToggle();
   });
 
   function showMessage(html) {

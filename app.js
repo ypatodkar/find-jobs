@@ -189,11 +189,10 @@
   const themeToggle = document.getElementById("theme-toggle");
   if (themeToggle) {
     const saved = localStorage.getItem("vc-directory-theme");
-    const themePreference = window.matchMedia("(prefers-color-scheme: dark)");
     if (saved === "dark" || saved === "light") document.documentElement.setAttribute("data-theme", saved);
 
     const currentTheme = () =>
-      document.documentElement.getAttribute("data-theme") || (themePreference.matches ? "dark" : "light");
+      document.documentElement.getAttribute("data-theme") || "light";
 
     const updateThemeToggle = () => {
       const dark = currentTheme() === "dark";
@@ -210,9 +209,6 @@
       document.documentElement.setAttribute("data-theme", next);
       localStorage.setItem("vc-directory-theme", next);
       updateThemeToggle();
-    });
-    themePreference.addEventListener("change", () => {
-      if (!document.documentElement.hasAttribute("data-theme")) updateThemeToggle();
     });
   }
 })();

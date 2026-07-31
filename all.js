@@ -137,11 +137,10 @@
   // --- Theme toggle ---
   const themeToggle = document.getElementById("theme-toggle");
   const saved = localStorage.getItem("vc-directory-theme");
-  const themePreference = window.matchMedia("(prefers-color-scheme: dark)");
   if (saved === "dark" || saved === "light") document.documentElement.setAttribute("data-theme", saved);
 
   function currentTheme() {
-    return document.documentElement.getAttribute("data-theme") || (themePreference.matches ? "dark" : "light");
+    return document.documentElement.getAttribute("data-theme") || "light";
   }
 
   function updateThemeToggle() {
@@ -159,9 +158,6 @@
     document.documentElement.setAttribute("data-theme", next);
     localStorage.setItem("vc-directory-theme", next);
     updateThemeToggle();
-  });
-  themePreference.addEventListener("change", () => {
-    if (!document.documentElement.hasAttribute("data-theme")) updateThemeToggle();
   });
 
   load();

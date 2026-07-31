@@ -47,24 +47,9 @@
   --shadow: 0 1px 3px rgba(46, 30, 64, 0.08);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #111014;
-    --surface: #19171f;
-    --ink: #f5f1f8;
-    --ink-soft: #c7bfce;
-    --ink-faint: #aaa0b4;
-    --rule: #332e39;
-    --rule-strong: #50475a;
-    --accent: #c084fc;
-    --on-accent: #21152c;
-    --accent-fill: #c084fc1f;
-    --accent2: #a855f7;
-    --accent2-fill: #a855f71f;
-    --chip-bg: #24212a;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  }
-}
+/* Light is the default, deliberately: the site opens light regardless of the
+   visitor's OS setting. Dark is available, but only when they ask for it via
+   the toggle, which writes html[data-theme="dark"] below. */
 
 html[data-theme="dark"] {
   --bg: #111014;
