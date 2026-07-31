@@ -12,7 +12,10 @@ const path = require("path");
 
 const RESULTS = process.argv[2] || path.join(__dirname, "results.json");
 const OUT = process.argv[3] || path.join(__dirname, "sync.sql");
-const ROWS_PER_STATEMENT = 200;
+// D1 rejects an over-long statement with SQLITE_TOOBIG. At ~800 bytes a row, 200
+// rows produced ~160 KB statements and failed; 50 keeps each one near 40 KB with
+// plenty of headroom for longer titles and market lists.
+const ROWS_PER_STATEMENT = 50;
 
 // Job titles, companies and salaries come from third-party boards, so every value
 // interpolated here is untrusted. Doubling the quote is the whole of SQLite string
@@ -85,7 +88,11 @@ function main() {
   }
 
   const ts = data.scrapedAt ? Date.parse(data.scrapedAt) : Date.now();
-  const lines = ["BEGIN TRANSACTION;"];
+
+  // No BEGIN/COMMIT: D1 rejects SQL transaction statements in a --file execution and
+  // wraps the whole file in its own transaction anyway, so the batch is already atomic
+  // — "if the execution fails to complete, your DB will return to its original state".
+  const lines = [];
 
   for (let i = 0; i < jobs.length; i += ROWS_PER_STATEMENT) {
     const values = jobs.slice(i, i + ROWS_PER_STATEMENT).map((j) => row(j, ts));
@@ -100,7 +107,6 @@ function main() {
   // Anything not in this scrape has come off the boards. Kept, not deleted — a click
   // recorded last week should still resolve to a company and a title.
   lines.push(`UPDATE jobs SET active = 0 WHERE last_seen < ${ts};`);
-  lines.push("COMMIT;");
 
   fs.writeFileSync(OUT, lines.join("\n\n") + "\n");
   console.log(`${jobs.length} jobs -> ${path.basename(OUT)}`);
