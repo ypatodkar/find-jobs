@@ -94,7 +94,7 @@
     el.innerHTML =
       '<form class="visitor-ask" novalidate>' +
       '<label class="visitor-ask-label" for="visitor-name">' +
-      (isEdit ? "What should we call you?" : "Hi — what should we call you?") +
+      (isEdit ? "What should we call you?" : "Hi, what should we call you?") +
       "</label>" +
       '<input id="visitor-name" class="visitor-input" type="text" maxlength="' + MAX_NAME +
       '" autocomplete="given-name" placeholder="Your name" value="' + esc((me && me.name) || "") + '" />' +

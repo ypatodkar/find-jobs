@@ -24,6 +24,8 @@ const RESULTS_FILE = path.join(ROOT, "results.json");
 const ASSETS = [
   "index.html", "firms.html", "firm.html",
   "styles.css", "og.png", "robots.txt", "sitemap.xml", "404.html",
+  "fonts/geist-sans-400.woff2", "fonts/geist-sans-500.woff2",
+  "fonts/geist-sans-600.woff2", "fonts/geist-sans-700.woff2",
   "data.js", "jobs-ui.js", "presets.js", "all.js", "app.js", "firm.js", "track.js", "visitor.js", "viewed.js", "auth.js",
 ];
 
@@ -52,7 +54,9 @@ async function main() {
       missing.push(rel);
       continue;
     }
-    await fsp.copyFile(src, path.join(DIST, rel));
+    const destination = path.join(DIST, rel);
+    await fsp.mkdir(path.dirname(destination), { recursive: true });
+    await fsp.copyFile(src, destination);
   }
   if (missing.length) {
     console.error(`Missing asset(s), refusing to build a broken site: ${missing.join(", ")}`);

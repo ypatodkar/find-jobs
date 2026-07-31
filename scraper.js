@@ -29,6 +29,7 @@ const CONSIDER_PAGE_SIZE = 1000; // hard ceiling: 2000 returns an empty body
 // The param is snake_case; `hitsPerPage` is silently ignored and capped at 20.
 const GETRO_PAGE_SIZE = 500;
 const GETRO_MAX_PAGES = 12;
+const SCRAPE_RETRIES = 2; // backs off 2s then 4s
 
 async function postJson(url, body, headers) {
   const res = await fetch(url, {
@@ -180,21 +181,29 @@ async function scrapeFirm(firmId) {
   if (!cfg) return { firmId, status: "unsupported", reason: "No board configured", jobs: [] };
   if (!cfg.platform) return { firmId, status: "unsupported", reason: cfg.reason, jobs: [], host: cfg.host };
 
-  try {
-    const res = cfg.platform === "consider" ? await scrapeConsider(cfg) : await scrapeGetro(cfg);
-    return {
-      firmId,
-      status: "ok",
-      host: cfg.host,
-      platform: cfg.platform,
-      jobs: dedupe(res.jobs),
-      scanned: res.scanned,
-      totalOnBoard: res.totalOnBoard,
-      scrapedAt: new Date().toISOString(),
-    };
-  } catch (err) {
-    return { firmId, status: "error", host: cfg.host, platform: cfg.platform, reason: err.message, jobs: [] };
+  // Retry transient failures. Without this a single "fetch failed" — a blip on a
+  // shared CI runner — empties that firm's whole listing until the next scheduled
+  // run twelve hours later. ats.js has retried from the start; this did not.
+  let lastErr;
+  for (let attempt = 0; attempt <= SCRAPE_RETRIES; attempt++) {
+    try {
+      const res = cfg.platform === "consider" ? await scrapeConsider(cfg) : await scrapeGetro(cfg);
+      return {
+        firmId,
+        status: "ok",
+        host: cfg.host,
+        platform: cfg.platform,
+        jobs: dedupe(res.jobs),
+        scanned: res.scanned,
+        totalOnBoard: res.totalOnBoard,
+        scrapedAt: new Date().toISOString(),
+      };
+    } catch (err) {
+      lastErr = err;
+      if (attempt < SCRAPE_RETRIES) await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+    }
   }
+  return { firmId, status: "error", host: cfg.host, platform: cfg.platform, reason: lastErr.message, jobs: [] };
 }
 
 module.exports = { scrapeFirm, BOARDS };

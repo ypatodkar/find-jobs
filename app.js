@@ -75,6 +75,11 @@
   }
 
   function cardHtml(firm) {
+    // Only firms we can actually show roles for get the whole-card link. Twenty-one
+    // of thirty-seven have no scrapeable board; making those look clickable promised
+    // a page that could only apologise.
+    const r = (firm.id && state.results[firm.id]) || {};
+    const openable = r.status === "ok" && r.count > 0;
     const shortBit = firm.short ? ` <span class="short">${escapeHtml(firm.short)}</span>` : "";
     const aumBit = firm.aum ? `<div class="card-aum">${escapeHtml(firm.aum)}</div>` : "";
     const noteBit = firm.note ? `<span class="signal-note">${escapeHtml(firm.note)}</span>` : "";
@@ -89,7 +94,7 @@
     }
 
     return `
-      <article class="card" data-name="${escapeHtml(firm.name.toLowerCase())}" data-href="firm.html?id=${encodeURIComponent(firm.id)}" tabindex="0" role="link" aria-label="${escapeHtml(firm.name)} — view roles">
+      <article class="card${openable ? "" : " card-static"}" data-name="${escapeHtml(firm.name.toLowerCase())}"${openable ? ` data-href="firm.html?id=${encodeURIComponent(firm.id)}" tabindex="0" role="link" aria-label="${escapeHtml(firm.name)} — view ${r.count} roles"` : ""}>
         <div class="card-top">
           <div class="card-name-wrap">
             <p class="card-name">${escapeHtml(firm.name)}${shortBit}</p>

@@ -1,3 +1,35 @@
+@font-face {
+  font-family: "Geist Sans";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("fonts/geist-sans-400.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Geist Sans";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url("fonts/geist-sans-500.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Geist Sans";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url("fonts/geist-sans-600.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Geist Sans";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url("fonts/geist-sans-700.woff2") format("woff2");
+}
+
 :root {
   --bg: #ffffff;
   --surface: #faf9fc;
@@ -77,14 +109,22 @@ html[data-theme="light"] {
 html, body { margin: 0; padding: 0; background: var(--bg); }
 
 body {
-  --serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Helvetica, Arial, sans-serif;
-  --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --font: "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --serif: var(--font);
+  --sans: var(--font);
+  --mono: var(--font);
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--sans);
+  font-family: var(--font);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 
 .skip-link {
@@ -1336,3 +1376,8 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   .viewed-row { grid-template-columns: 1fr; gap: 2px; }
   .viewed-when { grid-row: 1; justify-self: end; margin-top: -18px; }
 }
+
+/* A firm with no scrapeable board has no page worth opening, so its card must not
+   look like a link. The badge and the external site link still work. */
+.card-static { cursor: default; }
+.card-static:hover { border-color: var(--rule); }
