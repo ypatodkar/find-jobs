@@ -197,6 +197,7 @@ async function fetchCompany(entry) {
         stage: entry.meta.stage,
         markets: entry.meta.markets,
         domain: entry.meta.domain,
+        logo: entry.meta.logo,
         source: "ats",
         ats: entry.ats,
       });
@@ -243,7 +244,7 @@ function buildRegistry(firms) {
       if (!registry.has(key)) {
         registry.set(key, {
           key, ats: d.ats, slug: d.slug, company: job.company, firms: new Set(),
-          meta: { staffCount: null, size: null, stage: null, markets: [], domain: null },
+          meta: { staffCount: null, size: null, stage: null, markets: [], domain: null, logo: null },
         });
       }
       const entry = registry.get(key);
@@ -255,6 +256,7 @@ function buildRegistry(firms) {
       if (m.staffCount == null && job.staffCount != null) { m.staffCount = job.staffCount; m.size = job.size; }
       if (!m.stage && job.stage) m.stage = job.stage;
       if (!m.domain && job.domain) m.domain = job.domain;
+      if (!m.logo && job.logo) m.logo = job.logo;
       if (job.markets && job.markets.length) {
         for (const mk of job.markets) if (!m.markets.includes(mk)) m.markets.push(mk);
       }

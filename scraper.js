@@ -1,6 +1,18 @@
 const { BOARDS, LOCATIONS } = require("./boards");
 const { keep, dedupe, deriveSeniority, sizeBucket } = require("./match");
 
+// Consider exposes a few logo variants keyed by where it found them; `manual` is the
+// curated 160px one and the best of them, with the LinkedIn scrape as a fallback.
+function logoOf(logos) {
+  if (!logos || typeof logos !== "object") return null;
+  for (const key of ["manual", "linkedin", "clearbit", "website"]) {
+    const v = logos[key];
+    if (v && typeof v === "object" && v.src) return v.src;
+    if (typeof v === "string" && v) return v;
+  }
+  return null;
+}
+
 const labels = (arr) => (arr || []).map((x) => (x && x.label) || x).filter(Boolean);
 
 function fmtSalary(min, max, currency, period) {
@@ -105,6 +117,7 @@ async function scrapeConsider(cfg) {
       stage: j.fundingLV?.label || null,
       markets: labels(j.markets),
       domain: j.companyDomain || null,
+      logo: logoOf(j.companyLogos),
       source: "board",
     });
   }
@@ -167,6 +180,7 @@ async function scrapeGetro(cfg) {
         stage: null,
         markets: j.organization?.industry_tags || [],
         domain: null,
+        logo: j.organization?.logo_url || null,
         source: "board",
       });
     }

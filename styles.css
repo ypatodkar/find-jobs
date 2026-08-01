@@ -307,7 +307,7 @@ h1.title {
   color: var(--ink-soft);
   background: var(--chip-bg);
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 5px;
   padding: 6px 12px;
   cursor: pointer;
   white-space: nowrap;
@@ -399,7 +399,7 @@ h1.title {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 3px 7px;
-  border-radius: 3px;
+  border-radius: 5px;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -444,7 +444,7 @@ a.joblink::after { content: " ↗"; }
   color: var(--ink-faint);
   background: var(--chip-bg);
   padding: 0 4px;
-  border-radius: 2px;
+  border-radius: 5px;
 }
 .no-link { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-faint); font-style: italic; }
 
@@ -482,7 +482,7 @@ footer code {
   font-size: 0.85em;
   background: var(--chip-bg);
   padding: 1px 5px;
-  border-radius: 3px;
+  border-radius: 5px;
 }
 
 /* ---- Job count badge on firm cards ---- */
@@ -497,7 +497,7 @@ footer code {
   font-family: var(--mono);
   font-size: 0.72rem;
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: 5px;
   white-space: nowrap;
   text-decoration: none;
 }
@@ -655,8 +655,12 @@ footer code {
 
 /* ---- Company groups ---- */
 .cgroup {
+  --company-role-indent: 90px;
   background: transparent;
-  margin: 0 0 18px;
+  margin: 0;
+}
+.cgroup + .cgroup {
+  border-top: 1px solid color-mix(in srgb, var(--accent) 34%, var(--rule));
 }
 
 .cg-head {
@@ -665,22 +669,23 @@ footer code {
   align-items: center;
   gap: 18px;
   padding: 18px 20px;
-  background: color-mix(in srgb, var(--accent) 9%, var(--bg));
+  background: var(--bg);
   border: none;
-  border-radius: 14px;
-  box-shadow: var(--shadow);
+  border-radius: 0;
+  box-shadow: none;
   cursor: pointer;
   text-align: left;
   font: inherit;
   color: inherit;
 }
 .cg-head:hover {
-  background: color-mix(in srgb, var(--accent) 12%, var(--bg));
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 10%, transparent);
+  background: var(--bg);
 }
+.cgroup:first-child .cg-head { border-radius: 5px 5px 0 0; }
+.cgroup:last-child:not(.is-open) .cg-head { border-radius: 0 0 5px 5px; }
 .cg-head:focus-visible { outline: 2px solid var(--accent2); outline-offset: 3px; }
 .cgroup.is-open .cg-head {
-  background: color-mix(in srgb, var(--accent) 14%, var(--bg));
+  background: var(--bg);
 }
 
 .cg-mono {
@@ -745,7 +750,7 @@ footer code {
   align-items: center;
   min-height: 26px;
   padding: 4px 9px;
-  border-radius: 999px;
+  border-radius: 5px;
   color: var(--ink-soft);
   background: var(--bg);
   white-space: nowrap;
@@ -755,9 +760,10 @@ footer code {
   font-family: var(--mono);
   font-size: 0.72rem;
   font-weight: 650;
-  color: var(--on-accent);
-  background: var(--accent);
-  border-radius: 999px;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 5px;
   padding: 6px 10px;
   white-space: nowrap;
 }
@@ -786,15 +792,15 @@ footer code {
   background: var(--bg);
   margin-top: 3px;
 }
+.cg-body .job { padding-left: var(--company-role-indent); }
 .cgroup:not(.is-open) .cg-body { display: none; }
 
 @media (prefers-reduced-motion: no-preference) {
-  .cg-head, .cg-toggle { transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
-  .cg-head:hover { transform: translateY(-1px); }
+  .cg-head, .cg-toggle { transition: background 160ms ease, color 160ms ease; }
 }
 
 @media (max-width: 620px) {
-  .cgroup { margin-bottom: 14px; }
+  .cgroup { --company-role-indent: 71px; }
   .cg-head { flex-wrap: wrap; align-items: flex-start; gap: 12px; padding: 15px; }
   .cg-mono { width: 44px; height: 44px; border-radius: 12px; font-size: 0.78rem; }
   .cg-main { flex-basis: calc(100% - 58px); }
@@ -857,7 +863,7 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   letter-spacing: 0.03em;
   color: var(--ink-soft);
   background: var(--chip-bg);
-  border-radius: 2px;
+  border-radius: 5px;
   padding: 2px 6px;
   white-space: nowrap;
 }
@@ -1074,7 +1080,7 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   color: var(--ink-faint);
   background: transparent;
   border: 1px dotted var(--rule-strong);
-  border-radius: 2px;
+  border-radius: 5px;
   padding: 2px 5px;
   white-space: nowrap;
 }
@@ -1344,7 +1350,7 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   font-variant-numeric: tabular-nums;
   background: var(--accent);
   color: var(--bg);
-  border-radius: 999px;
+  border-radius: 5px;
   padding: 0 7px;
   font-size: 0.68rem;
 }
@@ -1489,3 +1495,19 @@ html[data-theme="dark"] .heart:hover { color: #fb5c7d; }
   70% { transform: scale(0.94); }
   100% { transform: scale(1); }
 }
+
+/* Company logo in the grouped view, occupying the same box the monogram did so the
+   two are interchangeable. Contained rather than cropped: these are wordmarks and
+   squares alike, and cropping would decapitate half of them. */
+.cg-logo {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  display: grid;
+  place-items: center;
+}
+.cg-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }

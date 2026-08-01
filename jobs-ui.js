@@ -420,7 +420,7 @@
         if (!g) {
           g = { company: j.company, jobs: [], cities: new Map(), newest: 0, oldest: Infinity,
                 titleFirst: j.title, payMax: 0,
-                size: j.size, stage: j.stage, markets: j.markets || [] };
+                size: j.size, stage: j.stage, markets: j.markets || [], logo: j.logo || null };
           map.set(j.company, g);
         }
         g.jobs.push(j);
@@ -433,6 +433,7 @@
         if (pay > g.payMax) g.payMax = pay;
         if (!g.size && j.size) g.size = j.size;
         if (!g.stage && j.stage) g.stage = j.stage;
+        if (!g.logo && j.logo) g.logo = j.logo;
       }
       const groups = [...map.values()];
       if (state.sort === "company") {
@@ -485,9 +486,11 @@
       return `
         <section class="cgroup${open ? " is-open" : ""}">
           <button class="cg-head" type="button" data-company="${escapeHtml(g.company)}" aria-expanded="${open}">
-            <span class="cg-mono t${m.tint}" aria-hidden="true">${escapeHtml(m.initials)}</span>
+            ${g.logo
+              ? `<span class="cg-logo"><img src="${escapeHtml(g.logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+                   onerror="this.closest('.cg-logo').outerHTML='<span class=\\'cg-mono t${m.tint}\\' aria-hidden=\\'true\\'>${escapeHtml(m.initials)}</span>'" /></span>`
+              : `<span class="cg-mono t${m.tint}" aria-hidden="true">${escapeHtml(m.initials)}</span>`}
             <span class="cg-main">
-              <span class="cg-kicker">Company ${directoryNumber}</span>
               <span class="cg-name">${escapeHtml(g.company)}</span>
               <span class="cg-cities"><span class="cg-label">Hiring in</span>${cities}</span>
               ${backers}
