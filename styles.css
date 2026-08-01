@@ -655,7 +655,8 @@ footer code {
 
 /* ---- Company groups ---- */
 .cgroup {
-  --company-role-indent: 90px;
+  /* head padding-left + badge + gap, so expanded roles line up under the name */
+  --company-role-indent: 72px;
   background: transparent;
   margin: 0;
 }
@@ -688,19 +689,31 @@ footer code {
   background: var(--bg);
 }
 
+/* Monogram and logo share one box so the onerror fallback swaps in place without
+   shifting the row. Only three of 816 companies still land here. */
 .cg-mono {
   flex: 0 0 auto;
-  width: 52px;
-  height: 52px;
-  border-radius: 15px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
   font-family: var(--mono);
-  font-size: 0.9rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--accent);
   background: transparent;
+}
+
+/* The badge belongs to the company name, not to the card. Centring it against the
+   whole head drops it to the middle of the meta block — 22px below the name, and
+   further still for a company hiring in enough cities to wrap to three lines. Pin
+   it to the top and lift it so its centre lands on the name's own line box. */
+.cg-mono,
+.cg-logo {
+  align-self: flex-start;
+  margin-top: -5px;
 }
 
 .cg-main { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
@@ -800,9 +813,12 @@ footer code {
 }
 
 @media (max-width: 620px) {
-  .cgroup { --company-role-indent: 71px; }
+  .cgroup { --company-role-indent: 61px; }
   .cg-head { flex-wrap: wrap; align-items: flex-start; gap: 12px; padding: 15px; }
-  .cg-mono { width: 44px; height: 44px; border-radius: 12px; font-size: 0.78rem; }
+  /* Same badge size as desktop; only the lift changes, because the name is set a
+     little smaller here and its line box is correspondingly shorter. */
+  .cg-mono,
+  .cg-logo { margin-top: -7px; }
   .cg-main { flex-basis: calc(100% - 58px); }
   .cg-name { font-size: 1.12rem; }
   .cg-right { min-width: 0; flex: 1 1 100%; justify-content: space-between; align-items: flex-end; }
