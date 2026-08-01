@@ -655,129 +655,154 @@ footer code {
 
 /* ---- Company groups ---- */
 .cgroup {
-  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--rule));
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--accent) 3%, var(--bg));
-  margin-bottom: 8px;
-  overflow: hidden;
-  position: relative;
+  background: transparent;
+  margin: 0 0 18px;
 }
-.cgroup::before {
-  /* A stripe that only appears when open — cheaper on the eye than a colour flood. */
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  background: var(--accent2);
-  opacity: 0;
-}
-.cgroup.is-open {
-  border-color: color-mix(in srgb, var(--accent) 62%, var(--rule));
-  box-shadow: 0 5px 18px color-mix(in srgb, var(--accent) 9%, transparent);
-}
-.cgroup.is-open::before { opacity: 1; }
-.cgroup:hover { border-color: var(--rule-strong); }
 
 .cg-head {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 13px 16px;
-  background: none;
+  gap: 18px;
+  padding: 18px 20px;
+  background: color-mix(in srgb, var(--accent) 9%, var(--bg));
   border: none;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
   cursor: pointer;
   text-align: left;
   font: inherit;
   color: inherit;
 }
-.cg-head:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
-.cg-head:focus-visible { outline: 2px solid var(--accent2); outline-offset: -2px; }
+.cg-head:hover {
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.cg-head:focus-visible { outline: 2px solid var(--accent2); outline-offset: 3px; }
+.cgroup.is-open .cg-head {
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg));
+}
 
 .cg-mono {
   flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
   display: grid;
   place-items: center;
   font-family: var(--mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.02em;
-  color: var(--ink);
-  background: var(--chip-bg);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  background: transparent;
 }
-/* Muted tints kept inside the page's own hue family, not a rainbow. */
-.cg-mono.t0 { background: color-mix(in oklab, var(--accent2) 18%, var(--chip-bg)); }
-.cg-mono.t1 { background: color-mix(in oklab, var(--accent) 16%, var(--chip-bg)); }
-.cg-mono.t2 { background: color-mix(in oklab, var(--accent2) 30%, var(--chip-bg)); }
-.cg-mono.t3 { background: color-mix(in oklab, var(--accent) 28%, var(--chip-bg)); }
-.cg-mono.t4 { background: color-mix(in oklab, var(--accent2) 38%, var(--chip-bg)); }
-.cg-mono.t5 { background: color-mix(in oklab, var(--accent2) 45%, var(--chip-bg)); }
 
-.cg-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cg-main { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cg-kicker,
+.cg-label {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.cg-label { margin-right: 8px; }
 .cg-name {
   font-family: var(--serif);
-  font-size: 1.04rem;
+  font-size: 1.25rem;
+  font-weight: 650;
+  line-height: 1.2;
   color: var(--ink);
   overflow-wrap: anywhere;
 }
 .cg-cities, .cg-facts {
   font-family: var(--mono);
-  font-size: 0.71rem;
+  font-size: 0.73rem;
   color: var(--ink-faint);
 }
+.cg-cities { margin-top: 3px; }
 .cg-n { color: var(--ink-soft); }
 .cg-sep { margin: 0 6px; color: var(--rule-strong); }
 .cg-backers {
   font-family: var(--mono);
-  font-size: 0.67rem;
-  color: var(--accent);
-  opacity: 1;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
 }
 
-.cg-right { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.cg-count {
-  font-family: var(--mono);
-  font-size: 0.71rem;
-  color: var(--accent2);
-  background: var(--accent2-fill);
-  border: 1px solid var(--accent2);
+.cg-right {
+  flex: 0 1 45%;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+}
+.cg-facts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.cg-fact {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 9px;
   border-radius: 999px;
-  padding: 2px 9px;
+  color: var(--ink-soft);
+  background: var(--bg);
   white-space: nowrap;
 }
-.cg-chev { flex: 0 0 auto; color: var(--ink-faint); }
-.cgroup.is-open .cg-chev { transform: rotate(180deg); }
+.cg-action { flex: 0 0 auto; display: flex; align-items: center; gap: 9px; }
+.cg-count {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: var(--on-accent);
+  background: var(--accent);
+  border-radius: 999px;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+.cg-toggle {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  background: var(--bg);
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1;
+}
+.cg-toggle::before { content: "+"; transform: translateY(-1px); }
+.cgroup.is-open .cg-toggle {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+.cgroup.is-open .cg-toggle::before { content: "−"; }
 
 .cg-body {
-  border-top: 1px solid color-mix(in srgb, var(--accent) 20%, var(--rule));
-  background: color-mix(in srgb, var(--accent) 7%, var(--bg));
-  padding: 7px 12px 12px 15px;
+  background: var(--bg);
+  margin-top: 3px;
 }
 .cgroup:not(.is-open) .cg-body { display: none; }
-.cg-body .job {
-  margin: 6px 0;
-  padding: 12px 14px;
-  background: var(--bg);
-  border: 1px solid var(--rule);
-  border-radius: 7px;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 6%, transparent);
-}
-.cg-body .job:hover {
-  background: var(--surface);
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--rule));
-}
-.cg-body .job:last-child { border-bottom: 1px solid var(--rule); }
 
 @media (prefers-reduced-motion: no-preference) {
-  .cg-chev, .cgroup, .cgroup::before { transition: transform 160ms ease, border-color 160ms ease, opacity 160ms ease; }
+  .cg-head, .cg-toggle { transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+  .cg-head:hover { transform: translateY(-1px); }
 }
 
 @media (max-width: 620px) {
-  .cg-head { flex-wrap: wrap; gap: 10px; }
-  .cg-right { align-items: flex-start; flex-direction: row; gap: 10px; width: 100%; }
-  .cg-facts { order: 2; }
+  .cgroup { margin-bottom: 14px; }
+  .cg-head { flex-wrap: wrap; align-items: flex-start; gap: 12px; padding: 15px; }
+  .cg-mono { width: 44px; height: 44px; border-radius: 12px; font-size: 0.78rem; }
+  .cg-main { flex-basis: calc(100% - 58px); }
+  .cg-name { font-size: 1.12rem; }
+  .cg-right { min-width: 0; flex: 1 1 100%; justify-content: space-between; align-items: flex-end; }
+  .cg-facts { justify-content: flex-start; }
+  .cg-fact { min-height: 23px; padding: 3px 7px; font-size: 0.66rem; }
+  .cg-action { align-self: flex-end; }
 }
 
 .job-list { display: flex; flex-direction: column; gap: 0; }
@@ -1173,8 +1198,6 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   .job-side { align-items: flex-start; }
   .job-tags { justify-content: flex-start; }
   .job-meta { text-align: left; }
-  .cg-body { padding: 6px 8px 9px 11px; }
-  .cg-body .job { padding: 11px 12px; }
   .pagination {
     width: 100%;
     display: grid;
@@ -1424,4 +1447,45 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 /* On narrow screens the header is already carrying nav, name and theme toggle. */
 @media (max-width: 720px) {
   #counter-slot { display: none; }
+}
+
+/* ---- Heart ----
+   Hollow outline until tapped, then filled red for good. Red rather than the accent
+   on purpose: this is affection, not another control, and it should not read as part
+   of the interface chrome. */
+#heart-slot { display: flex; align-items: center; }
+
+.heart {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  cursor: pointer;
+  color: var(--ink-faint);
+}
+.heart svg { fill: none; stroke: currentColor; stroke-width: 1.7; }
+.heart:hover { color: #e11d48; }
+.heart:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+
+.heart.is-liked { color: #e11d48; cursor: default; }
+.heart.is-liked svg { fill: #e11d48; stroke: #e11d48; }
+/* Slightly brighter on dark, where the deep rose goes muddy. */
+html[data-theme="dark"] .heart.is-liked { color: #fb5c7d; }
+html[data-theme="dark"] .heart.is-liked svg { fill: #fb5c7d; stroke: #fb5c7d; }
+html[data-theme="dark"] .heart:hover { color: #fb5c7d; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .heart svg { transition: transform 160ms ease, fill 160ms ease, stroke 160ms ease; }
+  .heart:hover svg { transform: scale(1.12); }
+  .heart.just-liked svg { animation: heart-pop 420ms ease; }
+}
+@keyframes heart-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); }
+  70% { transform: scale(0.94); }
+  100% { transform: scale(1); }
 }

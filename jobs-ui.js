@@ -453,10 +453,11 @@
       return groups;
     }
 
-    function groupHtml(g) {
+    function groupHtml(g, index) {
       const open = state.expanded.has(g.company);
       const m = monogram(g.company);
       const n = g.jobs.length;
+      const directoryNumber = String(index + 1).padStart(2, "0");
 
       const cities = [...g.cities.entries()].sort((a, b) => b[1] - a[1])
         .map(([c, k]) => `${escapeHtml(c)}${n > 1 ? ` <span class="cg-n">${k}</span>` : ""}`).join("<span class=\"cg-sep\">·</span>");
@@ -466,7 +467,7 @@
         g.stage,
         g.payMax ? "up to $" + Math.round(g.payMax / 1000) + "k" : null,
         relativeDate(new Date(g.newest).toISOString()),
-      ].filter(Boolean).map(escapeHtml).join("<span class=\"cg-sep\">·</span>");
+      ].filter(Boolean).map((fact) => `<span class="cg-fact">${escapeHtml(fact)}</span>`).join("");
 
       const rows = open ? g.jobs.map((j) => jobHtml(j, true)).join("") : "";
 
@@ -477,7 +478,7 @@
         if (all.length) {
           const names = all.slice(0, 3).map((f) => escapeHtml(cfg.firmLabel(f)));
           const extra = all.length > 3 ? ` +${all.length - 3}` : "";
-          backers = `<span class="cg-backers">${names.join("<span class=\"cg-sep\">·</span>")}${extra}</span>`;
+          backers = `<span class="cg-backers"><span class="cg-label">Backed by</span>${names.join("<span class=\"cg-sep\">·</span>")}${extra}</span>`;
         }
       }
 
@@ -486,17 +487,18 @@
           <button class="cg-head" type="button" data-company="${escapeHtml(g.company)}" aria-expanded="${open}">
             <span class="cg-mono t${m.tint}" aria-hidden="true">${escapeHtml(m.initials)}</span>
             <span class="cg-main">
+              <span class="cg-kicker">Company ${directoryNumber}</span>
               <span class="cg-name">${escapeHtml(g.company)}</span>
-              <span class="cg-cities">${cities}</span>
+              <span class="cg-cities"><span class="cg-label">Hiring in</span>${cities}</span>
               ${backers}
             </span>
             <span class="cg-right">
               <span class="cg-facts">${facts}</span>
-              <span class="cg-count">${n} role${n === 1 ? "" : "s"}</span>
+              <span class="cg-action">
+                <span class="cg-count">${n} role${n === 1 ? "" : "s"}</span>
+                <span class="cg-toggle" aria-hidden="true"></span>
+              </span>
             </span>
-            <svg class="cg-chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-              <path d="M3 4.5 L6 7.5 L9 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
           </button>
           <div class="cg-body">${rows}</div>
         </section>`;
@@ -597,7 +599,9 @@
       el.count.textContent = groups.length
         ? `Showing ${start + 1}–${start + slice.length} of ${groups.length} companies · ${results.length} roles`
         : "0 companies · 0 roles";
-      el.list.innerHTML = slice.length ? slice.map(groupHtml).join("") : `<p class="empty">No roles match those filters.</p>`;
+      el.list.innerHTML = slice.length
+        ? slice.map((group, index) => groupHtml(group, start + index)).join("")
+        : `<p class="empty">No roles match those filters.</p>`;
       renderPagination(pageCount);
     }
 

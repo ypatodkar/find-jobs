@@ -1,6 +1,7 @@
 // Click collector, plus accounts.
 //   POST /click                    record one click        (called by track.js via sendBeacon)
 //   POST /filter                   record a saved/applied view (called by presets.js)
+//   POST /like                     one-way heart, per browser
 //   GET  /stats                    public totals for the header counter
 //   GET  /counts                   { job_id: clicks, ... } (private — needs ADMIN_TOKEN)
 //   GET  /auth/:provider/start     redirect to GitHub/Google's consent screen
@@ -347,6 +348,38 @@ export default {
       return new Response(null, { status: 204, headers: cors });
     }
 
+    // One-way, one-per-browser. COALESCE keeps the first like's timestamp, so a
+    // repeat tap is a no-op rather than a fresh row or a moved date — the heart is
+    // "I liked this", not a counter to farm.
+    if (req.method === "POST" && url.pathname === "/like") {
+      if (!cors) return new Response(null, { status: 403 });
+
+      let body;
+      try {
+        body = JSON.parse(await req.text());
+      } catch {
+        return new Response(null, { status: 400, headers: cors });
+      }
+
+      const visitor = visitorOf(body);
+      if (!visitor) return new Response(null, { status: 400, headers: cors });
+
+      const now = Date.now();
+      await env.DB.prepare(
+        `INSERT INTO visitors (visitor_id, name, first_seen, last_seen, country, liked_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(visitor_id) DO UPDATE SET
+           last_seen = excluded.last_seen,
+           name      = COALESCE(excluded.name, visitors.name),
+           country   = COALESCE(excluded.country, visitors.country),
+           liked_at  = COALESCE(visitors.liked_at, excluded.liked_at)`
+      )
+        .bind(visitor, clip(body.visitor_name), now, now, req.cf?.country || null, now)
+        .run();
+
+      return new Response(null, { status: 204, headers: cors });
+    }
+
     // Public aggregate for the counter in the site header. Deliberately totals only —
     // the per-job breakdown stays behind /counts and ADMIN_TOKEN. Origin-checked like
     // the write routes, and edge-cached so a busy page never becomes D1 load.
@@ -355,7 +388,8 @@ export default {
       const row = await env.DB.prepare(
         `SELECT (SELECT COUNT(*) FROM clicks) AS clicks,
                 (SELECT COUNT(DISTINCT job_id) FROM clicks) AS jobs,
-                (SELECT COUNT(*) FROM visitors) AS visitors`
+                (SELECT COUNT(*) FROM visitors) AS visitors,
+                (SELECT COUNT(*) FROM visitors WHERE liked_at IS NOT NULL) AS likes`
       ).first();
       return new Response(JSON.stringify(row || { clicks: 0, jobs: 0, visitors: 0 }), {
         headers: { ...cors, "content-type": "application/json", "cache-control": "public, max-age=300" },

@@ -119,6 +119,7 @@ CREATE INDEX IF NOT EXISTS idx_filter_events_action ON filter_events (action);
 CREATE TABLE IF NOT EXISTS visitors (
   visitor_id TEXT PRIMARY KEY,
   name       TEXT,
+  liked_at   INTEGER,          -- when they tapped the heart; NULL = never. One-way.
   first_seen INTEGER NOT NULL,
   last_seen  INTEGER NOT NULL,
   country    TEXT
