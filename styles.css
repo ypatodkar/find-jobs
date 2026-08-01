@@ -1366,3 +1366,23 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
    look like a link. The badge and the external site link still work. */
 .card-static { cursor: default; }
 .card-static:hover { border-color: var(--rule); }
+
+/* Undo sits beside Reset: both act on the filter set, but undo is the reversible
+   one, so it stays quieter than the accent-filled Reset. */
+.undo-btn {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.undo-btn:hover { border-color: var(--rule-strong); color: var(--ink); }
+.undo-btn:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+.undo-btn[disabled] { opacity: 0.45; cursor: default; }
+/* Reset keeps the right edge when both are shown. */
+.undo-btn + .reset-btn { margin-left: 10px; }

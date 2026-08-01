@@ -204,6 +204,7 @@
       dateSelect: $("date-select"),
       salarySelect: $("salary-select"),
       resetBtn: $("reset-filters"),
+      undoBtn: $("undo-filters"),
       sortSelect: $("sort-select"),
       count: $("job-count"),
       list: $("job-list"),
@@ -321,6 +322,9 @@
               renderResults();
               refreshOtherPickers(d.key);
               updateResetBtn();
+              // Ticking a dropdown deliberately skips render() — it must not rebuild
+              // the list under the cursor — so history is recorded here too.
+              if (!restoring) recordHistory();
               listeners.forEach((fn) => fn());
             },
           }
@@ -607,6 +611,11 @@
 
     function updateResetBtn() {
       const n = activeCount();
+      if (el.undoBtn) {
+        el.undoBtn.addEventListener("click", undo);
+        updateUndoBtn();
+      }
+
       if (el.resetBtn) {
         el.resetBtn.hidden = n === 0;
         el.resetBtn.textContent = `Reset ${n} filter${n === 1 ? "" : "s"}`;
@@ -625,11 +634,75 @@
     // preset (if any) matches the current state.
     const listeners = [];
 
+    // ---- undo ----
+    // Every filter change funnels through render(), so history is captured in one
+    // place rather than instrumenting each control. We snapshot the state we are
+    // leaving, not the one we are arriving at, so undo steps backwards.
+    //
+    // Applying a saved filter is a single change and therefore a single undo step:
+    // one press returns you to whatever you had before you recalled it. Undo only
+    // ever restores filter state — it never touches the saved filters themselves,
+    // so it can't delete a preset you spent time building.
+    const HISTORY_MAX = 25;
+    const COALESCE_MS = 1200; // typing in the search box collapses into one step
+    const history = [];
+    let previous = null;   // the state as it was after the last settled change
+    let lastPushAt = 0;
+    let restoring = false; // guard: undo calls render(), which must not re-record
+
+    const sameFilters = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+    // True when the only thing that moved is the free-text query, which is what makes
+    // a burst of keystrokes collapse into one undo step instead of twenty.
+    function onlyQueryChanged(a, b) {
+      if (!a || !b) return false;
+      return a.query !== b.query && sameFilters({ ...a, query: "" }, { ...b, query: "" });
+    }
+
+    function recordHistory() {
+      const now = view.getFilters();
+      if (previous === null) { previous = now; return; }
+      if (sameFilters(now, previous)) return;
+
+      const t = Date.now();
+      const coalesce =
+        history.length &&
+        onlyQueryChanged(previous, now) &&
+        onlyQueryChanged(history[history.length - 1], previous) &&
+        t - lastPushAt < COALESCE_MS;
+
+      if (!coalesce) {
+        history.push(previous);
+        if (history.length > HISTORY_MAX) history.shift();
+        lastPushAt = t;
+      }
+      previous = now;
+      updateUndoBtn();
+    }
+
+    function updateUndoBtn() {
+      if (!el.undoBtn) return;
+      el.undoBtn.hidden = history.length === 0;
+      el.undoBtn.disabled = history.length === 0;
+    }
+
+    function undo() {
+      if (!history.length) return;
+      const target = history.pop();
+      restoring = true;
+      view.applyFilters(target);
+      restoring = false;
+      previous = view.getFilters();
+      updateUndoBtn();
+      listeners.forEach((fn) => fn()); // let the saved-filters bar re-evaluate its match
+    }
+
     function render() {
       state.page = 1;
       refreshAllPickers();
       renderResults();
       updateResetBtn();
+      if (!restoring) recordHistory();
       listeners.forEach((fn) => fn());
     }
 
