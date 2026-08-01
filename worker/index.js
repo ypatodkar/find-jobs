@@ -1,6 +1,7 @@
 // Click collector, plus accounts.
 //   POST /click                    record one click        (called by track.js via sendBeacon)
 //   POST /filter                   record a saved/applied view (called by presets.js)
+//   GET  /stats                    public totals for the header counter
 //   GET  /counts                   { job_id: clicks, ... } (private — needs ADMIN_TOKEN)
 //   GET  /auth/:provider/start     redirect to GitHub/Google's consent screen
 //   GET  /auth/:provider/callback  exchange the code, open a session, redirect back to the site
@@ -344,6 +345,21 @@ export default {
       await env.DB.batch(stmts);
 
       return new Response(null, { status: 204, headers: cors });
+    }
+
+    // Public aggregate for the counter in the site header. Deliberately totals only —
+    // the per-job breakdown stays behind /counts and ADMIN_TOKEN. Origin-checked like
+    // the write routes, and edge-cached so a busy page never becomes D1 load.
+    if (req.method === "GET" && url.pathname === "/stats") {
+      if (!cors) return new Response(null, { status: 403 });
+      const row = await env.DB.prepare(
+        `SELECT (SELECT COUNT(*) FROM clicks) AS clicks,
+                (SELECT COUNT(DISTINCT job_id) FROM clicks) AS jobs,
+                (SELECT COUNT(*) FROM visitors) AS visitors`
+      ).first();
+      return new Response(JSON.stringify(row || { clicks: 0, jobs: 0, visitors: 0 }), {
+        headers: { ...cors, "content-type": "application/json", "cache-control": "public, max-age=300" },
+      });
     }
 
     if (req.method === "GET" && url.pathname === "/counts") {

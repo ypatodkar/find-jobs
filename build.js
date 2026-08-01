@@ -26,7 +26,7 @@ const ASSETS = [
   "styles.css", "og.png", "robots.txt", "sitemap.xml", "404.html",
   "fonts/geist-sans-400.woff2", "fonts/geist-sans-500.woff2",
   "fonts/geist-sans-600.woff2", "fonts/geist-sans-700.woff2",
-  "data.js", "jobs-ui.js", "presets.js", "all.js", "app.js", "firm.js", "track.js", "visitor.js", "viewed.js", "auth.js",
+  "data.js", "jobs-ui.js", "presets.js", "all.js", "app.js", "firm.js", "track.js", "visitor.js", "viewed.js", "counter.js", "auth.js",
 ];
 
 async function writeJson(rel, body) {

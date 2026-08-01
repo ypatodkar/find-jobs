@@ -1386,3 +1386,42 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 .undo-btn[disabled] { opacity: 0.45; cursor: default; }
 /* Reset keeps the right edge when both are shown. */
 .undo-btn + .reset-btn { margin-left: 10px; }
+
+/* ---- Live click counter ----
+   Centred in the header between the nav and the greeting — the one empty spot up
+   there. Quiet by design: it is ambient reassurance that the site is in use, not a
+   headline, so it never competes with the page title. */
+#counter-slot { display: flex; justify-content: center; flex: 1 1 auto; min-width: 0; }
+
+.counter {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  cursor: help;
+}
+.counter-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent2);
+  align-self: center;
+  flex: 0 0 auto;
+}
+.counter-n { color: var(--accent); font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .counter-dot { animation: counter-pulse 2.6s ease-in-out infinite; }
+}
+@keyframes counter-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* On narrow screens the header is already carrying nav, name and theme toggle. */
+@media (max-width: 720px) {
+  #counter-slot { display: none; }
+}
