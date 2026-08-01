@@ -22,10 +22,13 @@
     if (!top) return null;
     el = document.createElement("div");
     el.id = MOUNT_ID;
-    // Between the nav on the left and the greeting on the right, which is the one
-    // genuinely empty spot in the header.
-    var greeting = document.getElementById("visitor-slot");
-    top.insertBefore(el, greeting || top.lastElementChild);
+    // Between the nav on the left and the actions on the right, which is the one
+    // genuinely empty spot in the header. The reference node must be a direct child
+    // of `top` — #visitor-slot is nested inside .masthead-actions, and passing it
+    // here throws NotFoundError.
+    var ref = top.querySelector(".masthead-actions");
+    if (ref && ref.parentNode === top) top.insertBefore(el, ref);
+    else top.appendChild(el);
     return el;
   }
 
@@ -47,10 +50,12 @@
     if (!ENDPOINT) return;
     fetch(ENDPOINT + "/stats", { credentials: "omit" })
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(render)
       .catch(function () {
-        /* offline, blocked, or worker down — the counter just stays absent */
-      });
+        return null; // offline, blocked, or worker down — the counter stays absent
+      })
+      // Outside the catch on purpose: a fetch failure is expected and silent, but a
+      // rendering bug should reach the console rather than look like a dead endpoint.
+      .then(function (stats) { if (stats) render(stats); });
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", load);
