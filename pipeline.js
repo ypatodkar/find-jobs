@@ -139,6 +139,49 @@ function resultsPayload(data) {
   return { scrapedAt: data.scrapedAt, firms: summarize(data) };
 }
 
+// Facts that describe a company rather than a role. Repeating them on every one of
+// that company's listings was half of all-jobs.json: 3.4MB of logo URLs and 2.4MB of
+// market tags across 11,691 rows that held 1,624 distinct values between them.
+//
+// Hoisting them also settles a disagreement. A company's board-sourced rows carry the
+// metadata of whichever board reported them, while its ATS-sourced rows carry the
+// merged registry value, so 41 companies published two different `size` values and the
+// company-size filter matched some of their roles but not others. One value per
+// company, first non-empty wins — the same rule ats.js already uses to merge them.
+const COMPANY_FIELDS = ["logo", "markets", "domain", "staffCount", "size", "stage"];
+
+const isEmpty = (v) => v == null || (Array.isArray(v) && v.length === 0);
+
+/**
+ * Split company-level fields out of the job rows into a lookup table the jobs index
+ * into. `companyFields` travels with the payload so the client can reverse this
+ * without keeping its own copy of the list to drift out of sync.
+ */
+function packCompanies(jobs) {
+  const order = [];
+  const byName = new Map();
+  for (const job of jobs) {
+    let co = byName.get(job.company);
+    if (!co) {
+      co = { n: job.company };
+      byName.set(job.company, co);
+      order.push(co);
+    }
+    for (const f of COMPANY_FIELDS) if (isEmpty(co[f]) && !isEmpty(job[f])) co[f] = job[f];
+  }
+  const index = new Map(order.map((co, i) => [co.n, i]));
+
+  const packed = jobs.map((job) => {
+    const out = { c: index.get(job.company) };
+    for (const k of Object.keys(job)) {
+      if (k === "company" || COMPANY_FIELDS.includes(k)) continue;
+      out[k] = job[k];
+    }
+    return out;
+  });
+  return { companyFields: COMPANY_FIELDS, companies: order, jobs: packed };
+}
+
 /**
  * Every role across every firm, deduped. The same company can sit in several
  * portfolios, so a job carries the list of investors that back it.
@@ -164,7 +207,7 @@ function allJobsPayload(data) {
   return {
     scrapedAt: data.scrapedAt,
     enrichment: data.enrichment || null,
-    jobs: [...merged.values()],
+    ...packCompanies([...merged.values()]),
   };
 }
 

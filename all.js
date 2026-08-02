@@ -76,6 +76,30 @@
     if (!controls.hidden) setMobileFiltersCollapsed(event.matches);
   });
 
+  /**
+   * Reverse pipeline.js's packCompanies: put each company's facts back onto its
+   * rows, so every consumer downstream sees the same job objects it always has.
+   *
+   * The field list rides along in the payload rather than being repeated here, and
+   * a payload without a companies table is passed through unchanged — a browser
+   * holding a cached copy of the old flat shape still renders.
+   */
+  function expand(data) {
+    const companies = data.companies;
+    if (!companies) return data.jobs || [];
+    const fields = data.companyFields || [];
+    return (data.jobs || []).map(function (job) {
+      const co = companies[job.c] || {};
+      const out = {};
+      for (const k in job) if (k !== "c") out[k] = job[k];
+      out.company = co.n;
+      // Absent means empty, which is what it meant before packing too; every reader
+      // already guards with `|| []` or `|| null`.
+      for (const f of fields) if (co[f] !== undefined) out[f] = co[f];
+      return out;
+    });
+  }
+
   function load() {
     // Relative, and ending in .json: server.js answers this path live, and build.js
     // writes a real file at the same path. Relative matters because Pages serves a
@@ -86,7 +110,7 @@
       return r.json();
     })
     .then((data) => {
-      const jobs = data.jobs || [];
+      const jobs = expand(data);
       if (!jobs.length) {
         hideJobsUI();
         view.setJobs([]);
