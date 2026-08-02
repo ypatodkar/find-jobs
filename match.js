@@ -3,12 +3,34 @@
 
 const { CITY_MATCHERS, ROLE_PATTERNS, EXCLUDE_TITLE } = require("./boards");
 
+const REMOTE_RE = /\bremote\b|\bwork from home\b|\banywhere\b|\bdistributed\b/i;
+// Remote postings routinely name the region they're open to. We only track US roles,
+// so a remote listing scoped to somewhere else is not a match.
+const NON_US_RE =
+  /\b(emea|apac|latam|europe|european|united kingdom|u\.?k\.?|canada|toronto|vancouver|india|bangalore|bengaluru|hyderabad|germany|berlin|munich|france|paris|spain|barcelona|madrid|poland|warsaw|krakow|portugal|lisbon|netherlands|amsterdam|ireland|dublin|israel|tel aviv|brazil|mexico|argentina|colombia|singapore|australia|sydney|japan|tokyo|china|shanghai|korea|philippines|vietnam|nigeria|kenya|south africa|switzerland|sweden|norway|denmark|finland|italy|romania|ukraine|turkey|uae|dubai)\b/i;
+
+/**
+ * Bucket a job's locations into one tracked metro, or "Remote".
+ *
+ * Two passes on purpose. A posting listed as ["Remote", "San Francisco"] should
+ * count as San Francisco — it's a real desk in a metro we track — so every named
+ * metro is ruled out across all of its locations before remote is considered.
+ * A single loop would return whichever matched the first location string.
+ */
 function matchCity(locations) {
   for (const raw of locations) {
     if (!raw) continue;
     for (const m of CITY_MATCHERS) {
       if (m.re.test(raw)) return m.city;
     }
+  }
+  // Tested across the whole set, not per string: a posting listed as
+  // ["Remote", "Bangalore, India"] is a remote role for India, and reading only
+  // the bare "Remote" would admit it.
+  if (locations.some((l) => l && NON_US_RE.test(l))) return null;
+  for (const raw of locations) {
+    if (!raw) continue;
+    if (REMOTE_RE.test(raw)) return "Remote";
   }
   return null;
 }

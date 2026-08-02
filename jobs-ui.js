@@ -5,12 +5,20 @@
 (function (global) {
   "use strict";
 
+  // Mirrors the labels on ROLE_PATTERNS in boards.js. Kept as its own copy because
+  // boards.js is a CommonJS module the browser never loads; a key added there and
+  // missed here surfaces in the filter as a raw slug rather than breaking.
   const ROLE_LABELS = {
     ai: "AI / ML",
     backend: "Backend",
     infra: "Infra / Platform",
     fullstack: "Full-stack",
     frontend: "Frontend",
+    data: "Data",
+    security: "Security",
+    mobile: "Mobile",
+    solutions: "Solutions / FDE",
+    qa: "QA / Test",
     swe: "Software Eng",
   };
   const DATE_RANGES = [

@@ -13,6 +13,20 @@ const BOARDS = {
   "bessemer":            { platform: "consider", host: "jobs.bvp.com", boardId: "bessemer-ventures" },
   "kleiner-perkins":     { platform: "consider", host: "jobs.kleinerperkins.com", boardId: "kleiner-perkins" },
   "greylock":            { platform: "consider", host: "jobs.greylock.com", boardId: "greylock-partners" },
+  "ivp":                 { platform: "consider", host: "careers.ivp.com", boardId: "ivp" },
+  "felicis":             { platform: "consider", host: "jobs.felicis.com", boardId: "felicis" },
+  "point72-ventures":    { platform: "consider", host: "jobs.p72.vc", boardId: "point72-ventures" },
+  "bain-capital-ventures": { platform: "consider", host: "jobs.baincapitalventures.com", boardId: "bain-ventures" },
+  "forerunner":          { platform: "consider", host: "jobs.forerunnerventures.com", boardId: "forerunner-ventures" },
+  "first-round":         { platform: "consider", host: "jobs.firstround.com", boardId: "first-round-capital" },
+  "crv":                 { platform: "consider", host: "jobs.crv.com", boardId: "crv" },
+  "initialized":         { platform: "consider", host: "jobs.initialized.com", boardId: "initialized" },
+  "amplify":             { platform: "consider", host: "talent.amplifypartners.com", boardId: "amplify-partners" },
+  "costanoa":            { platform: "consider", host: "jobs.costanoavc.com", boardId: "costanoa-ventures" },
+  "gradient":            { platform: "consider", host: "careers.gradient.com", boardId: "gradient-ventures" },
+  "playground-global":   { platform: "consider", host: "careers.playground.global", boardId: "playground-global" },
+  "qed":                 { platform: "consider", host: "careers.qedinvestors.com", boardId: "qed-investors" },
+  "zetta":               { platform: "consider", host: "careers.zettavp.com", boardId: "zetta-venture-partners" },
 
   "khosla":              { platform: "getro", host: "jobs.khoslaventures.com", networkId: 257 },
   "general-catalyst":    { platform: "getro", host: "jobs.generalcatalyst.com", networkId: 222 },
@@ -22,6 +36,31 @@ const BOARDS = {
   "craft":               { platform: "getro", host: "jobs.craftventures.com", networkId: 340 },
   "notable-capital":     { platform: "getro", host: "jobs.notablecap.com", networkId: 764 },
   "thrive":              { platform: "getro", host: "jobs.thrivecap.com", networkId: 2105 },
+  "8vc":                 { platform: "getro", host: "jobs.8vc.com", networkId: 1005 },
+  "lux-capital":         { platform: "getro", host: "jobs.luxcapital.com", networkId: 103 },
+  "sapphire":            { platform: "getro", host: "jobs.sapphireventures.com", networkId: 199 },
+  "dcvc":                { platform: "getro", host: "jobs.dcvc.com", networkId: 514 },
+  "wing":                { platform: "getro", host: "careers.wing.vc", networkId: 43520 },
+  "canaan":              { platform: "getro", host: "careers.canaan.com", networkId: 1419 },
+  "homebrew":            { platform: "getro", host: "careers.homebrew.co", networkId: 440 },
+  "signalfire":          { platform: "getro", host: "jobs.signalfire.com", networkId: 135 },
+  "true-ventures":       { platform: "getro", host: "jobs.trueventures.com", networkId: 646 },
+  "greycroft":           { platform: "getro", host: "jobs.greycroft.com", networkId: 616 },
+  "madrona":             { platform: "getro", host: "jobs.madrona.com", networkId: 151 },
+  "uncork":              { platform: "getro", host: "jobs.uncorkcapital.com", networkId: 247 },
+  "basis-set":           { platform: "getro", host: "jobs.basisset.com", networkId: 619 },
+  "lerer-hippeau":       { platform: "getro", host: "jobs.lererhippeau.com", networkId: 120 },
+  "upfront":             { platform: "getro", host: "jobs.upfront.com", networkId: 184 },
+  "innovation-endeavors": { platform: "getro", host: "jobs.innovationendeavors.com", networkId: 156 },
+  "primary":             { platform: "getro", host: "jobs.primary.vc", networkId: 1124 },
+  "scale-vp":            { platform: "getro", host: "jobs.scalevp.com", networkId: 776 },
+  "georgian":            { platform: "getro", host: "careers.georgian.io", networkId: 14282 },
+  "obvious":             { platform: "getro", host: "jobs.obvious.com", networkId: 69 },
+  "nfx":                 { platform: "getro", host: "jobs.nfx.com", networkId: 307 },
+  "sierra-ventures":     { platform: "getro", host: "careers.sierraventures.com", networkId: 825 },
+  "freestyle":           { platform: "getro", host: "jobs.freestyle.vc", networkId: 108 },
+  "m13":                 { platform: "getro", host: "jobs.m13.co", networkId: 318 },
+  "glasswing":           { platform: "getro", host: "jobs.glasswing.vc", networkId: 215 },
 
   // Boards that exist but can't be scraped, with the reason surfaced in the UI.
   "accel":          { platform: null, host: "jobs.accel.com", reason: "Board is behind Cloudflare bot protection" },
@@ -35,17 +74,11 @@ const BOARDS = {
   "tiger-global": { platform: null, host: "tigerglobal.com", reason: "No public portfolio job board" },
   "battery":      { platform: null, host: "batteryventures.com", reason: "No public portfolio job board" },
   "benchmark":    { platform: null, host: "benchmark.com", reason: "No public portfolio job board" },
-  "ivp":          { platform: null, host: "ivp.com", reason: "No public portfolio job board" },
-  "crv":          { platform: null, host: "crv.com", reason: "No public portfolio job board" },
   "mayfield":     { platform: null, host: "mayfield.com", reason: "No public portfolio job board" },
   "emergence":    { platform: null, host: "emergencecap.com", reason: "No public portfolio job board" },
-  "scale-vp":     { platform: null, host: "scalevp.com", reason: "No public portfolio job board" },
-  "sapphire":     { platform: null, host: "sapphireventures.com", reason: "No public portfolio job board" },
   "conviction":   { platform: null, host: "conviction.com", reason: "AI-native specialist — publishes no portfolio job board" },
   "radical":      { platform: null, host: "radical.vc", reason: "AI-native specialist — publishes no portfolio job board" },
   "aix":          { platform: null, host: "aix.vc", reason: "AI-native specialist — publishes no portfolio job board" },
-  "amplify":      { platform: null, host: "amplifypartners.com", reason: "AI-native specialist — publishes no portfolio job board" },
-  "basis-set":    { platform: null, host: "basisset.com", reason: "AI-native specialist — publishes no portfolio job board" },
   "air-street":   { platform: null, host: "airstreet.com", reason: "AI-native specialist — publishes no portfolio job board" },
 };
 
@@ -91,21 +124,41 @@ const METROS = [
   { city: "Nashville", re: /nashville/i, consider: ["Nashville, Tennessee"], getro: ["Nashville, TN, USA"] },
 ];
 
+// Getro accepts "Remote" as a searchable location. Consider has no equivalent — every
+// spelling of it returns zero rows — so remote roles from Consider-backed firms reach
+// us only through the ATS phase, which filters locations locally.
 const LOCATIONS = {
   consider: METROS.flatMap((m) => m.consider),
-  getro: METROS.flatMap((m) => m.getro),
+  getro: [...METROS.flatMap((m) => m.getro), "Remote"],
 };
 
 const CITY_MATCHERS = METROS.map((m) => ({ city: m.city, re: m.re }));
 
 // A role is kept if its title matches at least one pattern here.
+//
+// Deliberately an allow-list of named software disciplines rather than a catch-all
+// on /\bengineer\b/. Several portfolios are hardware-heavy (Anduril, Waymo, Nuro),
+// and a catch-all pulls in Mechanical, Power Electronics and FPGA Verification
+// roles — real engineering, but not what this board is for. Anything that matches
+// no pattern is dropped, so hardware titles need no exclusion of their own.
 const ROLE_PATTERNS = [
   { key: "ai", label: "AI / ML", re: /\b(a\.?i\.?|artificial intelligence|machine learning|ml|mlops|llms?|genai|gen[-\s]ai|deep learning|nlp|computer vision|applied scientist|research engineer|research scientist|agentic|agents?|foundation models?|inference|rag|fine[-\s]?tuning|perception|robot learning)\b/i },
   { key: "backend", label: "Backend", re: /\b(back[-\s]?end|server[-\s]?side|api engineer|distributed systems)\b/i },
   { key: "infra", label: "Infra / Platform", re: /\b(platform engineer|infrastructure|infra engineer|systems engineer|site reliability|sre|devops|cloud engineer)\b/i },
   { key: "fullstack", label: "Full-stack", re: /\bfull[-\s]?stack\b/i },
   { key: "frontend", label: "Frontend", re: /\b(front[-\s]?end|web engineer|ui engineer)\b/i },
-  { key: "swe", label: "Software Eng", re: /\b(software engineer|software development engineer|software developer|sde|swe|member of technical staff|engineering manager|staff engineer|principal engineer)\b/i },
+  // "Data Center Engineer" is a facilities role, so the data words are bound to the
+  // discipline rather than matched loosely on /\bdata\b/.
+  { key: "data", label: "Data", re: /\b(data (engineer\w*|scien\w+|platform|infrastructure|architect)|analytics engineer|database engineer|etl engineer|machine learning data)\b/i },
+  { key: "security", label: "Security", re: /\b(security engineer\w*|application security|appsec|infosec|information security|security architect|product security|offensive security|detection engineer|cryptograph\w+)\b/i },
+  // Bound to engineer/developer so "Android" or "iOS" inside a product name doesn't
+  // sweep in non-engineering roles.
+  { key: "mobile", label: "Mobile", re: /\b(ios|android|mobile)\s+(engineer\w*|developer)\b|\breact native\b/i },
+  // Forward Deployed Engineer was the single most-dropped title on the VC boards —
+  // it is the canonical AI-startup field-engineering role.
+  { key: "solutions", label: "Solutions / FDE", re: /\b(forward[-\s]?deployed|solutions?\s+(engineer\w*|architect)|customer engineer|integration engineer|implementation engineer|deployment engineer|technical solutions)\b/i },
+  { key: "qa", label: "QA / Test", re: /\b(qa engineer|quality engineer|quality assurance|sdet|test engineer|test automation|automation engineer)\b/i },
+  { key: "swe", label: "Software Eng", re: /\b(software engineer|software development engineer|software developer|sde|swe|member of technical staff|founding engineer|engineering manager|staff engineer|principal engineer)\b/i },
 ];
 
 // Non-engineering roles that slip through the platform's own function filter.
