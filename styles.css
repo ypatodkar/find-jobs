@@ -655,8 +655,12 @@ footer code {
 
 /* ---- Company groups ---- */
 .cgroup {
-  /* head padding-left + badge + gap, so expanded roles line up under the name */
-  --company-role-indent: 72px;
+  /* One badge size drives the whole card: the badge box, the name's line-height,
+     the meta indent and the expanded-role indent all derive from these two. */
+  --cg-badge: 26px;
+  --cg-gap: 10px;
+  --cg-pad: 20px;
+  --company-role-indent: calc(var(--cg-pad) + var(--cg-badge) + var(--cg-gap));
   background: transparent;
   margin: 0;
 }
@@ -669,7 +673,7 @@ footer code {
   display: flex;
   align-items: center;
   gap: 18px;
-  padding: 18px 20px;
+  padding: 18px var(--cg-pad);
   background: var(--bg);
   border: none;
   border-radius: 0;
@@ -689,32 +693,41 @@ footer code {
   background: var(--bg);
 }
 
+/* Badge and name are one unit, so they live in one row and share one height:
+   --cg-badge sizes the badge and doubles as the name's line-height, which makes
+   the two exactly equal by construction rather than by a tuned offset. Top-aligned
+   so a company name long enough to wrap keeps its badge on the first line. */
+.cg-title {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cg-gap);
+  min-width: 0;
+}
+
 /* Monogram and logo share one box so the onerror fallback swaps in place without
    shifting the row. Only three of 816 companies still land here. */
-.cg-mono {
+.cg-mono,
+.cg-logo {
   flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
+  width: var(--cg-badge);
+  height: var(--cg-badge);
+}
+.cg-mono {
   border-radius: 8px;
   display: grid;
   place-items: center;
   font-family: var(--mono);
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--accent);
   background: transparent;
 }
 
-/* The badge belongs to the company name, not to the card. Centring it against the
-   whole head drops it to the middle of the meta block — 22px below the name, and
-   further still for a company hiring in enough cities to wrap to three lines. Pin
-   it to the top and lift it so its centre lands on the name's own line box. */
-.cg-mono,
-.cg-logo {
-  align-self: flex-start;
-  margin-top: -5px;
-}
+/* The meta lines hang under the name rather than under the badge, so the card
+   still reads as one text column with the logo as its leading mark. */
+.cg-cities,
+.cg-backers { padding-left: calc(var(--cg-badge) + var(--cg-gap)); }
 
 .cg-main { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .cg-kicker,
@@ -731,9 +744,12 @@ footer code {
   font-family: var(--serif);
   font-size: 1.25rem;
   font-weight: 650;
-  line-height: 1.2;
+  /* A length, not a ratio: the name's line box is the badge's height, which is what
+     makes the two the same height however either is restyled. */
+  line-height: var(--cg-badge);
   color: var(--ink);
   overflow-wrap: anywhere;
+  min-width: 0;
 }
 .cg-cities, .cg-facts {
   font-family: var(--mono);
@@ -813,13 +829,10 @@ footer code {
 }
 
 @media (max-width: 620px) {
-  .cgroup { --company-role-indent: 61px; }
+  /* Only the three inputs change; badge, name line box and both indents follow. */
+  .cgroup { --cg-badge: 23px; --cg-gap: 9px; --cg-pad: 15px; }
   .cg-head { flex-wrap: wrap; align-items: flex-start; gap: 12px; padding: 15px; }
-  /* Same badge size as desktop; only the lift changes, because the name is set a
-     little smaller here and its line box is correspondingly shorter. */
-  .cg-mono,
-  .cg-logo { margin-top: -7px; }
-  .cg-main { flex-basis: calc(100% - 58px); }
+  .cg-main { flex-basis: 100%; }
   .cg-name { font-size: 1.12rem; }
   .cg-right { min-width: 0; flex: 1 1 100%; justify-content: space-between; align-items: flex-end; }
   .cg-facts { justify-content: flex-start; }
@@ -1512,14 +1525,13 @@ html[data-theme="dark"] .heart:hover { color: #fb5c7d; }
   100% { transform: scale(1); }
 }
 
-/* Company logo in the grouped view, occupying the same box the monogram did so the
-   two are interchangeable. Contained rather than cropped: these are wordmarks and
-   squares alike, and cropping would decapitate half of them. */
+/* Company logo in the grouped view. Sized with .cg-mono up where the card is laid
+   out — repeating width/height here would silently win on specificity, since this
+   rule sits after the mobile block and media queries add none. Contained rather
+   than cropped: these are wordmarks and squares alike, and cropping would
+   decapitate half of them. */
 .cg-logo {
-  flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--rule);

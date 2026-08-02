@@ -486,12 +486,14 @@
       return `
         <section class="cgroup${open ? " is-open" : ""}">
           <button class="cg-head" type="button" data-company="${escapeHtml(g.company)}" aria-expanded="${open}">
-            ${g.logo
-              ? `<span class="cg-logo"><img src="${escapeHtml(g.logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
-                   onerror="this.closest('.cg-logo').outerHTML='<span class=\\'cg-mono t${m.tint}\\' aria-hidden=\\'true\\'>${escapeHtml(m.initials)}</span>'" /></span>`
-              : `<span class="cg-mono t${m.tint}" aria-hidden="true">${escapeHtml(m.initials)}</span>`}
             <span class="cg-main">
-              <span class="cg-name">${escapeHtml(g.company)}</span>
+              <span class="cg-title">
+                ${g.logo
+                  ? `<span class="cg-logo"><img src="${escapeHtml(g.logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+                       onerror="this.closest('.cg-logo').outerHTML='<span class=\\'cg-mono t${m.tint}\\' aria-hidden=\\'true\\'>${escapeHtml(m.initials)}</span>'" /></span>`
+                  : `<span class="cg-mono t${m.tint}" aria-hidden="true">${escapeHtml(m.initials)}</span>`}
+                <span class="cg-name">${escapeHtml(g.company)}</span>
+              </span>
               <span class="cg-cities"><span class="cg-label">Hiring in</span>${cities}</span>
               ${backers}
             </span>
