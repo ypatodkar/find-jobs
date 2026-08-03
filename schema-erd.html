@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Database schema — ER diagram</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --ink: #211b29;
+    --ink-soft: #554d60;
+    --rule: #e2dce8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111014;
+      --ink: #f5f1f8;
+      --ink-soft: #c7bfce;
+      --rule: #332e39;
+    }
+  }
+  body {
+    margin: 0;
+    padding: 32px 24px 64px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  p.sub { color: var(--ink-soft); margin: 0 0 28px; font-size: 0.9rem; }
+  .diagram {
+    max-width: 1100px;
+    margin: 0 auto 32px;
+    overflow-x: auto;
+  }
+  .notes {
+    max-width: 720px;
+    margin: 0 auto;
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    border-top: 1px solid var(--rule);
+    padding-top: 18px;
+  }
+  .notes h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink); margin: 0 0 10px; }
+  .notes ul { padding-left: 18px; margin: 0; }
+  .notes li { margin-bottom: 8px; }
+  code { font-size: 0.85em; }
+</style>
+</head>
+<body>
+  <h1>Database schema — ER diagram</h1>
+  <p class="sub">Generated from schema.sql</p>
+
+  <div class="diagram">
+    <pre class="mermaid">
+erDiagram
+    JOBS {
+        text job_id PK
+        text company
+        text title
+        text city
+        text url
+        text ats
+        text source
+        integer remote
+        text posted
+        text firms
+        text salary
+        real salary_min
+        real salary_max
+        text seniority
+        integer staff_count
+        text size
+        text stage
+        text markets
+        text domain
+        integer first_seen
+        integer last_seen
+        integer active
+        integer clicks
+    }
+
+    CLICKS {
+        integer id PK
+        text job_id FK
+        text visitor_id FK
+        integer ts
+        text page
+        text firm
+        text country
+    }
+
+    USERS {
+        text id PK
+        text provider
+        text provider_user_id
+        text email
+        text name
+        text avatar_url
+        integer created_at
+    }
+
+    SESSIONS {
+        text token PK
+        text user_id FK
+        integer created_at
+        integer expires_at
+    }
+
+    SEEN_JOBS {
+        text user_id FK
+        text job_id FK
+        integer first_seen
+    }
+
+    FILTER_EVENTS {
+        integer id PK
+        text visitor_id FK
+        integer ts
+        text action
+        text name
+        text filters
+        text page
+        text firm
+        text country
+    }
+
+    VISITORS {
+        text visitor_id PK
+        text name
+        integer liked_at
+        integer first_seen
+        integer last_seen
+        text country
+    }
+
+    JOBS       ||--o{ CLICKS        : "clicked in"
+    VISITORS   ||--o{ CLICKS        : "makes"
+    JOBS       ||--o{ SEEN_JOBS     : "seen via"
+    USERS      ||--o{ SEEN_JOBS     : "has seen"
+    USERS      ||--o{ SESSIONS      : "signs into"
+    VISITORS   ||--o{ FILTER_EVENTS : "triggers"
+    </pre>
+  </div>
+
+  <div class="notes">
+    <h2>Notes</h2>
+    <ul>
+      <li><code>CLICKS</code>→<code>JOBS</code>/<code>VISITORS</code> and <code>SEEN_JOBS</code>→<code>JOBS</code> are not enforced with <code>REFERENCES</code> in the SQL — only <code>sessions.user_id</code> and <code>seen_jobs.user_id</code> actually declare a foreign key. The relationships above reflect intent, not a constraint SQLite is enforcing.</li>
+      <li><code>USERS</code> (real OAuth accounts) and <code>VISITORS</code> (anonymous per-browser IDs) are deliberately separate and never merged.</li>
+      <li><code>FILTER_EVENTS</code> carries a <code>visitor_id</code> but is explicitly documented in the schema as aggregate-only, not a per-user trail.</li>
+    </ul>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default",
+    });
+  </script>
+</body>
+</html>

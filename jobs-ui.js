@@ -180,6 +180,45 @@
     };
   }
 
+  /**
+   * A fresh running order on every page load, applied within a single day.
+   *
+   * Each job draws its number once and keeps it for the life of the page. Drawing
+   * inside the comparator instead would give different answers for the same pair on
+   * different comparisons, which is not a valid ordering and can make Array.sort
+   * throw; re-drawing between renders would reshuffle the list under someone who is
+   * paging through it, or make a role appear on two pages and on neither.
+   *
+   * Keyed on the job object, which is created once when the payload loads and merely
+   * filtered and sliced afterwards. Companies key by name instead, because the
+   * grouped view rebuilds its group objects on every render.
+   */
+  const jobShuffle = new WeakMap();
+  const companyShuffle = new Map();
+
+  function shuffleOf(job) {
+    let v = jobShuffle.get(job);
+    if (v === undefined) {
+      v = Math.random();
+      jobShuffle.set(job, v);
+    }
+    return v;
+  }
+
+  function companyShuffleOf(name) {
+    let v = companyShuffle.get(name);
+    if (v === undefined) {
+      v = Math.random();
+      companyShuffle.set(name, v);
+    }
+    return v;
+  }
+
+  const dayOf = (j) => (j.posted ? startOfDay(new Date(j.posted)) : 0);
+  // Groups seed `newest` at 0 and `oldest` at Infinity, and startOfDay(Infinity) is
+  // NaN — which a comparator reads as 0 and silently scrambles the order around it.
+  const dayOfTs = (ts) => (ts && isFinite(ts) ? startOfDay(ts) : 0);
+
   function createJobsView(config) {
     const cfg = Object.assign({ showFirms: false, firmLabel: (id) => id, contextLabel: null }, config);
 
@@ -262,8 +301,12 @@
       const t = (j) => (j.posted ? new Date(j.posted).getTime() : 0);
       const pay = (j) => j.salaryMax || j.salaryMin || 0;
       const byTitle = (a, b) => a.title.localeCompare(b.title) || a.company.localeCompare(b.company);
-      if (state.sort === "newest") arr.sort((a, b) => t(b) - t(a) || byTitle(a, b));
-      else if (state.sort === "oldest") arr.sort((a, b) => t(a) - t(b) || byTitle(a, b));
+      // Date sorts tie on the day, not the timestamp, so everything the list labels
+      // "1 day ago" competes as one bucket and is then ordered at random. The exact
+      // posting minute was never shown, and letting it decide meant the same handful
+      // of roles owned the top of each day for every visitor, forever.
+      if (state.sort === "newest") arr.sort((a, b) => dayOf(b) - dayOf(a) || shuffleOf(a) - shuffleOf(b));
+      else if (state.sort === "oldest") arr.sort((a, b) => dayOf(a) - dayOf(b) || shuffleOf(a) - shuffleOf(b));
       else if (state.sort === "salary") arr.sort((a, b) => pay(b) - pay(a) || t(b) - t(a) || byTitle(a, b));
       else if (state.sort === "count") {
         // In a flat list, "Most roles" means roles from companies with the most
@@ -455,9 +498,15 @@
       } else if (state.sort === "count") {
         groups.sort((a, b) => b.jobs.length - a.jobs.length || a.company.localeCompare(b.company));
       } else if (state.sort === "oldest") {
-        groups.sort((a, b) => a.oldest - b.oldest || a.company.localeCompare(b.company));
+        // Same rule as the flat list: companies whose oldest role landed on the same
+        // day are one bucket, ordered at random rather than alphabetically.
+        groups.sort((a, b) =>
+          dayOfTs(a.oldest) - dayOfTs(b.oldest) ||
+          companyShuffleOf(a.company) - companyShuffleOf(b.company));
       } else {
-        groups.sort((a, b) => b.newest - a.newest || a.company.localeCompare(b.company));
+        groups.sort((a, b) =>
+          dayOfTs(b.newest) - dayOfTs(a.newest) ||
+          companyShuffleOf(a.company) - companyShuffleOf(b.company));
       }
       return groups;
     }
@@ -469,7 +518,8 @@
       const directoryNumber = String(index + 1).padStart(2, "0");
 
       const cities = [...g.cities.entries()].sort((a, b) => b[1] - a[1])
-        .map(([c, k]) => `${escapeHtml(c)}${n > 1 ? ` <span class="cg-n">${k}</span>` : ""}`).join("<span class=\"cg-sep\">·</span>");
+        .map(([c, k]) => `<span class="cg-city">${escapeHtml(c)}${n > 1 ? `&nbsp;<span class="cg-n">${k}</span>` : ""}</span>`)
+        .join("&#8203;<span class=\"cg-sep\">·</span>");
 
       const facts = [
         g.size ? (SIZE_LABELS[g.size] || g.size) + " staff" : null,
@@ -479,6 +529,24 @@
       ].filter(Boolean).map((fact) => `<span class="cg-fact">${escapeHtml(fact)}</span>`).join("");
 
       const rows = open ? g.jobs.map((j) => jobHtml(j, true)).join("") : "";
+
+      // No company descriptions exist in any scraped source, so the closest thing to
+      // "what this company does" is the industry tags it already carries. Every source
+      // returns those alphabetically rather than by relevance, so a plain slice(0, 3)
+      // leads with whatever happens to start with "A" ("Aerospace Engineering" for an
+      // AI company). Shorter tags tend to be the broad, recognizable category ("AI",
+      // "Fintech") rather than a narrow compound one ("Agriculture and Farming"), so
+      // rank by length instead — a cheap proxy, not a real relevance signal.
+      let blurb = "";
+      if (g.markets && g.markets.length) {
+        const seen = new Set();
+        const ranked = g.markets
+          .filter((mk) => (seen.has(mk.toLowerCase()) ? false : seen.add(mk.toLowerCase())))
+          .sort((a, b) => a.length - b.length);
+        const shown = ranked.slice(0, 3).map((mk) => escapeHtml(mk));
+        const extra = ranked.length > 3 ? ` +${ranked.length - 3}` : "";
+        blurb = `<span class="cg-blurb">${shown.join("<span class=\"cg-sep\">·</span>")}${extra}</span>`;
+      }
 
       // Investors are a company fact, so they belong here rather than on every row.
       let backers = "";
@@ -502,6 +570,7 @@
                   : `<span class="cg-mono t${m.tint}" aria-hidden="true">${escapeHtml(m.initials)}</span>`}
                 <span class="cg-name">${escapeHtml(g.company)}</span>
               </span>
+              ${blurb}
               <span class="cg-cities"><span class="cg-label">Hiring in</span>${cities}</span>
               ${backers}
             </span>

@@ -660,12 +660,11 @@ footer code {
   --cg-badge: 26px;
   --cg-gap: 10px;
   --cg-pad: 20px;
-  --company-role-indent: calc(var(--cg-pad) + var(--cg-badge) + var(--cg-gap));
   background: transparent;
   margin: 0;
 }
 .cgroup + .cgroup {
-  border-top: 1px solid color-mix(in srgb, var(--accent) 34%, var(--rule));
+  border-top: 1px solid var(--rule);
 }
 
 .cg-head {
@@ -684,13 +683,16 @@ footer code {
   color: inherit;
 }
 .cg-head:hover {
-  background: var(--bg);
+  background: var(--accent-fill);
 }
 .cgroup:first-child .cg-head { border-radius: 5px 5px 0 0; }
 .cgroup:last-child:not(.is-open) .cg-head { border-radius: 0 0 5px 5px; }
 .cg-head:focus-visible { outline: 2px solid var(--accent2); outline-offset: 3px; }
 .cgroup.is-open .cg-head {
   background: var(--bg);
+}
+.cgroup.is-open .cg-head:hover {
+  background: var(--accent-fill);
 }
 
 /* Badge and name are one unit, so they live in one row and share one height:
@@ -724,11 +726,6 @@ footer code {
   background: transparent;
 }
 
-/* The meta lines hang under the name rather than under the badge, so the card
-   still reads as one text column with the logo as its leading mark. */
-.cg-cities,
-.cg-backers { padding-left: calc(var(--cg-badge) + var(--cg-gap)); }
-
 .cg-main { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .cg-kicker,
 .cg-label {
@@ -756,10 +753,15 @@ footer code {
   font-size: 0.73rem;
   color: var(--ink-faint);
 }
-.cg-cities { margin-top: 3px; }
+/* Whichever meta line follows the name directly gets the extra breathing room —
+   the blurb when there is one, otherwise the cities line. */
+.cg-title + * { margin-top: 3px; }
+/* A city name and its count wrap as one unit; only the separator between
+   cities is a break point (see the zero-width space in jobs-ui.js). */
+.cg-city { white-space: nowrap; }
 .cg-n { color: var(--ink-soft); }
 .cg-sep { margin: 0 6px; color: var(--rule-strong); }
-.cg-backers {
+.cg-blurb, .cg-backers {
   font-family: var(--mono);
   font-size: 0.7rem;
   color: var(--ink-soft);
@@ -781,7 +783,7 @@ footer code {
   padding: 4px 9px;
   border-radius: 5px;
   color: var(--ink-soft);
-  background: var(--bg);
+  background: var(--chip-bg);
   white-space: nowrap;
 }
 .cg-action { flex: 0 0 auto; display: flex; align-items: center; gap: 9px; }
@@ -820,12 +822,16 @@ footer code {
 .cg-body {
   background: var(--bg);
   margin-top: 3px;
+  padding: 0 var(--cg-pad);
 }
-.cg-body .job { padding-left: var(--company-role-indent); }
+/* Margin, not padding: keeps each row's own border-bottom scoped to the
+   indented content instead of trailing under the empty badge gutter. */
+.cg-body .job { margin-left: calc((var(--cg-badge) + var(--cg-gap)) / 2); }
 .cgroup:not(.is-open) .cg-body { display: none; }
 
 @media (prefers-reduced-motion: no-preference) {
   .cg-head, .cg-toggle { transition: background 160ms ease, color 160ms ease; }
+  .cg-logo img { transition: filter 200ms ease; }
 }
 
 @media (max-width: 620px) {
@@ -1539,3 +1545,10 @@ html[data-theme="dark"] .heart:hover { color: #fb5c7d; }
   place-items: center;
 }
 .cg-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* Muted by default so a row of arbitrary brand colors doesn't fight the
+   site's single-accent palette; full color rewards a closer look. */
+.cg-logo img { filter: grayscale(1) opacity(0.82); }
+.cg-head:hover .cg-logo img,
+.cgroup.is-open .cg-logo img {
+  filter: none;
+}
