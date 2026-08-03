@@ -12,3 +12,6 @@ node_modules/
 
 # Local tooling config, not part of the project.
 .claude/
+
+# Database exports — contain visitor names and countries.
+backups/

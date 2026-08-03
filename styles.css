@@ -1418,6 +1418,11 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 .viewed-row:first-of-type { border-top: none; }
 .viewed-co { font-family: var(--serif); font-size: 0.92rem; color: var(--ink); overflow-wrap: anywhere; }
 .viewed-roles { font-size: 0.78rem; color: var(--ink-soft); overflow-wrap: anywhere; }
+/* Underlined only on hover: with four titles separated by dots on one line, four
+   permanent underlines read as one striped block rather than as separate links. */
+.viewed-link { color: inherit; text-decoration: none; border-bottom: 1px solid transparent; }
+.viewed-link:hover { color: var(--accent); border-bottom-color: currentColor; }
+.viewed-link:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; border-radius: 2px; }
 .viewed-when { font-family: var(--mono); font-size: 0.68rem; color: var(--ink-faint); white-space: nowrap; }
 
 @media (prefers-reduced-motion: no-preference) { .viewed-chev { transition: transform 150ms ease; } }

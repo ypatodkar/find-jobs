@@ -48,7 +48,7 @@ CREATE INDEX IF NOT EXISTS idx_jobs_seniority ON jobs(seniority);
 CREATE TABLE IF NOT EXISTS clicks (
   id      INTEGER PRIMARY KEY AUTOINCREMENT,
   job_id  TEXT NOT NULL,
-  visitor_id TEXT,            -- anonymous per-browser id, see visitors
+  user_id TEXT,               -- anonymous per-browser id, see users
   ts      INTEGER NOT NULL,     -- unix ms
   page    TEXT,                 -- all.html | firm.html
   firm    TEXT,                 -- investor page the click came from, if any

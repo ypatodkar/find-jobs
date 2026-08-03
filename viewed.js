@@ -46,6 +46,23 @@
     return m === 1 ? "1 month ago" : m + " months ago";
   }
 
+  /**
+   * A role in the panel, linked straight back to the posting.
+   *
+   * Deliberately not `a.job-title[data-job-id]`, which is what track.js listens for:
+   * every role in here has been opened already, so re-counting it would inflate the
+   * click total with a visit to your own history, and the "clicked" stamp styling is
+   * written for the job rows, not for this panel.
+   *
+   * A role with no url — a board listing that never carried one — stays plain text
+   * rather than becoming a link to nowhere.
+   */
+  function role(r) {
+    if (!r.url) return esc(r.title);
+    return '<a class="viewed-link" href="' + esc(r.url) + '" target="_blank" rel="noopener noreferrer">' +
+      esc(r.title) + "</a>";
+  }
+
   var open = false;
 
   function render() {
@@ -78,7 +95,7 @@
                 '<div class="viewed-row">' +
                 '<span class="viewed-co">' + esc(c.company) + "</span>" +
                 '<span class="viewed-roles">' +
-                c.roles.slice(0, 4).map(function (r) { return esc(r.title); }).join(" · ") +
+                c.roles.slice(0, 4).map(role).join(" · ") +
                 (c.roles.length > 4 ? " · +" + (c.roles.length - 4) + " more" : "") +
                 "</span>" +
                 '<span class="viewed-when">' + esc(when(c.last)) + "</span>" +
