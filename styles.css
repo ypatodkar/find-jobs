@@ -31,6 +31,7 @@
 }
 
 :root {
+  color-scheme: light;
   --bg: #ffffff;
   --surface: #faf9fc;
   --ink: #211b29;
@@ -47,11 +48,43 @@
   --shadow: 0 1px 3px rgba(46, 30, 64, 0.08);
 }
 
-/* Light is the default, deliberately: the site opens light regardless of the
-   visitor's OS setting. Dark is available, but only when they ask for it via
-   the toggle, which writes html[data-theme="dark"] below. */
+/* The OS setting is the default: a laptop in dark mode opens the site dark, with no
+   toggle press and no flash of the wrong theme, because this is CSS rather than
+   something a script has to apply after first paint.
+
+   `data-theme` is only ever present when the visitor has deliberately deviated from
+   their OS, and it always wins — `:not([data-theme])` below is what steps aside for
+   it. theme.js removes the attribute again the moment their choice and the OS agree,
+   which is what lets a manual override lapse back into following the system.
+
+   `color-scheme` is set alongside the variables so the browser's own furniture —
+   scrollbars, form controls, the text-selection colour — matches the page.
+
+   The dark values are stated twice because a media query cannot be folded into the
+   attribute selector's rule. Keep the two blocks in step. */
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #111014;
+    --surface: #19171f;
+    --ink: #f5f1f8;
+    --ink-soft: #c7bfce;
+    --ink-faint: #aaa0b4;
+    --rule: #332e39;
+    --rule-strong: #50475a;
+    --accent: #c084fc;
+    --on-accent: #21152c;
+    --accent-fill: #c084fc1f;
+    --accent2: #a855f7;
+    --accent2-fill: #a855f71f;
+    --chip-bg: #24212a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+}
 
 html[data-theme="dark"] {
+  color-scheme: dark;
   --bg: #111014;
   --surface: #19171f;
   --ink: #f5f1f8;
@@ -69,6 +102,7 @@ html[data-theme="dark"] {
 }
 
 html[data-theme="light"] {
+  color-scheme: light;
   --bg: #ffffff;
   --surface: #faf9fc;
   --ink: #211b29;
@@ -170,64 +204,6 @@ header.masthead {
 
 .masthead-actions { display: flex; align-items: center; gap: 10px; }
 
-/* Empty until auth.js decides whether to render "Sign in" or the account menu — stays
-   invisible (no border/padding of its own) rather than flashing a placeholder. */
-.account-menu { position: relative; }
-.account-menu > summary {
-  list-style: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-family: var(--sans);
-  font-size: 0.8rem;
-  color: var(--ink-soft);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  padding: 5px 12px;
-  white-space: nowrap;
-  user-select: none;
-}
-.account-menu > summary::-webkit-details-marker { display: none; }
-.account-menu > summary:hover { border-color: var(--accent); color: var(--accent); }
-.account-menu > summary:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
-.account-menu[open] > summary { border-color: var(--accent2); }
-.account-avatar { width: 18px; height: 18px; border-radius: 50%; }
-
-.account-panel {
-  position: absolute;
-  z-index: 5;
-  top: calc(100% + 6px);
-  right: 0;
-  min-width: 180px;
-  background: var(--surface);
-  border: 1px solid var(--rule-strong);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.account-provider,
-.account-panel .linkish {
-  display: block;
-  font-family: var(--sans);
-  font-size: 0.82rem;
-  color: var(--ink);
-  text-decoration: none;
-  border: none;
-  background: none;
-  text-align: left;
-  border-radius: 5px;
-  padding: 7px 9px;
-  cursor: pointer;
-}
-.account-provider:hover,
-.account-panel .linkish:hover { background: var(--accent-fill); color: var(--accent); }
-.account-provider:focus-visible,
-.account-panel .linkish:focus-visible { outline: 2px solid var(--accent2); outline-offset: -2px; }
 h1.title {
   font-family: var(--serif);
   font-weight: 400;
@@ -907,6 +883,21 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   background: var(--accent2-fill);
   border: 1px solid var(--accent2);
 }
+.sponsor-tag {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  border-radius: 5px;
+  padding: 2px 5px;
+  white-space: nowrap;
+  cursor: help;
+}
+.sponsor-tag.yes { color: var(--accent); border-color: var(--accent); background: var(--accent-fill); }
+.sponsor-tag.no { color: var(--ink-soft); border-style: dotted; }
+.sponsor-tag.unknown { color: var(--ink-faint); border-color: var(--rule); }
 .job-meta {
   font-family: var(--mono);
   font-size: 0.72rem;
@@ -1556,4 +1547,124 @@ html[data-theme="dark"] .heart:hover { color: #fb5c7d; }
 .cg-head:hover .cg-logo img,
 .cgroup.is-open .cg-logo img {
   filter: none;
+}
+
+/* ---- Feedback widget ---------------------------------------------------------
+   Lives in the masthead under the theme toggle, right-aligned, so it stays inside
+   the page's own margins rather than floating over a corner of the viewport. The
+   panel is absolutely positioned so opening it never pushes the headline down. */
+#feedback-slot { display: flex; justify-content: flex-end; margin: 8px 0 -4px; }
+.fb-wrap { position: relative; }
+
+.fb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.fb-btn:hover { color: var(--accent); border-color: var(--accent); }
+.fb-btn:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+.fb-wrap.is-open .fb-btn { color: var(--accent); border-color: var(--accent); }
+
+/* A nudge, not a jig: three small hops, then a long pause. Stops for good once
+   someone has written in, and never runs for readers who asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .fb-btn.is-nudging { animation: fb-nudge 9s ease-in-out 4s infinite; }
+}
+@keyframes fb-nudge {
+  0%, 12%, 100% { transform: translateY(0); }
+  4%  { transform: translateY(-5px); }
+  8%  { transform: translateY(-2px); }
+}
+
+.fb-panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  right: 0;                       /* grows leftwards, so it can never cross the right margin */
+  width: min(330px, calc(100vw - 48px));
+  background: var(--bg);
+  border: 1px solid var(--rule-strong);
+  border-radius: 12px;
+  box-shadow: 0 12px 34px rgba(46, 30, 64, 0.18);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  text-align: left;
+}
+.fb-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.fb-title { font-size: 0.86rem; font-weight: 600; color: var(--ink); line-height: 1.35; }
+.fb-close {
+  border: none; background: none; cursor: pointer; padding: 0 2px;
+  font-size: 1.15rem; line-height: 1; color: var(--ink-faint);
+}
+.fb-close:hover { color: var(--accent); }
+.fb-close:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; border-radius: 3px; }
+
+.fb-form { display: flex; flex-direction: column; gap: 9px; }
+.fb-sub { font-size: 0.68rem; color: var(--ink-faint); }
+.fb-sub em { font-style: normal; opacity: 0.75; }
+.fb-topics { display: flex; flex-wrap: wrap; gap: 6px; }
+.fb-chip {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  background: var(--chip-bg);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.fb-chip:hover { border-color: var(--rule-strong); }
+.fb-chip:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+.fb-chip.is-on { background: var(--accent-fill); color: var(--accent); border-color: var(--accent); }
+
+.fb-text, .fb-contact {
+  width: 100%;
+  font-family: var(--sans);
+  font-size: 0.84rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  padding: 9px 10px;
+  resize: vertical;
+}
+.fb-text::placeholder, .fb-contact::placeholder { color: var(--ink-faint); }
+.fb-text:focus-visible, .fb-contact:focus-visible { outline: 2px solid var(--accent2); outline-offset: 1px; border-color: var(--accent2); }
+
+.fb-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.fb-note { font-size: 0.65rem; color: var(--ink-faint); line-height: 1.3; }
+.fb-send {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--on-accent);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 7px 15px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.fb-send:hover { background: var(--accent2); border-color: var(--accent2); }
+.fb-send:disabled { opacity: 0.6; cursor: default; }
+.fb-send:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+
+.fb-done { font-size: 0.84rem; color: var(--accent); padding: 6px 2px; line-height: 1.45; }
+.fb-done.is-error { color: #d13c3c; }
+html[data-theme="dark"] .fb-done.is-error { color: #ff8f8f; }
+
+@media (max-width: 620px) {
+  .fb-btn { padding: 5px 10px; font-size: 0.73rem; }
+  .fb-panel { width: calc(100vw - 32px); }
 }

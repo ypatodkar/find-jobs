@@ -82,6 +82,19 @@ const BOARDS = {
   "air-street":   { platform: null, host: "airstreet.com", reason: "AI-native specialist — publishes no portfolio job board" },
 };
 
+// Companies excluded everywhere, whatever board they surface on.
+//
+// Matched on all three of name, domain and ATS slug, because one company arrives under
+// all three across our sources: a16z's board calls it "TENEX.AI", the company record
+// carries the domain tenex.ai, and the apply URL is jobs.ashbyhq.com/tenex. Blocking
+// the slug too means phase 2 never even fetches their board.
+//
+// Names are compared with punctuation and case stripped, so "TENEX.AI", "Tenex.ai" and
+// "tenex ai" all collapse to the same key.
+const BLOCKED_COMPANIES = [
+  { domain: "tenex.ai", names: ["tenex.ai", "tenex"], slugs: ["tenex"] },
+];
+
 // Metro areas we track. Each carries the query values the two VC-board platforms
 // accept (their vocabularies differ, and some metros exist on only one) plus the
 // pattern that buckets a raw location string — which is what the ATS phase uses,
@@ -164,4 +177,4 @@ const ROLE_PATTERNS = [
 // Non-engineering roles that slip through the platform's own function filter.
 const EXCLUDE_TITLE = /\b(recruit\w*|sourcer|talent partner|sales|account executive|account manager|marketing|brand|designer|design lead|people ops|human resources|controller|accountant|counsel|legal|paralegal|customer support|customer success|program manager|product manager|product marketing|community|content writer|copywriter|executive assistant|office manager|business development|solutions consultant recruiter)\b/i;
 
-module.exports = { BOARDS, METROS, LOCATIONS, CITY_MATCHERS, ROLE_PATTERNS, EXCLUDE_TITLE };
+module.exports = { BOARDS, METROS, LOCATIONS, CITY_MATCHERS, ROLE_PATTERNS, EXCLUDE_TITLE, BLOCKED_COMPANIES };

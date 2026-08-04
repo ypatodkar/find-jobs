@@ -33,8 +33,8 @@
   function report() {
     if (!ENDPOINT) return;
     var body = JSON.stringify({
-      visitor_id: global.Visitor ? global.Visitor.id() : null,
-      visitor_name: global.Visitor ? global.Visitor.name() : null,
+      user_id: global.Visitor ? global.Visitor.id() : null,
+      user_name: global.Visitor ? global.Visitor.name() : null,
     });
     try {
       if (navigator.sendBeacon) navigator.sendBeacon(ENDPOINT + "/like", body);

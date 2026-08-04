@@ -23,33 +23,6 @@
   const esc = JobsUI.escapeHtml;
   const mobileFilters = window.matchMedia("(max-width: 720px)");
 
-  // Theme setup happens before firm validation so the control also works on
-  // missing or invalid firm URLs.
-  const themeToggle = document.getElementById("theme-toggle");
-  const savedTheme = localStorage.getItem("vc-directory-theme");
-  if (savedTheme === "dark" || savedTheme === "light") {
-    document.documentElement.setAttribute("data-theme", savedTheme);
-  }
-
-  const currentTheme = () =>
-    document.documentElement.getAttribute("data-theme") || "light";
-
-  function updateThemeToggle() {
-    const dark = currentTheme() === "dark";
-    const label = `Switch to ${dark ? "light" : "dark"} mode`;
-    themeToggle.setAttribute("aria-label", label);
-    themeToggle.setAttribute("title", label);
-    themeToggle.setAttribute("aria-pressed", String(dark));
-  }
-
-  updateThemeToggle();
-  themeToggle.addEventListener("click", () => {
-    const next = currentTheme() === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", next);
-    localStorage.setItem("vc-directory-theme", next);
-    updateThemeToggle();
-  });
-
   function showMessage(html) {
     el.message.innerHTML = html;
     el.message.hidden = false;

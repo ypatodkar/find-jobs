@@ -1,7 +1,32 @@
 // Shared role/city matching, used by both the VC-board scraper and the ATS adapters
 // so a job is judged identically no matter which source it came from.
 
-const { CITY_MATCHERS, ROLE_PATTERNS, EXCLUDE_TITLE } = require("./boards");
+const { CITY_MATCHERS, ROLE_PATTERNS, EXCLUDE_TITLE, BLOCKED_COMPANIES } = require("./boards");
+
+// Punctuation and case carry no meaning in a company name here: "TENEX.AI", "Tenex.ai"
+// and "Tenex AI" are the same employer, and boards disagree about which to publish.
+const nameKey = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const hostKey = (s) => String(s || "").toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0];
+
+const BLOCKED_NAMES = new Set(BLOCKED_COMPANIES.flatMap((b) => (b.names || []).map(nameKey)));
+const BLOCKED_DOMAINS = BLOCKED_COMPANIES.map((b) => b.domain).filter(Boolean).map(hostKey);
+const BLOCKED_SLUGS = new Set(BLOCKED_COMPANIES.flatMap((b) => (b.slugs || []).map((s) => String(s).toLowerCase())));
+
+/**
+ * True for a company we never list, matched on any of the three identifiers a source
+ * might give us. Checked at both scrape phases so a blocked company is dropped from
+ * board results and never has its own ATS board fetched at all.
+ */
+function isBlockedCompany({ company, domain, slug } = {}) {
+  if (company && BLOCKED_NAMES.has(nameKey(company))) return true;
+  if (slug && BLOCKED_SLUGS.has(String(slug).toLowerCase())) return true;
+  if (domain) {
+    const host = hostKey(domain);
+    // endsWith covers a subdomain like careers.tenex.ai without matching nottenex.ai.
+    if (BLOCKED_DOMAINS.some((d) => host === d || host.endsWith("." + d))) return true;
+  }
+  return false;
+}
 
 const REMOTE_RE = /\bremote\b|\bwork from home\b|\banywhere\b|\bdistributed\b/i;
 // Remote postings routinely name the region they're open to. We only track US roles,
@@ -96,7 +121,7 @@ function dedupe(jobs) {
 }
 
 module.exports = {
-  matchCity, matchRoles, keep, dedupe,
+  matchCity, matchRoles, keep, dedupe, isBlockedCompany,
   deriveSeniority, sizeBucket,
   SENIORITY_LABELS, SIZE_BUCKETS,
 };

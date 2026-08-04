@@ -1,58 +1,114 @@
-// Click collector, plus accounts.
-//   POST /click                    record one click        (called by track.js via sendBeacon)
-//   POST /filter                   record a saved/applied view (called by presets.js)
-//   POST /like                     one-way heart, per browser
-//   GET  /stats                    public totals for the header counter
-//   GET  /counts                   { job_id: clicks, ... } (private — needs ADMIN_TOKEN)
-//   GET  /auth/:provider/start     redirect to GitHub/Google's consent screen
-//   GET  /auth/:provider/callback  exchange the code, open a session, redirect back to the site
-//   GET  /auth/me                  { user: {...} | null } for the current session cookie
-//   POST /auth/logout              end the session
-//   GET  /auth/seen                the signed-in user's server-side "seen" map (see track.js)
-//   POST /auth/seen                merge a browser's local "seen" map into the server's copy
+// Click collector.
+//   POST /click    record one click             (called by track.js via sendBeacon)
+//   POST /filter   record a saved/applied view  (called by presets.js)
+//   POST /like     one-way heart, per browser
+//   GET  /stats    public totals for the header counter
+//   POST /feedback record feedback from the widget, and email it on
+//   GET  /counts   { job_id: clicks, ... }      (private — needs ADMIN_TOKEN)
 //
 // Threat model for /click: it's a public write endpoint on the open internet. Its URL
 // is in the page source of a site you hand to friends, so assume it is known. There
 // are no credentials and no personal data behind it; the realistic abuse is someone
 // spamming writes to skew the numbers or to burn the D1 free-tier write quota, and
 // the guards below are sized for that rather than for a determined attacker.
-//
-// Threat model for /auth/*: sessions are opaque random tokens checked against the
-// `sessions` table on every request (not signed/decoded), so revoking one is just
-// deleting the row. The OAuth `state` param round-trips through a short-lived cookie
-// to stop CSRF on the callback. `return_to` only ever accepts a same-site path, never
-// a full URL, so the callback can't be turned into an open redirect.
 
 // Every id the scraper generates matches this (verified against a full 5,022-role
 // scrape). Anything else is not a job id we ever issued.
-// A visitor id is a UUID the browser minted for itself. Validated strictly so the
-// column can never hold anything but a UUID, and never used for anything but grouping
-// that browser's own events together.
-const VISITOR_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// A user id is a UUID the browser minted for itself — there is no sign-in. Validated
+// strictly so the column can never hold anything but a UUID, and never used for
+// anything but grouping that browser's own events together.
+const USER_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function visitorOf(body) {
-  const v = String(body.visitor_id || "");
-  return VISITOR_RE.test(v) ? v : null;
+function userIdOf(body) {
+  const v = String(body.user_id || "");
+  return USER_ID_RE.test(v) ? v : null;
 }
 
 // Upsert on every event so `last_seen` stays current and a name typed later lands.
 // A null name never overwrites a stored one — skipping now and naming later works,
 // and naming now then skipping later does not wipe it.
-function touchVisitor(env, visitorId, name, country, now) {
+function touchUser(env, userId, name, country, now) {
   return env.DB.prepare(
-    `INSERT INTO visitors (visitor_id, name, first_seen, last_seen, country)
+    `INSERT INTO users (user_id, name, first_seen, last_seen, country)
      VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT(visitor_id) DO UPDATE SET
+     ON CONFLICT(user_id) DO UPDATE SET
        last_seen = excluded.last_seen,
-       name      = COALESCE(excluded.name, visitors.name),
-       country   = COALESCE(excluded.country, visitors.country)`
-  ).bind(visitorId, name, now, now, country);
+       name      = COALESCE(excluded.name, users.name),
+       country   = COALESCE(excluded.country, users.country)`
+  ).bind(userId, name, now, now, country);
 }
 
 const JOB_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}_(ashby|greenhouse|lever|vc)_[a-z0-9-]{1,64}$/;
 
 const MAX_TEXT = 200;
 const clip = (v) => (v == null ? null : String(v).slice(0, MAX_TEXT));
+
+// Anything else submitted as a topic is filed as "other" rather than rejected — a
+// changed dropdown on the site should never start dropping feedback on the floor.
+const TOPICS = ["jobs", "filters", "design", "bug", "other"];
+const TOPIC_LABELS = {
+  jobs: "More jobs / companies",
+  filters: "Filters & search",
+  design: "Design & layout",
+  bug: "Something is broken",
+  other: "Something else",
+};
+
+const escapeHtml = (s) =>
+  String(s == null ? "" : s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+/**
+ * Email one feedback row. Returns true only if Resend accepted it.
+ *
+ * Never throws: every caller treats email as best-effort, because the row is already
+ * safely in D1 by the time this runs. With no RESEND_API_KEY set the whole feature
+ * still works, it just collects silently in the database.
+ */
+async function sendFeedbackEmail(env, f) {
+  if (!env.RESEND_API_KEY || !env.FEEDBACK_TO) return false;
+
+  const label = TOPIC_LABELS[f.topic] || f.topic;
+  const who = f.name ? `${f.name}` : "someone";
+  const rows = [
+    ["Topic", label],
+    ["From", f.name || "(no name given)"],
+    ["Reply to", f.contact || "(not provided)"],
+    ["Browser id", f.userId || "(none)"],
+    ["Page", f.page || "(unknown)"],
+    ["Country", f.country || "(unknown)"],
+  ];
+
+  const html =
+    `<div style="font:15px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#211b29">` +
+    `<p style="margin:0 0 14px;font-size:13px;color:#6b6275">Feedback #${f.id ?? "?"} · Find Jobs</p>` +
+    `<blockquote style="margin:0 0 18px;padding:12px 16px;background:#faf9fc;border-left:3px solid #6d28d9;` +
+    `border-radius:0 6px 6px 0;white-space:pre-wrap">${escapeHtml(f.message)}</blockquote>` +
+    `<table style="border-collapse:collapse;font-size:13px">` +
+    rows.map(([k, v]) =>
+      `<tr><td style="padding:3px 14px 3px 0;color:#6b6275">${escapeHtml(k)}</td>` +
+      `<td style="padding:3px 0">${escapeHtml(v)}</td></tr>`).join("") +
+    `</table></div>`;
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        from: env.FEEDBACK_FROM || "Find Jobs <onboarding@resend.dev>",
+        to: [env.FEEDBACK_TO],
+        subject: `[Find Jobs] ${label} — from ${who}`,
+        html,
+        text: `${label}\n\n${f.message}\n\n` + rows.map(([k, v]) => `${k}: ${v}`).join("\n"),
+        // So hitting reply in the mail client goes to them, when they left an address.
+        ...(f.contact && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.contact) ? { reply_to: f.contact } : {}),
+      }),
+    });
+    return res.ok;
+  } catch {
+    return false; // stored in D1 regardless; emailed_at stays NULL
+  }
+}
 
 function corsFor(req, env) {
   const allowed = (env.ALLOWED_ORIGINS || "")
@@ -64,190 +120,10 @@ function corsFor(req, env) {
   // No allowlist configured: stay permissive so a fresh deploy works, and rely on the
   // other guards. Set ALLOWED_ORIGINS once you know your site's URL.
   if (!allowed.length) return { "access-control-allow-origin": "*", vary: "Origin" };
-  // Credentials (the session cookie) only ever ride on a request from a named origin —
-  // "*" plus credentials is invalid CORS and browsers refuse it outright.
   if (origin && allowed.includes(origin)) {
-    return { "access-control-allow-origin": origin, vary: "Origin", "access-control-allow-credentials": "true" };
+    return { "access-control-allow-origin": origin, vary: "Origin" };
   }
   return null; // caller rejects
-}
-
-// ---- accounts ---------------------------------------------------------------------
-
-const PROVIDERS = {
-  github: {
-    authorizeUrl: "https://github.com/login/oauth/authorize",
-    tokenUrl: "https://github.com/login/oauth/access_token",
-    scope: "read:user user:email",
-    clientIdKey: "GITHUB_CLIENT_ID",
-    clientSecretKey: "GITHUB_CLIENT_SECRET",
-    async fetchProfile(accessToken) {
-      const res = await fetch("https://api.github.com/user", {
-        headers: { authorization: `Bearer ${accessToken}`, "user-agent": "vcjobs-directory", accept: "application/json" },
-      });
-      const p = await res.json();
-      return { providerUserId: String(p.id), name: p.name || p.login || null, email: p.email || null, avatarUrl: p.avatar_url || null };
-    },
-  },
-  google: {
-    authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
-    tokenUrl: "https://oauth2.googleapis.com/token",
-    scope: "openid email profile",
-    extraAuthorizeParams: { response_type: "code" },
-    clientIdKey: "GOOGLE_CLIENT_ID",
-    clientSecretKey: "GOOGLE_CLIENT_SECRET",
-    async fetchProfile(accessToken) {
-      const res = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
-        headers: { authorization: `Bearer ${accessToken}` },
-      });
-      const p = await res.json();
-      return { providerUserId: String(p.sub), name: p.name || null, email: p.email || null, avatarUrl: p.picture || null };
-    },
-  },
-};
-
-function parseCookies(req) {
-  const header = req.headers.get("cookie") || "";
-  const out = {};
-  header.split(";").forEach((part) => {
-    const i = part.indexOf("=");
-    if (i === -1) return;
-    out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
-  });
-  return out;
-}
-
-// Domain left unset works fine on a *.workers.dev deploy, but the session cookie is
-// then third-party relative to your site and browsers increasingly block those. Put
-// the Worker on a custom subdomain of your site (Cloudflare dashboard: Workers & Pages
-// -> this worker -> Settings -> Domains & Routes) and set COOKIE_DOMAIN to match — see
-// worker/wrangler.toml.
-function setCookie(name, value, { maxAgeSeconds, env }) {
-  const parts = [`${name}=${encodeURIComponent(value)}`, "Path=/", "Secure", "HttpOnly", "SameSite=Lax"];
-  if (env.COOKIE_DOMAIN) parts.push(`Domain=${env.COOKIE_DOMAIN}`);
-  parts.push(`Max-Age=${maxAgeSeconds}`);
-  return parts.join("; ");
-}
-
-function randomToken() {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-// Where the OAuth callback sends the browser back to. env.SITE_ORIGIN is the one
-// source of truth for that (falls back to the first ALLOWED_ORIGINS entry so a fresh
-// deploy still works); the caller-supplied `return_to` is trusted only as a *path*,
-// never a full URL, so this can't be turned into an open redirect.
-function siteOrigin(env) {
-  return env.SITE_ORIGIN || (env.ALLOWED_ORIGINS || "").split(",")[0].trim() || "/";
-}
-
-function sanitizeReturnTo(raw) {
-  if (!raw || typeof raw !== "string") return "/";
-  if (!raw.startsWith("/") || raw.startsWith("//")) return "/"; // "//host/x" is protocol-relative, i.e. off-site
-  return raw.slice(0, 200);
-}
-
-async function currentUser(req, env) {
-  const token = parseCookies(req).session;
-  if (!token) return null;
-  return env.DB.prepare(
-    `SELECT u.id, u.name, u.avatar_url AS avatarUrl, u.provider FROM sessions s
-     JOIN users u ON u.id = s.user_id
-     WHERE s.token = ? AND s.expires_at > ?`
-  ).bind(token, Date.now()).first();
-}
-
-async function handleAuthStart(req, env, provider) {
-  const cfg = PROVIDERS[provider];
-  const clientId = cfg && env[cfg.clientIdKey];
-  if (!clientId) return new Response("Provider not configured", { status: 501 });
-
-  const url = new URL(req.url);
-  const state = randomToken();
-  const authorize = new URL(cfg.authorizeUrl);
-  authorize.searchParams.set("client_id", clientId);
-  authorize.searchParams.set("redirect_uri", `${url.origin}/auth/${provider}/callback`);
-  authorize.searchParams.set("scope", cfg.scope);
-  authorize.searchParams.set("state", state);
-  Object.entries(cfg.extraAuthorizeParams || {}).forEach(([k, v]) => authorize.searchParams.set(k, v));
-
-  const headers = new Headers({ location: authorize.toString() });
-  // state:return_to, both server-generated or already sanitized — safe to join on ":".
-  headers.append(
-    "set-cookie",
-    setCookie("oauth_state", `${state}:${sanitizeReturnTo(url.searchParams.get("return_to"))}`, { maxAgeSeconds: 600, env })
-  );
-  return new Response(null, { status: 302, headers });
-}
-
-async function handleAuthCallback(req, env, provider) {
-  const cfg = PROVIDERS[provider];
-  const clientId = cfg && env[cfg.clientIdKey];
-  const clientSecret = cfg && env[cfg.clientSecretKey];
-  if (!clientId || !clientSecret) return new Response("Provider not configured", { status: 501 });
-
-  const url = new URL(req.url);
-  const code = url.searchParams.get("code");
-  const state = url.searchParams.get("state");
-  const saved = parseCookies(req).oauth_state || "";
-  const sep = saved.indexOf(":");
-  const savedState = sep === -1 ? saved : saved.slice(0, sep);
-  const returnTo = sep === -1 ? "/" : saved.slice(sep + 1);
-
-  const clearState = setCookie("oauth_state", "", { maxAgeSeconds: 0, env });
-  if (!code || !state || !savedState || state !== savedState) {
-    return new Response("Invalid or expired sign-in attempt — go back and try again.", {
-      status: 400,
-      headers: { "set-cookie": clearState },
-    });
-  }
-
-  const tokenRes = await fetch(cfg.tokenUrl, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      code,
-      redirect_uri: `${url.origin}/auth/${provider}/callback`,
-      grant_type: "authorization_code",
-    }),
-  });
-  const tokenBody = await tokenRes.json().catch(() => ({}));
-  if (!tokenBody.access_token) {
-    return new Response("Sign-in failed while contacting " + provider + ".", { status: 502, headers: { "set-cookie": clearState } });
-  }
-
-  const profile = await cfg.fetchProfile(tokenBody.access_token);
-  const now = Date.now();
-
-  const existing = await env.DB.prepare(`SELECT id FROM users WHERE provider = ? AND provider_user_id = ?`)
-    .bind(provider, profile.providerUserId)
-    .first();
-
-  const userId = existing ? existing.id : randomToken();
-  if (existing) {
-    await env.DB.prepare(`UPDATE users SET name = ?, email = ?, avatar_url = ? WHERE id = ?`)
-      .bind(profile.name, profile.email, profile.avatarUrl, userId)
-      .run();
-  } else {
-    await env.DB.prepare(
-      `INSERT INTO users (id, provider, provider_user_id, email, name, avatar_url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).bind(userId, provider, profile.providerUserId, profile.email, profile.name, profile.avatarUrl, now).run();
-  }
-
-  const sessionTtl = 60 * 60 * 24 * 90; // 90 days
-  const sessionToken = randomToken();
-  await env.DB.prepare(`INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)`)
-    .bind(sessionToken, userId, now, now + sessionTtl * 1000)
-    .run();
-
-  const headers = new Headers({ location: new URL(returnTo, siteOrigin(env)).toString() });
-  headers.append("set-cookie", clearState);
-  headers.append("set-cookie", setCookie("session", sessionToken, { maxAgeSeconds: sessionTtl, env }));
-  return new Response(null, { status: 302, headers });
 }
 
 export default {
@@ -278,9 +154,9 @@ export default {
       if (!JOB_ID_RE.test(id)) return new Response(null, { status: 400, headers: cors });
 
       const now = Date.now();
-      const visitor = visitorOf(body);
+      const userId = userIdOf(body);
       const statements = [];
-      if (visitor) statements.push(touchVisitor(env, visitor, clip(body.visitor_name), req.cf?.country || null, now));
+      if (userId) statements.push(touchUser(env, userId, clip(body.user_name), req.cf?.country || null, now));
 
       // STRICT=1 counts clicks only for jobs a sync has already loaded, so no request
       // can create a row. Leave it off until your first sync, then turn it on — it is
@@ -296,8 +172,8 @@ export default {
       }
 
       statements.push(
-        env.DB.prepare(`INSERT INTO clicks (job_id, visitor_id, ts, page, firm, country) VALUES (?, ?, ?, ?, ?, ?)`)
-          .bind(id, visitor, now, clip(body.page), clip(body.firm), req.cf?.country || null),
+        env.DB.prepare(`INSERT INTO clicks (job_id, user_id, ts, page, firm, country) VALUES (?, ?, ?, ?, ?, ?)`)
+          .bind(id, userId, now, clip(body.page), clip(body.firm), req.cf?.country || null),
         env.DB.prepare(`UPDATE jobs SET clicks = clicks + 1 WHERE job_id = ?`).bind(id)
       );
 
@@ -334,14 +210,14 @@ export default {
       }
 
       const fnow = Date.now();
-      const fvisitor = visitorOf(body);
+      const fUserId = userIdOf(body);
       const stmts = [];
-      if (fvisitor) stmts.push(touchVisitor(env, fvisitor, clip(body.visitor_name), req.cf?.country || null, fnow));
+      if (fUserId) stmts.push(touchUser(env, fUserId, clip(body.user_name), req.cf?.country || null, fnow));
       stmts.push(
         env.DB.prepare(
-          `INSERT INTO filter_events (visitor_id, ts, action, name, filters, page, firm, country)
+          `INSERT INTO filter_events (user_id, ts, action, name, filters, page, firm, country)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(fvisitor, fnow, action, clip(body.name), filters, clip(body.page), clip(body.firm), req.cf?.country || null)
+        ).bind(fUserId, fnow, action, clip(body.name), filters, clip(body.page), clip(body.firm), req.cf?.country || null)
       );
       await env.DB.batch(stmts);
 
@@ -361,22 +237,71 @@ export default {
         return new Response(null, { status: 400, headers: cors });
       }
 
-      const visitor = visitorOf(body);
-      if (!visitor) return new Response(null, { status: 400, headers: cors });
+      const userId = userIdOf(body);
+      if (!userId) return new Response(null, { status: 400, headers: cors });
 
       const now = Date.now();
       await env.DB.prepare(
-        `INSERT INTO visitors (visitor_id, name, first_seen, last_seen, country, liked_at)
+        `INSERT INTO users (user_id, name, first_seen, last_seen, country, liked_at)
          VALUES (?, ?, ?, ?, ?, ?)
-         ON CONFLICT(visitor_id) DO UPDATE SET
+         ON CONFLICT(user_id) DO UPDATE SET
            last_seen = excluded.last_seen,
-           name      = COALESCE(excluded.name, visitors.name),
-           country   = COALESCE(excluded.country, visitors.country),
-           liked_at  = COALESCE(visitors.liked_at, excluded.liked_at)`
+           name      = COALESCE(excluded.name, users.name),
+           country   = COALESCE(excluded.country, users.country),
+           liked_at  = COALESCE(users.liked_at, excluded.liked_at)`
       )
-        .bind(visitor, clip(body.visitor_name), now, now, req.cf?.country || null, now)
+        .bind(userId, clip(body.user_name), now, now, req.cf?.country || null, now)
         .run();
 
+      return new Response(null, { status: 204, headers: cors });
+    }
+
+    // Feedback from the widget in the page corner.
+    //
+    // Stored first, emailed second, and the email is deliberately not allowed to fail
+    // the request: a bad API key or a Resend outage should cost a notification, never
+    // someone's typed-out complaint. `emailed_at` marks which rows actually went out,
+    // so the ones that didn't can be found later with
+    //   SELECT * FROM feedback WHERE emailed_at IS NULL
+    if (req.method === "POST" && url.pathname === "/feedback") {
+      if (!cors) return new Response(null, { status: 403 });
+
+      let body;
+      try {
+        body = JSON.parse(await req.text());
+      } catch {
+        return new Response(null, { status: 400, headers: cors });
+      }
+
+      // The message is the whole point, so it gets a far larger cap than `clip`'s 200 —
+      // but still a cap, because this is an unauthenticated write endpoint.
+      const message = String(body.message || "").trim().slice(0, 4000);
+      if (message.length < 2) return new Response(null, { status: 400, headers: cors });
+
+      const topic = TOPICS.includes(body.topic) ? body.topic : "other";
+      const now = Date.now();
+      const userId = userIdOf(body);
+      const name = clip(body.user_name);
+      const contact = clip(body.contact);
+      const country = req.cf?.country || null;
+      const page = clip(body.page);
+
+      const row = await env.DB.prepare(
+        `INSERT INTO feedback (user_id, name, topic, message, contact, page, country, ts)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`
+      )
+        .bind(userId, name, topic, message, contact, page, country, now)
+        .first();
+
+      const sent = await sendFeedbackEmail(env, {
+        id: row?.id, topic, message, name, contact, userId, page, country,
+      });
+      if (sent && row?.id) {
+        await env.DB.prepare(`UPDATE feedback SET emailed_at = ? WHERE id = ?`).bind(Date.now(), row.id).run();
+      }
+
+      // 204 either way. From the reader's side the feedback is safely recorded, which
+      // is true; whether the email left is our problem, not theirs.
       return new Response(null, { status: 204, headers: cors });
     }
 
@@ -388,16 +313,16 @@ export default {
       const row = await env.DB.prepare(
         `SELECT (SELECT COUNT(*) FROM clicks) AS clicks,
                 (SELECT COUNT(DISTINCT job_id) FROM clicks) AS jobs,
-                (SELECT COUNT(*) FROM visitors) AS visitors,
-                (SELECT COUNT(*) FROM visitors WHERE liked_at IS NOT NULL) AS likes`
+                (SELECT COUNT(*) FROM users) AS users,
+                (SELECT COUNT(*) FROM users WHERE liked_at IS NOT NULL) AS likes`
       ).first();
-      return new Response(JSON.stringify(row || { clicks: 0, jobs: 0, visitors: 0 }), {
+      return new Response(JSON.stringify(row || { clicks: 0, jobs: 0, users: 0 }), {
         headers: { ...cors, "content-type": "application/json", "cache-control": "public, max-age=300" },
       });
     }
 
     if (req.method === "GET" && url.pathname === "/counts") {
-      // Your numbers, not your visitors'. Without this the whole point of "store it,
+      // Your numbers, not your users'. Without this the whole point of "store it,
       // don't show it" is undone by anyone who opens the endpoint in a browser.
       const auth = req.headers.get("authorization") || "";
       const token = auth.startsWith("Bearer ") ? auth.slice(7) : url.searchParams.get("token");
@@ -409,68 +334,6 @@ export default {
       return new Response(JSON.stringify(Object.fromEntries(results.map((r) => [r.job_id, r.clicks]))), {
         headers: { "content-type": "application/json", "cache-control": "no-store" },
       });
-    }
-
-    // /auth/github/start, /auth/google/callback, etc.
-    const authMatch = url.pathname.match(/^\/auth\/(github|google)\/(start|callback)$/);
-    if (authMatch) {
-      const [, provider, step] = authMatch;
-      return step === "start" ? handleAuthStart(req, env, provider) : handleAuthCallback(req, env, provider);
-    }
-
-    if (req.method === "GET" && url.pathname === "/auth/me") {
-      if (!cors) return new Response(null, { status: 403 });
-      const user = await currentUser(req, env);
-      return new Response(
-        JSON.stringify({ user: user ? { id: user.id, name: user.name, avatarUrl: user.avatarUrl, provider: user.provider } : null }),
-        { headers: { ...cors, "content-type": "application/json", "cache-control": "no-store" } }
-      );
-    }
-
-    if (req.method === "POST" && url.pathname === "/auth/logout") {
-      if (!cors) return new Response(null, { status: 403 });
-      const token = parseCookies(req).session;
-      if (token) await env.DB.prepare(`DELETE FROM sessions WHERE token = ?`).bind(token).run();
-      const headers = new Headers(cors);
-      headers.append("set-cookie", setCookie("session", "", { maxAgeSeconds: 0, env }));
-      return new Response(null, { status: 204, headers });
-    }
-
-    if (url.pathname === "/auth/seen") {
-      if (!cors) return new Response(null, { status: 403 });
-      const user = await currentUser(req, env);
-      if (!user) return new Response(null, { status: 401, headers: cors });
-
-      if (req.method === "GET") {
-        const { results } = await env.DB.prepare(`SELECT job_id, first_seen FROM seen_jobs WHERE user_id = ?`)
-          .bind(user.id)
-          .all();
-        return new Response(JSON.stringify(Object.fromEntries(results.map((r) => [r.job_id, r.first_seen]))), {
-          headers: { ...cors, "content-type": "application/json", "cache-control": "no-store" },
-        });
-      }
-
-      if (req.method === "POST") {
-        let body;
-        try {
-          body = JSON.parse(await req.text());
-        } catch {
-          return new Response(null, { status: 400, headers: cors });
-        }
-        // Same MAX_ENTRIES ceiling as track.js's local store, so one sync can never
-        // exceed what a single browser could have accumulated.
-        const statements = Object.entries(body || {})
-          .slice(0, 5000)
-          .filter(([id, ts]) => typeof id === "string" && id.length <= 80 && Number.isFinite(Number(ts)))
-          .map(([id, ts]) =>
-            env.DB.prepare(
-              `INSERT INTO seen_jobs (user_id, job_id, first_seen) VALUES (?, ?, ?)
-               ON CONFLICT(user_id, job_id) DO UPDATE SET first_seen = MIN(first_seen, excluded.first_seen)`
-            ).bind(user.id, id, Number(ts))
-          );
-        if (statements.length) await env.DB.batch(statements);
-        return new Response(null, { status: 204, headers: cors });
-      }
     }
 
     return new Response("Not found", { status: 404 });

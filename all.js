@@ -158,31 +158,5 @@
     });
   }
 
-  // --- Theme toggle ---
-  const themeToggle = document.getElementById("theme-toggle");
-  const saved = localStorage.getItem("vc-directory-theme");
-  if (saved === "dark" || saved === "light") document.documentElement.setAttribute("data-theme", saved);
-
-  function currentTheme() {
-    return document.documentElement.getAttribute("data-theme") || "light";
-  }
-
-  function updateThemeToggle() {
-    const dark = currentTheme() === "dark";
-    const label = `Switch to ${dark ? "light" : "dark"} mode`;
-    themeToggle.setAttribute("aria-label", label);
-    themeToggle.setAttribute("title", label);
-    themeToggle.setAttribute("aria-pressed", String(dark));
-  }
-
-  updateThemeToggle();
-  themeToggle.addEventListener("click", () => {
-    const current = currentTheme();
-    const next = current === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", next);
-    localStorage.setItem("vc-directory-theme", next);
-    updateThemeToggle();
-  });
-
   load();
 })();

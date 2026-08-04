@@ -1,5 +1,6 @@
 const { BOARDS, LOCATIONS } = require("./boards");
-const { keep, dedupe, deriveSeniority, sizeBucket } = require("./match");
+const { keep, dedupe, deriveSeniority, sizeBucket, isBlockedCompany } = require("./match");
+const { classifySponsorship } = require("./sponsorship");
 
 // Consider exposes a few logo variants keyed by where it found them; `manual` is the
 // curated 160px one and the best of them, with the LinkedIn scrape as a fallback.
@@ -94,10 +95,12 @@ async function scrapeConsider(cfg) {
     if (!hit) continue;
     const company = j.companyName || "";
     const url = j.applyUrl || j.url || "";
+    if (isBlockedCompany({ company, domain: j.companyDomain, slug: (detectAts(url) || {}).slug })) continue;
     // Salary is a structured object here — an earlier `j.salary.text` read silently
     // returned undefined for every role on all eight Consider boards.
     const s = j.salary || {};
     const staffCount = j.companyStaffCount || null;
+    const sponsorship = classifySponsorship(j.descriptionPlain || j.description || j.descriptionHtml || j.content || "");
     out.push({
       job_id: boardJobId(company, j.title, hit.city, url),
       title: j.title,
@@ -112,6 +115,9 @@ async function scrapeConsider(cfg) {
       salaryMax: s.maxValue || null,
       salary: fmtSalary(s.minValue, s.maxValue, s.currency?.label || "USD", s.period?.label),
       seniority: deriveSeniority(j.title),
+      sponsorship: sponsorship.status,
+      sponsorshipEvidence: sponsorship.evidence,
+      sponsorshipTypes: sponsorship.types,
       staffCount,
       size: sizeBucket(staffCount),
       stage: j.fundingLV?.label || null,
@@ -154,6 +160,8 @@ async function scrapeGetro(cfg) {
       if (!hit) continue;
       const company = j.organization?.name || "";
       const url = j.url || "";
+      if (isBlockedCompany({ company, domain: j.organization?.domain, slug: (detectAts(url) || {}).slug })) continue;
+      const sponsorship = classifySponsorship(j.descriptionPlain || j.description || j.descriptionHtml || j.content || "");
       out.push({
         job_id: boardJobId(company, j.title, hit.city, url),
         title: j.title,
@@ -173,6 +181,9 @@ async function scrapeGetro(cfg) {
           j.compensation_period
         ),
         seniority: deriveSeniority(j.title),
+        sponsorship: sponsorship.status,
+        sponsorshipEvidence: sponsorship.evidence,
+        sponsorshipTypes: sponsorship.types,
         // Getro's head_count is a bucket index, not a headcount, so size is left to
         // the Consider boards which publish a real number.
         staffCount: null,

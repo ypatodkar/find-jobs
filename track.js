@@ -7,11 +7,6 @@
 //
 // (1) must not depend on (2). Someone with no Worker deployed, or an ad blocker, or
 // no network still gets their own history — it never leaves the browser.
-//
-// When accounts arrive, signing up POSTs Seen.exportAll() to associate this browser's
-// history with the new user, and Seen.importAll() merges the server's copy back in.
-// The account layer is then purely a sync mechanism; this file stays the source of
-// truth for what renders.
 (function (global) {
   "use strict";
 
@@ -155,8 +150,8 @@
             ENDPOINT + "/click",
             JSON.stringify({
               job_id: id,
-              visitor_id: global.Visitor ? global.Visitor.id() : null,
-              visitor_name: global.Visitor ? global.Visitor.name() : null,
+              user_id: global.Visitor ? global.Visitor.id() : null,
+              user_name: global.Visitor ? global.Visitor.name() : null,
               company: a.getAttribute("data-company") || null,
               title: a.textContent || null,
               city: a.getAttribute("data-city") || null,
@@ -175,30 +170,11 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 
-  // ---- public API, for the account layer later --------------------------------
+  // ---- public API ---------------------------------------------------------------
   global.Seen = {
     has: function (id) { return !!seen[id]; },
     at: function (id) { return seen[id] || 0; },
     count: function () { return Object.keys(seen).length; },
-    // POST this on signup to claim this browser's history for the new account.
-    exportAll: function () { return JSON.parse(JSON.stringify(seen)); },
-    // Merge the server's copy back in after login. Oldest timestamp wins, so a job
-    // first opened on another device keeps its original date.
-    importAll: function (map) {
-      if (!map || typeof map !== "object") return 0;
-      var added = 0;
-      Object.keys(map).forEach(function (id) {
-        var ts = Number(map[id]) || Date.now();
-        if (!seen[id] || ts < seen[id]) {
-          if (!seen[id]) added++;
-          seen[id] = ts;
-        }
-      });
-      prune();
-      write();
-      repaint();
-      return added;
-    },
     clear: function () {
       seen = {};
       write();

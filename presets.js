@@ -1,9 +1,8 @@
 // Saved filters.
 //
 // Stored in localStorage, and encodable into the URL so a saved slice is also a link
-// you can send someone. Nothing here knows about accounts; when they arrive, signup
-// POSTs Presets.exportAll() and login merges with importAll(), exactly as track.js
-// does for click history.
+// you can send someone. There are no accounts — a preset lives in the browser that
+// made it, and the URL is how it travels.
 //
 // The view owns the filter state, so this file never touches it directly — it goes
 // through view.getFilters() / view.applyFilters(), which resync the selects and view
@@ -30,8 +29,8 @@
         ENDPOINT + "/filter",
         JSON.stringify({
           action: action,
-          visitor_id: window.Visitor ? window.Visitor.id() : null,
-          visitor_name: window.Visitor ? window.Visitor.name() : null,
+          user_id: window.Visitor ? window.Visitor.id() : null,
+          user_name: window.Visitor ? window.Visitor.name() : null,
           name: name || null,
           filters: filters || {},
           page: location.pathname.split("/").pop() || "index.html",
@@ -199,24 +198,6 @@
       return url.toString();
     },
 
-    // --- seams for the database layer, mirroring track.js ---
-    exportAll: function () { return JSON.parse(JSON.stringify(items)); },
-    importAll: function (list) {
-      if (!Array.isArray(list)) return 0;
-      var seen = {};
-      items.forEach(function (p) { seen[p.id] = true; });
-      var added = 0;
-      list.filter(valid).forEach(function (p) {
-        if (seen[p.id]) return;
-        items.push(p);
-        seen[p.id] = true;
-        added++;
-      });
-      items.sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
-      if (items.length > MAX) items = items.slice(items.length - MAX);
-      write();
-      return added;
-    },
     clear: function () { items = []; write(); },
 
     encode: encode,

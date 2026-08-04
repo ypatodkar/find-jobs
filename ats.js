@@ -8,8 +8,9 @@
 // Covers Ashby, Greenhouse and Lever (~83% of portfolio companies). Anything else
 // keeps its VC-board listing rather than being dropped.
 
-const { keep, deriveSeniority } = require("./match");
+const { keep, deriveSeniority, isBlockedCompany } = require("./match");
 const { jobId } = require("./id");
+const { classifySponsorship, toPlainText } = require("./sponsorship");
 
 const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36";
@@ -123,11 +124,12 @@ const ADAPTERS = {
       posted: j.publishedAt || null,
       remote: j.isRemote === true || /remote/i.test(j.workplaceType || ""),
       salary: null,
+      description: j.descriptionPlain || j.descriptionHtml || "",
     }));
   },
 
   async greenhouse(slug) {
-    const data = await getJson(`https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(slug)}/jobs`);
+    const data = await getJson(`https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(slug)}/jobs?content=true`);
     return (data.jobs || []).map((j) => ({
       id: j.id != null ? String(j.id) : null,
       title: j.title,
@@ -136,6 +138,7 @@ const ADAPTERS = {
       posted: j.first_published || j.updated_at || null,
       remote: /remote/i.test((j.location && j.location.name) || ""),
       salary: null,
+      description: j.content || "",
     }));
   },
 
@@ -154,6 +157,12 @@ const ADAPTERS = {
         salaryMin: j.salaryRange?.min || null,
         salaryMax: j.salaryRange?.max || null,
         salary: money(j.salaryRange),
+        description: [
+          j.descriptionPlain,
+          j.descriptionBodyPlain,
+          ...(j.lists || []).map((list) => `${list.text || ""}. ${toPlainText(list.content || "")}`),
+          j.additionalPlain,
+        ].filter(Boolean).join(". "),
       };
     });
   },
@@ -176,6 +185,7 @@ async function fetchCompany(entry) {
       // Prefer the id the API gave us; fall back to the one in the apply URL so a
       // job keeps its identity even if an adapter stops returning `id`.
       const atsId = j.id || (detectAts(j.url) || {}).postingId || null;
+      const sponsorship = classifySponsorship(j.description);
       jobs.push({
         job_id: jobId({ company: entry.company, ats: entry.ats, atsId, title: j.title, city: hit.city }),
         title: j.title,
@@ -190,6 +200,9 @@ async function fetchCompany(entry) {
         salaryMax: j.salaryMax || null,
         salary: j.salary || null,
         seniority: deriveSeniority(j.title),
+        sponsorship: sponsorship.status,
+        sponsorshipEvidence: sponsorship.evidence,
+        sponsorshipTypes: sponsorship.types,
         // Company-level facts don't exist on an ATS board — they're carried over from
         // whichever VC board introduced us to this company.
         staffCount: entry.meta.staffCount,
@@ -240,6 +253,8 @@ function buildRegistry(firms) {
     for (const job of r.jobs || []) {
       const d = detectAts(job.url);
       if (!d || !isSupported(d.ats)) continue;
+      // Blocked here rather than after fetching, so their board is never requested.
+      if (isBlockedCompany({ company: job.company, domain: job.domain, slug: d.slug })) continue;
       const key = `${d.ats}:${d.slug}`;
       if (!registry.has(key)) {
         registry.set(key, {

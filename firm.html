@@ -24,7 +24,23 @@
   <meta name="twitter:description" content="Open engineering roles across one investor's portfolio, pulled from each company's own job board and updated twice daily." />
   <meta name="twitter:image" content="https://jobs.ypatodkar.com/og.png" />
 
+  <!-- Colours the browser's own chrome — the address bar on mobile — to match the page
+       it sits above, rather than leaving a white strip over a dark site. -->
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#111014" media="(prefers-color-scheme: dark)" />
+
   <link rel="stylesheet" href="styles.css" />
+
+  <!-- The OS preference is handled in CSS and needs no script. This applies only a
+       deliberate override, and has to run here, before the first paint: any later and
+       a visitor who chose light on a dark laptop would watch the page change under
+       them. Inline and blocking for the same reason. theme.js owns the rest. -->
+  <script>
+    try {
+      var t = localStorage.getItem("vc-directory-theme");
+      if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to job listings</a>
@@ -36,7 +52,6 @@
           <div class="nav-links"><a class="backlink" href="index.html">← Find Jobs</a><a class="backlink" href="firms.html">All investors</a></div>
           <div class="masthead-actions">
             <div id="visitor-slot"></div>
-            <div id="account-slot"></div>
             <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode">
               <span class="theme-icon" aria-hidden="true">◐</span>
             </button>
@@ -115,6 +130,7 @@
     </div>
   </main>
 
+  <script src="theme.js"></script>
   <script src="data.js"></script>
   <script src="jobs-ui.js"></script>
   <script src="visitor.js"></script>
@@ -123,7 +139,7 @@
   <script src="firm.js"></script>
   <script src="track.js"></script>
   <script src="viewed.js"></script>
-  <script src="auth.js"></script>
   <script src="counter.js"></script>
+  <script src="feedback.js"></script>
 </body>
 </html>

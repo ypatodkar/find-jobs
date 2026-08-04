@@ -233,6 +233,7 @@
       { key: "industry", label: "Industry", values: (j) => j.markets || [] },
       { key: "size", label: "Company size", values: (j) => (j.size ? [j.size] : []), labelFor: (v) => SIZE_LABELS[v] || v, order: SIZE_ORDER },
       { key: "stage", label: "Funding", values: (j) => (j.stage ? [j.stage] : []) },
+      { key: "sponsorship", label: "Visa sponsorship", values: (j) => [j.sponsorship || "unknown"], labelFor: (v) => ({ yes: "Available", no: "Unavailable", unknown: "Not mentioned" }[v] || v), order: ["yes", "no", "unknown"] },
       { key: "firm", label: "Investor", values: (j) => j.firms || [], labelFor: (v) => cfg.firmLabel(v), onlyWhenFirms: true },
     ].filter((d) => !d.onlyWhenFirms || cfg.showFirms);
 
@@ -412,6 +413,10 @@
       const src = j.source === "ats"
         ? `<span class="src-tag ats" title="Fetched live from ${escapeHtml(j.ats || "the company")}'s job board">${escapeHtml(j.ats || "ats")}</span>`
         : `<span class="src-tag" title="From the VC's portfolio board">vc board</span>`;
+      const sponsorStatus = j.sponsorship || "unknown";
+      const sponsorLabel = { yes: "Visa: Available", no: "Visa: Unavailable", unknown: "Visa: Not mentioned" }[sponsorStatus] || "Visa: Not mentioned";
+      const sponsorEvidence = j.sponsorshipEvidence ? ` — ${j.sponsorshipEvidence}` : "";
+      const sponsor = `<span class="sponsor-tag ${escapeHtml(sponsorStatus)}" title="${escapeHtml(sponsorLabel + sponsorEvidence)}" aria-label="${escapeHtml(sponsorLabel + sponsorEvidence)}">${escapeHtml(sponsorLabel)}</span>`;
       // Date is always the final item so its position never shifts between rows.
       const meta = [j.city, j.remote ? "Remote OK" : null, relativeDate(j.posted)]
         .filter(Boolean).map(escapeHtml).join(" &middot; ");
@@ -441,7 +446,7 @@
             ${subLine}
           </div>
           <div class="job-side">
-            <div class="job-tags">${roleTags}${src}</div>
+            <div class="job-tags">${roleTags}${sponsor}${src}</div>
             <p class="job-meta">${meta}</p>
           </div>
         </article>`;
