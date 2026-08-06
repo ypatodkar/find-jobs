@@ -84,15 +84,18 @@ const BOARDS = {
 
 // Companies excluded everywhere, whatever board they surface on.
 //
-// Matched on all three of name, domain and ATS slug, because one company arrives under
-// all three across our sources: a16z's board calls it "TENEX.AI", the company record
-// carries the domain tenex.ai, and the apply URL is jobs.ashbyhq.com/tenex. Blocking
-// the slug too means phase 2 never even fetches their board.
+// Matched on all three of name, domain and ATS slug because boards disagree about
+// which identifier they publish. Blocking the slug too means phase 2 never even
+// fetches that company's ATS board.
 //
 // Names are compared with punctuation and case stripped, so "TENEX.AI", "Tenex.ai" and
 // "tenex ai" all collapse to the same key.
 const BLOCKED_COMPANIES = [
   { domain: "tenex.ai", names: ["tenex.ai", "tenex"], slugs: ["tenex"] },
+  // SignalFire bulk-publishes role/location templates for its talent network. Every
+  // description says it is not an application for a specific job, so these are lead
+  // capture forms rather than openings at SignalFire or its portfolio companies.
+  { domain: "signalfire.com", names: ["SignalFire"], slugs: ["signalfire"] },
 ];
 
 // Metro areas we track. Each carries the query values the two VC-board platforms
