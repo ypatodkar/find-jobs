@@ -225,16 +225,26 @@
     // Every multi-select filter is a "dimension": a key, how to read its values off a
     // job, and how to label them. Filters combine with AND across dimensions and OR
     // within one (ticking two cities means either city).
+    //
+    // `group` splits them into the two labelled blocks the controls render as. It is
+    // presentation only: filtering, saved views, the counts and the reset button all
+    // still treat DIMENSIONS as one flat list, so moving a filter between groups
+    // changes where it sits on screen and nothing else.
+    const GROUPS = [
+      { id: "dev", title: "Developers" },
+      { id: "rest", title: "Everything else" },
+    ];
+
     const DIMENSIONS = [
-      { key: "city", label: "City", values: (j) => [j.city] },
-      { key: "role", label: "Role", values: (j) => j.roles || [], labelFor: (v) => ROLE_LABELS[v] || v },
-      { key: "seniority", label: "Seniority", values: (j) => (j.seniority ? [j.seniority] : []), labelFor: (v) => SENIORITY_LABELS[v] || v, order: SENIORITY_ORDER },
-      { key: "company", label: "Company", values: (j) => [j.company] },
-      { key: "industry", label: "Industry", values: (j) => j.markets || [] },
-      { key: "size", label: "Company size", values: (j) => (j.size ? [j.size] : []), labelFor: (v) => SIZE_LABELS[v] || v, order: SIZE_ORDER },
-      { key: "stage", label: "Funding", values: (j) => (j.stage ? [j.stage] : []) },
-      { key: "sponsorship", label: "Visa sponsorship", values: (j) => [j.sponsorship || "unknown"], labelFor: (v) => ({ yes: "Available", no: "Unavailable", unknown: "Not mentioned" }[v] || v), order: ["yes", "no", "unknown"] },
-      { key: "firm", label: "Investor", values: (j) => j.firms || [], labelFor: (v) => cfg.firmLabel(v), onlyWhenFirms: true },
+      { key: "city", label: "City", group: "dev", values: (j) => [j.city] },
+      { key: "role", label: "Role", group: "rest", values: (j) => j.roles || [], labelFor: (v) => ROLE_LABELS[v] || v },
+      { key: "seniority", label: "Seniority", group: "dev", values: (j) => (j.seniority ? [j.seniority] : []), labelFor: (v) => SENIORITY_LABELS[v] || v, order: SENIORITY_ORDER },
+      { key: "company", label: "Company", group: "dev", values: (j) => [j.company] },
+      { key: "industry", label: "Industry", group: "rest", values: (j) => j.markets || [] },
+      { key: "size", label: "Company size", group: "dev", values: (j) => (j.size ? [j.size] : []), labelFor: (v) => SIZE_LABELS[v] || v, order: SIZE_ORDER },
+      { key: "stage", label: "Funding", group: "rest", values: (j) => (j.stage ? [j.stage] : []) },
+      { key: "sponsorship", label: "Visa sponsorship", group: "rest", values: (j) => [j.sponsorship || "unknown"], labelFor: (v) => ({ yes: "Available", no: "Unavailable", unknown: "Not mentioned" }[v] || v), order: ["yes", "no", "unknown"] },
+      { key: "firm", label: "Investor", group: "rest", values: (j) => j.firms || [], labelFor: (v) => cfg.firmLabel(v), onlyWhenFirms: true },
     ].filter((d) => !d.onlyWhenFirms || cfg.showFirms);
 
     const state = {
@@ -330,7 +340,7 @@
 
     // ---- dropdowns ----
     // One picker per dimension, built into the markup up front so ids stay stable.
-    el.pickerRow.innerHTML = DIMENSIONS.map((d) => `
+    const pickerMarkup = (d) => `
       <div class="picker-wrap">
         <span class="picker-label">${escapeHtml(d.label)}</span>
         <details class="company-picker" id="pick-${d.key}">
@@ -346,7 +356,21 @@
             <div class="company-list" id="list-${d.key}" role="group" aria-label="Select ${escapeHtml(d.label)}"></div>
           </div>
         </details>
-      </div>`).join("");
+      </div>`;
+
+    // A group with nothing in it is skipped rather than left as an empty heading —
+    // firm pages drop the Investor dimension, and a future one could empty a group.
+    // The title is a <p>, not a heading: these label a set of controls rather than
+    // opening a section, and the page's h1 → h3 outline should stay as it is.
+    el.pickerRow.innerHTML = GROUPS.map((g) => {
+      const dims = DIMENSIONS.filter((d) => d.group === g.id);
+      if (!dims.length) return "";
+      return `
+      <section class="filter-section">
+        <p class="filter-section-title" id="fg-${g.id}">${escapeHtml(g.title)}</p>
+        <div class="filter-grid" role="group" aria-labelledby="fg-${g.id}">${dims.map(pickerMarkup).join("")}</div>
+      </section>`;
+    }).join("");
 
     const pickers = DIMENSIONS.map((d) => {
       const labelFor = d.labelFor || ((v) => v);

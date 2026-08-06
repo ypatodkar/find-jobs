@@ -934,6 +934,44 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 /* ---- Multi-select dropdowns ----
    Deliberately styled like the Sort control, NOT like the filter chips beside
    them — a pill that opens a panel reads as a chip and never gets clicked. */
+/* The dropdowns are split into two labelled groups — the filters a developer reaches
+   for first, then the rest. Stacked rather than side by side so each group keeps the
+   full width to wrap across, which is what stops a four-item group from being squeezed
+   into a narrow column beside a five-item one. */
+/* Named -section, not -group: `.filter-group` is already the tier chip row on
+   firms.html, and a column flex rule would flatten it. */
+.filter-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+.filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+/* A quiet label: it orients, and should not compete with the filters themselves. The
+   rule runs to the end of the row so the group reads as a band rather than a caption. */
+.filter-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.filter-section-title::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--rule);
+}
+
 /* One row of dropdowns that wraps into a tidy grid instead of a ragged line. */
 .filter-grid {
   display: grid;
