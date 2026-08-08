@@ -224,27 +224,20 @@
   /**
    * A fresh running order on every page load, applied within a single day.
    *
-   * Each job draws its number once and keeps it for the life of the page. Drawing
+   * Only the grouped view uses this now — the flat list orders a day's roles by title
+   * instead. Companies whose newest role landed on the same day would otherwise sit in
+   * a fixed order forever, and the first few would take every visitor's attention.
+   *
+   * Each company draws its number once and keeps it for the life of the page. Drawing
    * inside the comparator instead would give different answers for the same pair on
    * different comparisons, which is not a valid ordering and can make Array.sort
    * throw; re-drawing between renders would reshuffle the list under someone who is
-   * paging through it, or make a role appear on two pages and on neither.
+   * paging through it, or make a company appear on two pages and on neither.
    *
-   * Keyed on the job object, which is created once when the payload loads and merely
-   * filtered and sliced afterwards. Companies key by name instead, because the
-   * grouped view rebuilds its group objects on every render.
+   * Keyed by name rather than by object, because the grouped view rebuilds its group
+   * objects on every render.
    */
-  const jobShuffle = new WeakMap();
   const companyShuffle = new Map();
-
-  function shuffleOf(job) {
-    let v = jobShuffle.get(job);
-    if (v === undefined) {
-      v = Math.random();
-      jobShuffle.set(job, v);
-    }
-    return v;
-  }
 
   function companyShuffleOf(name) {
     let v = companyShuffle.get(name);
@@ -363,11 +356,16 @@
       const pay = (j) => j.salaryMax || j.salaryMin || 0;
       const byTitle = (a, b) => a.title.localeCompare(b.title) || a.company.localeCompare(b.company);
       // Date sorts tie on the day, not the timestamp, so everything the list labels
-      // "1 day ago" competes as one bucket and is then ordered at random. The exact
-      // posting minute was never shown, and letting it decide meant the same handful
-      // of roles owned the top of each day for every visitor, forever.
-      if (state.sort === "newest") arr.sort((a, b) => dayOf(b) - dayOf(a) || shuffleOf(a) - shuffleOf(b));
-      else if (state.sort === "oldest") arr.sort((a, b) => dayOf(a) - dayOf(b) || shuffleOf(a) - shuffleOf(b));
+      // "1 day ago" competes as one bucket. The exact posting minute was never shown,
+      // so it cannot break the tie; the bucket is ordered by title instead, then by
+      // company, which makes a day's roles scannable and keeps the order stable
+      // between visits.
+      //
+      // This replaces a random shuffle (see 1ed3f42). The trade-off it reverses: a
+      // stable alphabetical order means titles early in the alphabet sit at the top
+      // of every day's bucket for everyone, permanently.
+      if (state.sort === "newest") arr.sort((a, b) => dayOf(b) - dayOf(a) || byTitle(a, b));
+      else if (state.sort === "oldest") arr.sort((a, b) => dayOf(a) - dayOf(b) || byTitle(a, b));
       else if (state.sort === "salary") arr.sort((a, b) => pay(b) - pay(a) || t(b) - t(a) || byTitle(a, b));
       else if (state.sort === "count") {
         // In a flat list, "Most roles" means roles from companies with the most
