@@ -178,6 +178,13 @@ const ROLE_PATTERNS = [
 ];
 
 // Non-engineering roles that slip through the platform's own function filter.
-const EXCLUDE_TITLE = /\b(recruit\w*|sourcer|talent partner|sales|account executive|account manager|marketing|brand|designer|design lead|people ops|human resources|controller|accountant|counsel|legal|paralegal|customer support|customer success|program manager|product manager|product marketing|community|content writer|copywriter|executive assistant|office manager|business development|solutions consultant recruiter)\b/i;
+//
+// `tutor` is here for the AI-lab annotation gigs — xAI publishes one "AI Tutor -
+// <language>" posting per language, 42 of them, all remote and none with a salary.
+// They reach us because "AI Tutor" matches the AI/ML role pattern above on the word
+// "AI", not because anyone classified them as engineering. They are contract data
+// work, not roles at the company, and at 43 listings they were xAI's largest single
+// contribution to the list.
+const EXCLUDE_TITLE = /\b(recruit\w*|sourcer|talent partner|sales|account executive|account manager|marketing|brand|designer|design lead|people ops|human resources|controller|accountant|counsel|legal|paralegal|customer support|customer success|program manager|product manager|product marketing|community|content writer|copywriter|executive assistant|office manager|business development|solutions consultant recruiter|tutors?)\b/i;
 
 module.exports = { BOARDS, METROS, LOCATIONS, CITY_MATCHERS, ROLE_PATTERNS, EXCLUDE_TITLE, BLOCKED_COMPANIES };
