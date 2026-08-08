@@ -43,6 +43,47 @@
     "1-10": "1–10", "11-50": "11–50", "51-200": "51–200",
     "201-1000": "201–1,000", "1000+": "1,000+",
   };
+  // Companies that have since been acquired. The VC boards still carry them under the
+  // old name — nobody updates a portfolio entry after an exit — but their apply URLs
+  // now resolve to the acquirer's ATS, so clicking "Element AI" lands you on a
+  // ServiceNow posting with no explanation. Naming the acquirer on the card removes the
+  // surprise without dropping the role, which is worth keeping: the job is real.
+  //
+  // Only acquisitions belong here. A company posting under a parent's slug (Snap Inc.
+  // → snapchat), a legal entity (Apex Space → apex-technology-inc) or a rebrand
+  // (Iterative Scopes → Iterative Health) has *not* been acquired, and saying so on a
+  // public page would be a false claim about a real company. When in doubt, leave it
+  // out — an unlabelled card is merely surprising; a wrong label is wrong.
+  //
+  // Keys are matched with punctuation and case stripped, the same way boards.js
+  // compares BLOCKED_COMPANIES.
+  const ACQUIRED_BY = {
+    prepared: "Axon",                     // Sept 2025, $640M
+    elementai: "ServiceNow",
+    offerfit: "Braze",                    // June 2025, $325M
+    verta: "Cloudera",                    // June 2024
+    habu: "LiveRamp",                     // Jan 2024, $200M
+    shapesecurity: "F5",
+    volterra: "F5",
+    lilaccloud: "F5",
+    doctorondemand: "Included Health",
+    normalyze: "Proofpoint",
+    dataai: "Sensor Tower",
+    tile: "Life360",
+    validately: "UserTesting",
+    convex: "ServiceTitan",
+    ribbonhealth: "H1",
+  };
+  const acquirerOf = (company) =>
+    ACQUIRED_BY[String(company || "").toLowerCase().replace(/[^a-z0-9]/g, "")] || null;
+
+  // Rendered straight after the company name wherever it appears. Returns "" for the
+  // overwhelming majority of companies, so it costs nothing on an unaffected card.
+  function acquiredNote(company) {
+    const by = acquirerOf(company);
+    return by ? ` <span class="acquired-note">(acquired by ${escapeHtml(by)})</span>` : "";
+  }
+
   const SIZE_ORDER = ["1-10", "11-50", "51-200", "201-1000", "1000+"];
   const DAY_MS = 86400000;
   const JOBS_PER_PAGE = 45;
@@ -249,6 +290,11 @@
 
     const state = {
       query: "", range: "all", salary: "all", sort: "newest",
+      // Hides roles you have already opened. "Opened" is the only signal there is —
+      // clicking a title sends you to the employer's application page, so it is the
+      // closest thing to "applied" without asking you to tell us twice. See the
+      // checkbox's own label, which says opened rather than applied for that reason.
+      hideOpened: false,
       selected: {}, // dimension key -> Set of chosen values
       jobs: [], page: 1,
       view: "flat",               // "flat" (every role) | "grouped" (by company)
@@ -264,6 +310,7 @@
       resetBtn: $("reset-filters"),
       undoBtn: $("undo-filters"),
       sortSelect: $("sort-select"),
+      hideOpened: $("hide-opened"),
       count: $("job-count"),
       list: $("job-list"),
       pagination: $("job-pagination"),
@@ -303,6 +350,9 @@
           if (top < floor.min) return false;
         }
         if (q && !j.title.toLowerCase().includes(q) && !j.company.toLowerCase().includes(q)) return false;
+        // track.js owns the opened set and loads after this file, so read it lazily
+        // rather than capturing a reference that would still be undefined.
+        if (state.hideOpened && global.Seen && j.job_id && global.Seen.has(j.job_id)) return false;
         return true;
       });
     }
@@ -399,8 +449,9 @@
               refreshOtherPickers(d.key);
               updateResetBtn();
               // Ticking a dropdown deliberately skips render() — it must not rebuild
-              // the list under the cursor — so history is recorded here too.
+              // the list under the cursor — so history and the URL are updated here too.
               if (!restoring) recordHistory();
+              syncUrl();
               listeners.forEach((fn) => fn());
             },
           }
@@ -458,7 +509,9 @@
       // Investors are deliberately absent from the row: they repeat on every job at a
       // company and crowd the title. The company card's header still lists them, and
       // the Investor filter still works.
-      const companyBit = inGroup ? "" : `<span class="job-company">${escapeHtml(j.company)}</span>`;
+      const companyBit = inGroup
+        ? ""
+        : `<span class="job-company">${escapeHtml(j.company)}${acquiredNote(j.company)}</span>`;
       // Company and salary share one line. Inside a company card the company name is
       // in the header, so the line carries the salary alone — and is dropped entirely
       // when there is neither, rather than leaving an empty gap.
@@ -597,7 +650,7 @@
                   ? `<span class="cg-logo"><img src="${escapeHtml(g.logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
                        onerror="this.closest('.cg-logo').outerHTML='<span class=\\'cg-mono t${m.tint}\\' aria-hidden=\\'true\\'>${escapeHtml(m.initials)}</span>'" /></span>`
                   : `<span class="cg-mono t${m.tint}" aria-hidden="true">${escapeHtml(m.initials)}</span>`}
-                <span class="cg-name">${escapeHtml(g.company)}</span>
+                <span class="cg-name">${escapeHtml(g.company)}${acquiredNote(g.company)}</span>
               </span>
               ${blurb}
               <span class="cg-cities"><span class="cg-label">Hiring in</span>${cities}</span>
@@ -721,6 +774,7 @@
       if (state.range !== "all") n++;
       if (state.salary !== "all") n++;
       if (state.query.trim()) n++;
+      if (state.hideOpened) n++;
       return n;
     }
 
@@ -812,18 +866,149 @@
       listeners.forEach((fn) => fn()); // let the saved-filters bar re-evaluate its match
     }
 
+    // ---- browser history ----
+    // The URL describes what you are looking at, so a filtered view survives a reload
+    // and can be shared or bookmarked. Two kinds of change, deliberately:
+    //
+    //   pushState     page and tab. These read as navigation, so Back steps through them.
+    //   replaceState  filters, search, sort. These refine one view; giving each its own
+    //                 history entry is what makes Back feel like a trap you have to
+    //                 press your way out of. The Undo button reverses these instead.
+    //
+    // `global.history` rather than `history`: the undo stack above shadows the browser's
+    // history object inside this closure.
+    //
+    // Everything is written as repeated params (?city=A&city=B) rather than a joined
+    // string, because company names and markets contain commas of their own.
+    const OURS = ["q", "posted", "salary", "sort", "view", "page", "unseen"];
+    let syncing = false;      // guard: applying a URL must not write one straight back
+    let pushNext = false;     // set immediately before a navigation-like render
+
+    function stateToUrl() {
+      const p = new URLSearchParams();
+      // Anything we don't own is passed through untouched — firm.html carries ?id=,
+      // and track.js reads it off the URL to attribute clicks to the right investor.
+      new URLSearchParams(location.search).forEach((v, k) => {
+        if (!OURS.includes(k) && !DIMENSIONS.some((d) => d.key === k)) p.append(k, v);
+      });
+      DIMENSIONS.forEach((d) => state.selected[d.key].forEach((v) => p.append(d.key, v)));
+      if (state.query) p.set("q", state.query);
+      if (state.range !== "all") p.set("posted", state.range);
+      if (state.salary !== "all") p.set("salary", state.salary);
+      if (state.sort !== "newest") p.set("sort", state.sort);
+      if (state.hideOpened) p.set("unseen", "1");
+      if (state.view === "grouped") p.set("view", "grouped");
+      if (state.page > 1) p.set("page", String(state.page));
+      const qs = p.toString();
+      return location.pathname + (qs ? "?" + qs : "") + location.hash;
+    }
+
+    function urlToState() {
+      const p = new URLSearchParams(location.search);
+      const selected = {};
+      DIMENSIONS.forEach((d) => {
+        const vals = p.getAll(d.key).filter(Boolean);
+        if (vals.length) selected[d.key] = vals;
+      });
+      return {
+        filters: {
+          selected,
+          query: p.get("q") || "",
+          range: p.get("posted") || "all",
+          salary: p.get("salary") || "all",
+          sort: p.get("sort") || "newest",
+          view: p.get("view") === "grouped" ? "grouped" : "flat",
+          hideOpened: p.get("unseen") === "1",
+        },
+        page: Math.max(1, Math.floor(Number(p.get("page"))) || 1),
+      };
+    }
+
+    // True when the URL actually carries a view of ours, so a plain visit doesn't pay
+    // for a second render just to apply an empty state.
+    function urlHasState() {
+      const p = new URLSearchParams(location.search);
+      return OURS.some((k) => p.has(k)) || DIMENSIONS.some((d) => p.has(d.key));
+    }
+
+    function syncUrl() {
+      if (syncing || !global.history || !global.history.replaceState) return;
+      const url = stateToUrl();
+      const snapshot = { page: state.page, view: state.view };
+      if (pushNext) global.history.pushState(snapshot, "", url);
+      else global.history.replaceState(snapshot, "", url);
+      pushNext = false;
+    }
+
+    // Shared by the URL, the popstate handler and presets.js, so all three go through
+    // the same resync of the selects and the view tabs.
+    function applyFilterState(f) {
+      if (!f) return;
+      DIMENSIONS.forEach((d) => {
+        state.selected[d.key].clear();
+        const vals = (f.selected || {})[d.key];
+        if (Array.isArray(vals)) vals.forEach((v) => state.selected[d.key].add(v));
+      });
+      // An absent or empty city selection intentionally means every city. A preset
+      // saved on the all-roles page can name an Investor dimension that firm pages
+      // don't have; that key has no matching DIMENSIONS entry here and is ignored.
+
+      state.query = f.query || "";
+      state.range = f.range || "all";
+      state.salary = f.salary || "all";
+      state.sort = f.sort || "newest";
+      state.hideOpened = !!f.hideOpened;
+      if (el.search) el.search.value = state.query;
+      if (el.dateSelect) el.dateSelect.value = state.range;
+      if (el.salarySelect) el.salarySelect.value = state.salary;
+      if (el.sortSelect) el.sortSelect.value = state.sort;
+      if (el.hideOpened) el.hideOpened.checked = state.hideOpened;
+
+      setView(f.view === "grouped" ? "grouped" : "flat");
+    }
+
+    // Captured before anything renders. The first render() replaceStates the current
+    // (empty) state over the address bar, which would wipe the params of the very link
+    // we were opened with before setJobs ever got to read them.
+    const openedWith = urlHasState() ? urlToState() : null;
+
+    // Back, Forward, and the first paint after a shared link is opened all land here.
+    // `restoring` keeps it out of the undo stack — arriving somewhere via Back is not
+    // a filter change to be undone — and `syncing` stops it echoing a URL back out.
+    function applyUrl() {
+      applyUrlState(urlToState());
+    }
+
+    function applyUrlState({ filters, page }) {
+      syncing = true;
+      restoring = true;
+      applyFilterState(filters);   // resets page to 1 by way of render()
+      state.page = page;
+      renderResults();             // clamps an out-of-range page against the real count
+      restoring = false;
+      syncing = false;
+      previous = view.getFilters();
+      updateUndoBtn();
+      listeners.forEach((fn) => fn());
+      syncUrl();                   // normalise, in case the page was clamped
+    }
+
     function render() {
       state.page = 1;
       refreshAllPickers();
       renderResults();
       updateResetBtn();
       if (!restoring) recordHistory();
+      syncUrl();
       listeners.forEach((fn) => fn());
     }
 
     // ---- events ----
     if (el.search) el.search.addEventListener("input", (e) => { state.query = e.target.value; render(); });
     if (el.sortSelect) el.sortSelect.addEventListener("change", (e) => { state.sort = e.target.value; render(); });
+    if (el.hideOpened) {
+      el.hideOpened.addEventListener("change", (e) => { state.hideOpened = e.target.checked; render(); });
+    }
     if (el.pagination) {
       const scrollToResults = () => {
         const anchor = el.count ? el.count.parentElement : el.list;
@@ -834,7 +1019,9 @@
 
       const goToPage = (page, focusNumber) => {
         state.page = page;
+        pushNext = true; // paging is navigation: Back should return to the page you left
         renderResults();
+        syncUrl();
         if (focusNumber) {
           const active = el.pagination.querySelector('.page-number[aria-current="page"]');
           if (active) {
@@ -899,7 +1086,10 @@
       }
     });
 
-    function setView(view) {
+    // `isNav` is set only by the tab buttons themselves. Restoring a URL or applying a
+    // saved filter also moves the tab, and neither should leave a history entry behind.
+    function setView(view, isNav) {
+      if (isNav && view !== state.view) pushNext = true;
       state.view = view;
       if (el.viewGrouped) {
         el.viewGrouped.classList.toggle("active", view === "grouped");
@@ -911,8 +1101,8 @@
       }
       render();
     }
-    if (el.viewGrouped) el.viewGrouped.addEventListener("click", () => setView("grouped"));
-    if (el.viewFlat) el.viewFlat.addEventListener("click", () => setView("flat"));
+    if (el.viewGrouped) el.viewGrouped.addEventListener("click", () => setView("grouped", true));
+    if (el.viewFlat) el.viewFlat.addEventListener("click", () => setView("flat", true));
 
     if (el.expandAll) {
       el.expandAll.addEventListener("click", () => {
@@ -937,20 +1127,30 @@
     if (el.resetBtn) {
       el.resetBtn.addEventListener("click", () => {
         DIMENSIONS.forEach((d) => state.selected[d.key].clear());
-        state.range = "all"; state.salary = "all"; state.query = "";
+        state.range = "all"; state.salary = "all"; state.query = ""; state.hideOpened = false;
         if (el.search) el.search.value = "";
         if (el.dateSelect) el.dateSelect.value = "all";
         if (el.salarySelect) el.salarySelect.value = "all";
+        if (el.hideOpened) el.hideOpened.checked = false;
         render();
       });
     }
 
     if (el.viewFlat) el.viewFlat.classList.add("active");
 
+    let booted = false;
+
     const view = {
       setJobs(jobs) {
         state.jobs = jobs || [];
         render();
+        // The first batch of data is the earliest point a URL can be honoured: the
+        // pickers need real values to tick, and the page count needs real rows to
+        // clamp against.
+        if (!booted) {
+          booted = true;
+          if (openedWith) applyUrlState(openedWith);
+        }
       },
       state,
       contextLabel: cfg.contextLabel,
@@ -974,31 +1174,11 @@
           salary: state.salary,
           sort: state.sort,
           view: state.view,
+          hideOpened: state.hideOpened,
         };
       },
 
-      applyFilters(f) {
-        if (!f) return;
-        DIMENSIONS.forEach((d) => {
-          state.selected[d.key].clear();
-          const vals = (f.selected || {})[d.key];
-          if (Array.isArray(vals)) vals.forEach((v) => state.selected[d.key].add(v));
-        });
-        // An absent or empty city selection intentionally means every city. A preset
-        // saved on the all-roles page can name an Investor dimension that firm pages
-        // don't have; that key has no matching DIMENSIONS entry here and is ignored.
-
-        state.query = f.query || "";
-        state.range = f.range || "all";
-        state.salary = f.salary || "all";
-        state.sort = f.sort || "newest";
-        if (el.search) el.search.value = state.query;
-        if (el.dateSelect) el.dateSelect.value = state.range;
-        if (el.salarySelect) el.salarySelect.value = state.salary;
-        if (el.sortSelect) el.sortSelect.value = state.sort;
-
-        setView(f.view === "grouped" ? "grouped" : "flat");
-      },
+      applyFilters: applyFilterState,
 
       /** Human label for one value, so a preset can name itself after its contents. */
       labelFor(key, value) {
@@ -1013,6 +1193,13 @@
        *  which saved filter (if any) matches what is on screen. */
       onChange(fn) { listeners.push(fn); },
     };
+
+    // Back and Forward. Wired after `view` exists because applyUrl reads getFilters()
+    // off it to resync the undo stack's idea of "where we are now".
+    global.addEventListener("popstate", () => {
+      if (!booted) return; // data hasn't landed yet; setJobs will read the URL instead
+      applyUrl();
+    });
 
     // Wired here rather than from the pages so both get it automatically. presets.js
     // loads before them, so it is present by the time this runs.

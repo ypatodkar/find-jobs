@@ -853,6 +853,30 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   margin: 3px 0 0;
 }
 .job-company { font-size: 0.85rem; color: var(--ink-soft); }
+/* Quieter than the company name it trails, because it is a caveat rather than part of
+   the name — but not so quiet that someone clicks through without reading it. */
+/* Sits among the Posted/Salary/Sort selects, so it borrows their type but stays a
+   checkbox rather than pretending to be another dropdown. */
+.applied-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.applied-toggle input { accent-color: var(--accent); cursor: pointer; margin: 0; }
+.applied-toggle:hover { color: var(--ink); }
+
+.acquired-note {
+  font-size: 0.92em;
+  font-style: italic;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
 .job-salary {
   font-family: var(--mono);
   font-size: 0.76rem;
