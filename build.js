@@ -22,7 +22,7 @@ const RESULTS_FILE = path.join(ROOT, "results.json");
 // Everything the browser needs. Server-side files (pipeline, scraper, ats, …) are
 // deliberately absent — shipping them would put the scrape internals on the public site.
 const ASSETS = [
-  "index.html", "firms.html", "firm.html",
+  "index.html", "firms.html", "firm.html", "about.html",
   "styles.css", "og.png", "robots.txt", "sitemap.xml", "404.html",
   "fonts/geist-sans-400.woff2", "fonts/geist-sans-500.woff2",
   "fonts/geist-sans-600.woff2", "fonts/geist-sans-700.woff2",

@@ -855,6 +855,27 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 .job-company { font-size: 0.85rem; color: var(--ink-soft); }
 /* Quieter than the company name it trails, because it is a caveat rather than part of
    the name — but not so quiet that someone clicks through without reading it. */
+/* Prose, not a dashboard: a measure narrow enough to read comfortably, which the rest
+   of the site has no need for because it is all tables and controls. */
+.about { max-width: 62ch; padding: 4px 0 8px; }
+.about section { margin: 0 0 30px; }
+.about h2 {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 0 0 12px;
+  font-weight: 500;
+}
+.about p {
+  font-size: 0.97rem;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  margin: 0 0 14px;
+}
+.about strong { color: var(--ink); font-weight: 600; }
+
 /* Sits among the Posted/Salary/Sort selects, so it borrows their type but stays a
    checkbox rather than pretending to be another dropdown. */
 .applied-toggle {
