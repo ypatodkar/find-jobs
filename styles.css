@@ -242,8 +242,12 @@ h1.title {
   border-bottom: 1px solid var(--rule);
   margin-bottom: 6px;
 }
+/* All four exist only for the mobile drawer. Above 720px the filters are an ordinary
+   block in the page and none of this is rendered. */
 .mobile-filter-toggle,
-.mobile-filter-backdrop { display: none; }
+.mobile-filter-backdrop,
+.drawer-head,
+.drawer-foot { display: none; }
 .search-wrap {
   position: relative;
   flex: 1 1 220px;
@@ -1242,17 +1246,6 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
     font: 500 0.7rem/1 var(--mono);
     color: var(--ink-soft);
   }
-  .mobile-filter-toggle[aria-expanded="true"] {
-    position: fixed;
-    z-index: 22;
-    top: 14px;
-    right: 14px;
-    width: auto;
-    min-width: 154px;
-    margin: 0;
-    background: var(--surface);
-  }
-  .mobile-filter-toggle[aria-expanded="true"]::after { content: "Close"; }
   .mobile-filter-toggle:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
   #job-controls.controls {
     position: fixed;
@@ -1265,7 +1258,9 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
     align-content: flex-start;
     gap: 14px;
     margin: 0;
-    padding: 70px 16px 24px;
+    /* No top or bottom padding: the sticky header and footer own those edges, so
+       they can sit flush against them while the middle scrolls under both. */
+    padding: 0 16px;
     background: var(--surface);
     border: 0;
     border-left: 1px solid var(--rule);
@@ -1273,6 +1268,125 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
     box-shadow: -12px 0 38px rgba(26, 18, 34, 0.18);
   }
   #job-controls.controls.mobile-collapsed { display: none; }
+
+  /* ---- drawer chrome ----
+     The old design floated the toggle into the top-right corner as a "Close" pill
+     once open, which put it on top of the first filter rather than beside it. The
+     sheet now carries its own title bar instead, and the toggle stays in the page
+     where it was. */
+  .drawer-head {
+    /* presets.js prepends its "Save this filter" bar with insertBefore(firstChild),
+       which lands it above this header in DOM order. The container is a flex box, so
+       order pins the chrome to the ends whatever gets injected between them. */
+    order: -1;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    /* Negative side margins cancel the container's padding so the bar spans the
+       full sheet and its underline reaches both edges. */
+    margin: 0 -16px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--rule);
+  }
+  .drawer-title {
+    margin: 0;
+    font: 600 0.95rem/1.2 var(--sans);
+    color: var(--ink);
+  }
+  .drawer-close {
+    min-height: 44px;
+    padding: 0 16px;
+    color: var(--accent);
+    background: var(--accent-fill);
+    border: 1px solid var(--accent);
+    border-radius: 7px;
+    font: 600 0.82rem/1 var(--sans);
+    cursor: pointer;
+  }
+  .drawer-close:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+
+  .drawer-foot {
+    order: 99;
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    display: block;
+    width: 100%;
+    margin: 4px -16px 0;
+    /* env() keeps the button clear of the iOS home indicator, which otherwise sits
+       directly on top of it. Falls back to plain padding everywhere else. */
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: var(--surface);
+    border-top: 1px solid var(--rule);
+  }
+  .drawer-apply {
+    width: 100%;
+    min-height: 48px;
+    color: var(--bg);
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    font: 600 0.88rem/1 var(--sans);
+    cursor: pointer;
+  }
+  .drawer-apply:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+  /* A filter set that matches nothing is a dead end, so the button stops inviting
+     the tap and says what happened instead. */
+  .drawer-apply.is-empty {
+    color: var(--ink-soft);
+    background: var(--chip-bg);
+    border-color: var(--rule);
+  }
+
+  /* ---- touch targets ----
+     Every control in this sheet measured under 44px tall before this block — the
+     "Select all" links were 15px. 44px is the smallest reliable touch target, so
+     it is applied to the controls themselves rather than to their containers. */
+  #job-controls .company-picker > summary,
+  #job-controls .preset-picker > summary,
+  #job-controls select,
+  #job-controls input[type="search"],
+  #job-controls input[type="text"],
+  #job-controls .chip,
+  #job-controls .linkish,
+  #job-controls .preset-save,
+  #job-controls .reset-btn,
+  #job-controls .undo-btn {
+    min-height: 44px;
+  }
+  /* min-height alone only reserves the box; without centring the label floats at the
+     top of it and the extra height reads as a gap rather than a bigger target. */
+  #job-controls .chip,
+  #job-controls .linkish,
+  #job-controls .preset-save,
+  #job-controls .company-picker > summary,
+  #job-controls .preset-picker > summary {
+    display: inline-flex;
+    align-items: center;
+  }
+  #job-controls .linkish { padding-inline: 10px; }
+  #job-controls .toggle {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #job-controls .toggle input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+  }
+  /* 16px is the threshold below which iOS Safari zooms the page on focus, which
+     leaves the drawer scrolled sideways and half off-screen. */
+  #job-controls select,
+  #job-controls input[type="search"],
+  #job-controls input[type="text"] { font-size: 16px; }
   #job-controls.controls .preset-bar { width: 100%; }
   .search-wrap { flex-basis: 100%; }
   .filter-grid { grid-template-columns: 1fr; gap: 12px; }

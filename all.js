@@ -16,65 +16,44 @@
   const pagination = document.getElementById("job-pagination");
   const message = document.getElementById("all-message");
   const note = document.getElementById("all-note");
-  const mobileFilters = window.matchMedia("(max-width: 720px)");
 
   const view = JobsUI.createJobsView({
     showFirms: true,
     firmLabel: firmName,
   });
 
-  function setMobileFiltersCollapsed(collapsed) {
-    const isCollapsed = mobileFilters.matches && collapsed;
-    const drawerOpen = mobileFilters.matches && !isCollapsed;
-    controls.classList.toggle("mobile-collapsed", isCollapsed);
-    mobileFilterToggle.setAttribute("aria-expanded", String(!isCollapsed));
-    mobileFilterBackdrop.hidden = !drawerOpen;
-    document.body.classList.toggle("filter-drawer-open", drawerOpen);
-    const active = mobileFilterToggle.textContent.match(/\d+ active/);
-    mobileFilterToggle.setAttribute(
-      "aria-label",
-      `${isCollapsed ? "Show" : "Hide"} filters${active ? `, ${active[0]}` : ""}`
-    );
-  }
+  // Modal-sheet behaviour under 720px — focus trap, scroll lock, live result count.
+  // Shared with firm.js rather than duplicated; see filter-drawer.js.
+  const drawer = FilterDrawer.create({
+    controls,
+    toggle: mobileFilterToggle,
+    backdrop: mobileFilterBackdrop,
+    closeBtn: document.getElementById("filter-drawer-close"),
+    applyBtn: document.getElementById("filter-drawer-apply"),
+    countSource: document.getElementById("count-flat"),
+    titleId: "filter-drawer-title",
+  });
+
+  // The footer button reads the count the results header renders, which is repainted
+  // after the filter state settles rather than during it.
+  view.onChange(() => drawer && drawer.syncCount());
 
   function showJobsUI() {
     controls.hidden = false;
-    mobileFilterToggle.hidden = false;
     viewTabs.hidden = false;
     resultsBar.hidden = false;
     jobList.hidden = false;
-    setMobileFiltersCollapsed(mobileFilters.matches);
+    if (drawer) drawer.reveal();
   }
 
   function hideJobsUI() {
-    document.body.classList.remove("filter-drawer-open");
-    mobileFilterBackdrop.hidden = true;
+    if (drawer) drawer.teardown();
     controls.hidden = true;
-    mobileFilterToggle.hidden = true;
     viewTabs.hidden = true;
     resultsBar.hidden = true;
     jobList.hidden = true;
     pagination.hidden = true;
   }
-
-  mobileFilterToggle.addEventListener("click", () => {
-    if (!mobileFilters.matches) return;
-    const collapse = !controls.classList.contains("mobile-collapsed");
-    setMobileFiltersCollapsed(collapse);
-    if (!collapse) requestAnimationFrame(() => document.getElementById("job-search")?.focus());
-  });
-  mobileFilterBackdrop.addEventListener("click", () => {
-    setMobileFiltersCollapsed(true);
-    mobileFilterToggle.focus();
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape" || !mobileFilters.matches || controls.classList.contains("mobile-collapsed")) return;
-    setMobileFiltersCollapsed(true);
-    mobileFilterToggle.focus();
-  });
-  mobileFilters.addEventListener("change", (event) => {
-    if (!controls.hidden) setMobileFiltersCollapsed(event.matches);
-  });
 
   /**
    * Reverse pipeline.js's packCompanies: put each company's facts back onto its

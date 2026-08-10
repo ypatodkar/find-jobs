@@ -21,54 +21,31 @@
   };
 
   const esc = JobsUI.escapeHtml;
-  const mobileFilters = window.matchMedia("(max-width: 720px)");
 
   function showMessage(html) {
     el.message.innerHTML = html;
     el.message.hidden = false;
   }
 
-  function setMobileFiltersCollapsed(collapsed) {
-    const isCollapsed = mobileFilters.matches && collapsed;
-    const drawerOpen = mobileFilters.matches && !isCollapsed;
-    el.controls.classList.toggle("mobile-collapsed", isCollapsed);
-    el.mobileFilterToggle.setAttribute("aria-expanded", String(!isCollapsed));
-    el.mobileFilterBackdrop.hidden = !drawerOpen;
-    document.body.classList.toggle("filter-drawer-open", drawerOpen);
-    const active = el.mobileFilterToggle.textContent.match(/\d+ active/);
-    el.mobileFilterToggle.setAttribute(
-      "aria-label",
-      `${isCollapsed ? "Show" : "Hide"} filters${active ? `, ${active[0]}` : ""}`
-    );
-  }
+  // Modal-sheet behaviour under 720px — focus trap, scroll lock, live result count.
+  // Shared with all.js rather than duplicated; see filter-drawer.js.
+  const drawer = FilterDrawer.create({
+    controls: el.controls,
+    toggle: el.mobileFilterToggle,
+    backdrop: el.mobileFilterBackdrop,
+    closeBtn: document.getElementById("filter-drawer-close"),
+    applyBtn: document.getElementById("filter-drawer-apply"),
+    countSource: document.getElementById("count-flat"),
+    titleId: "filter-drawer-title",
+  });
 
   function showJobsUI() {
     el.controls.hidden = false;
-    el.mobileFilterToggle.hidden = false;
     el.viewTabs.hidden = false;
     el.resultsBar.hidden = false;
     el.jobList.hidden = false;
-    setMobileFiltersCollapsed(mobileFilters.matches);
+    if (drawer) drawer.reveal();
   }
-
-  el.mobileFilterToggle.addEventListener("click", () => {
-    if (!mobileFilters.matches) return;
-    const collapse = !el.controls.classList.contains("mobile-collapsed");
-    setMobileFiltersCollapsed(collapse);
-    if (!collapse) requestAnimationFrame(() => document.getElementById("job-search")?.focus());
-  });
-  el.mobileFilterBackdrop.addEventListener("click", () => {
-    setMobileFiltersCollapsed(true);
-    el.mobileFilterToggle.focus();
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape" || !mobileFilters.matches || el.controls.classList.contains("mobile-collapsed")) return;
-    setMobileFiltersCollapsed(true);
-    el.mobileFilterToggle.focus();
-  });
-  mobileFilters.addEventListener("change", (event) => {
-    if (!el.controls.hidden) setMobileFiltersCollapsed(event.matches);
-  });
 
   if (!firm) {
     el.name.textContent = "Firm not found";
@@ -88,6 +65,10 @@
     showFirms: false,
     contextLabel: firm.short || firm.name,
   });
+
+  // The footer button reads the count the results header renders, which is repainted
+  // after the filter state settles rather than during it.
+  view.onChange(() => drawer && drawer.syncCount());
 
   fetch("api/firm/" + encodeURIComponent(firmId) + ".json")
     .then((r) => (r.ok ? r.json() : r.json().then((e) => Promise.reject(e))))
