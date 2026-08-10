@@ -12,6 +12,25 @@ node server.js
 
 Then open <http://localhost:4173>. No dependencies — Node 18+ only.
 
+## Refresh the live feed
+
+Between the twice-daily crons, to scrape and redeploy on demand:
+
+```bash
+./refresh.js              # dispatch, then watch it to completion
+./refresh.js --no-watch   # dispatch and get your prompt back
+./refresh.js --status     # last few runs, dispatch nothing
+```
+
+The scrape runs on GitHub's runners and lands on Cloudflare Pages — `refresh.js`
+duplicates none of the pipeline, it just fires the `workflow_dispatch` on
+`deploy.yml` and reports each step back. Needs `gh auth login` once.
+
+Not on Cloudflare itself, despite that being where the site lives: one pass makes
+~1,245 outbound requests (70 VC boards + 1,175 company ATS boards) and `results.json`
+needs ~121 MB of heap to parse, against a Worker's 1,000 subrequests and 128 MB.
+Landing it there means Workflows, chunked steps and R2 — a port, not a button.
+
 ## Deploy
 
 Hosted on **Cloudflare Pages**, scraped and redeployed by GitHub Actions twice daily
