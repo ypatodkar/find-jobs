@@ -355,16 +355,24 @@
       const t = (j) => (j.posted ? new Date(j.posted).getTime() : 0);
       const pay = (j) => j.salaryMax || j.salaryMin || 0;
       const byTitle = (a, b) => a.title.localeCompare(b.title) || a.company.localeCompare(b.company);
-      // Date sorts tie on the day, not the timestamp, so everything the list labels
-      // "1 day ago" competes as one bucket. The exact posting minute was never shown,
-      // so it cannot break the tie; the bucket is ordered by title instead, then by
-      // company, which makes a day's roles scannable and keeps the order stable
-      // between visits.
+
+      // "Newest first" means newest, at the finest granularity the sources give us —
+      // not a day bucket reordered by something else. 98.6% of roles carry a real
+      // posting time (Ashby, Greenhouse and Lever all publish one), so this is a
+      // genuine recency order rather than a tie waiting to be broken.
       //
-      // This replaces a random shuffle (see 1ed3f42). The trade-off it reverses: a
-      // stable alphabetical order means titles early in the alphabet sit at the top
-      // of every day's bucket for everyone, permanently.
-      if (state.sort === "newest") arr.sort((a, b) => dayOf(b) - dayOf(a) || byTitle(a, b));
+      // Roles that do tie keep the order they arrived in, because Array#sort is
+      // stable — that is the closest thing we have to "as they were added". In
+      // practice only the 172 board-sourced roles stamped midnight can tie at all.
+      //
+      // Supersedes fc7e671, which bucketed by day and alphabetized inside the bucket.
+      // That was answering a real problem — a random shuffle reordering the list
+      // between visits — but it bought stability by putting every "AI Engineer" at
+      // the top of each day, ahead of roles genuinely posted later.
+      if (state.sort === "newest") arr.sort((a, b) => t(b) - t(a));
+      // Oldest keeps the day bucket: reading forwards from the bottom of the pile,
+      // a stable alphabetical order within a day is easier to scan than a
+      // minute-by-minute one, and nothing is competing to be first.
       else if (state.sort === "oldest") arr.sort((a, b) => dayOf(a) - dayOf(b) || byTitle(a, b));
       else if (state.sort === "salary") arr.sort((a, b) => pay(b) - pay(a) || t(b) - t(a) || byTitle(a, b));
       else if (state.sort === "count") {
