@@ -140,6 +140,10 @@
         if (mark(id)) {
           paint(a.parentNode || document);
           if (global.Viewed) global.Viewed.refresh();
+          // The "(N)" beside every company name is derived from this same set, and
+          // the list is not re-rendered on a click — so nudge the badges that are
+          // already on screen, including the one on this row.
+          if (global.JobsUI && global.JobsUI.refreshOpenedCounts) global.JobsUI.refreshOpenedCounts();
         }
 
         if (!ENDPOINT || !navigator.sendBeacon) return;

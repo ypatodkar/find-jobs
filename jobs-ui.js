@@ -84,6 +84,63 @@
     return by ? ` <span class="acquired-note">(acquired by ${escapeHtml(by)})</span>` : "";
   }
 
+  // ---- "you've opened N roles here" ----
+  //
+  // Derived by joining the job list already in memory against track.js's opened set,
+  // rather than kept as its own per-company tally. Two things fall out of that: it is
+  // retroactive over history recorded long before this existed, and localStorage
+  // still holds exactly one map of job ids with nothing to migrate or keep in step.
+  //
+  // Local to this browser, like everything else track.js records. It counts roles you
+  // opened from this site — not applications, which the site has no way of knowing
+  // about.
+  let openedByCompany = null;
+  let openedStamp = -1; // the Seen size the cached map was built from
+
+  function openedCountFor(company) {
+    const seen = global.Seen;
+    if (!seen || !seen.count) return 0;
+    const n = seen.count();
+    if (!n) return 0;
+
+    // Rebuilding is O(all jobs), so it is keyed off the opened count rather than done
+    // per render: a filter change, a sort or a page turn reuses the map, and only an
+    // actual new click invalidates it.
+    if (openedStamp !== n) {
+      openedByCompany = new Map();
+      const all = (global.JobsData && global.JobsData.all()) || [];
+      for (const j of all) {
+        if (!j.job_id || !seen.has(j.job_id)) continue;
+        openedByCompany.set(j.company, (openedByCompany.get(j.company) || 0) + 1);
+      }
+      openedStamp = n;
+    }
+    return openedByCompany.get(company) || 0;
+  }
+
+  /**
+   * Update the badges already on screen.
+   *
+   * track.js marks a click and repaints that one row rather than re-rendering the
+   * list, so without this the count beside the company name would sit one behind
+   * until the next filter change — most visibly on the row you just clicked.
+   *
+   * The span is always rendered, empty at zero and hidden by :empty in CSS, so this
+   * only ever sets text and never has to insert a node into a row.
+   */
+  function refreshOpenedCounts(root) {
+    const scope = root && root.querySelectorAll ? root : document;
+    const nodes = scope.querySelectorAll(".job-company-opened[data-opened-for]");
+    for (const el of nodes) {
+      const n = openedCountFor(el.getAttribute("data-opened-for"));
+      const text = n ? `(${n})` : "";
+      if (el.textContent === text) continue;
+      el.textContent = text;
+      if (n) el.setAttribute("title", `You've opened ${n} role${n === 1 ? "" : "s"} at this company`);
+      else el.removeAttribute("title");
+    }
+  }
+
   const SIZE_ORDER = ["1-10", "11-50", "51-200", "201-1000", "1000+"];
   const DAY_MS = 86400000;
   const JOBS_PER_PAGE = 45;
@@ -515,9 +572,20 @@
       // Investors are deliberately absent from the row: they repeat on every job at a
       // company and crowd the title. The company card's header still lists them, and
       // the Investor filter still works.
+      // How many roles at this company you have opened, in brackets after the name.
+      // Always emitted, empty at zero: refreshOpenedCounts() then only has to set
+      // text on a click, and CSS :empty keeps a company you've never opened looking
+      // exactly as it did before. Inside a company card the header carries the count
+      // instead, so the rows don't repeat it on every line.
+      const openedN = inGroup ? 0 : openedCountFor(j.company);
+      const openedBit = inGroup
+        ? ""
+        : ` <span class="job-company-opened" data-opened-for="${escapeHtml(j.company)}"` +
+          (openedN ? ` title="You've opened ${openedN} role${openedN === 1 ? "" : "s"} at this company"` : "") +
+          `>${openedN ? `(${openedN})` : ""}</span>`;
       const companyBit = inGroup
         ? ""
-        : `<span class="job-company">${escapeHtml(j.company)}${acquiredNote(j.company)}</span>`;
+        : `<span class="job-company">${escapeHtml(j.company)}${acquiredNote(j.company)}${openedBit}</span>`;
       // Company and salary share one line. Inside a company card the company name is
       // in the header, so the line carries the salary alone — and is dropped entirely
       // when there is neither, rather than leaving an empty gap.
@@ -1213,5 +1281,7 @@
     return view;
   }
 
-  global.JobsUI = { createJobsView, escapeHtml, relativeDate, ROLE_LABELS };
+  // refreshOpenedCounts is called by track.js the moment a click is recorded, so the
+  // badge moves with the row it belongs to rather than on the next render.
+  global.JobsUI = { createJobsView, escapeHtml, relativeDate, ROLE_LABELS, refreshOpenedCounts };
 })(window);

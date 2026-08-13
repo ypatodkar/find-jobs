@@ -902,6 +902,23 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   color: var(--ink-faint);
   white-space: nowrap;
 }
+
+/* How many roles you've opened at this company, in brackets after the name.
+   Tabular figures so the brackets don't shift as the number grows, and the accent
+   colour because it is your own history rather than a fact about the company —
+   the same purple the "clicked" stamp and the opened title already use.
+
+   Rendered empty for a company you've never opened, so :empty is what keeps those
+   rows identical to before. Without it every company name would trail a stray space
+   and an empty inline box. */
+.job-company-opened {
+  font-family: var(--mono);
+  font-size: 0.78em;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in oklab, var(--accent) 62%, var(--ink-faint));
+  white-space: nowrap;
+}
+.job-company-opened:empty { display: none; }
 .job-salary {
   font-family: var(--mono);
   font-size: 0.76rem;
