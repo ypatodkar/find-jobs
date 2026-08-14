@@ -1565,6 +1565,63 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   max-width: 78ch;
 }
 
+/* ---- Startup of the day ----
+   One hand-written company above the list. It has to read as editorial rather than as
+   an ad, so it is a left rule and a kicker instead of a filled card with a border —
+   the same device the rest of the page uses for section bands. */
+#featured-slot:empty { display: none; }
+#featured-slot { margin: 0 0 18px; }
+
+.featured {
+  padding: 2px 0 2px 16px;
+  border-left: 2px solid var(--accent);
+}
+.featured-kicker {
+  margin: 0 0 6px;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.featured-name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+}
+.featured-facts {
+  margin: 3px 0 0;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+/* A reading measure, which nothing else on this page needs — everything around it is
+   tables and controls, and two sentences of prose set to full width reads badly. */
+.featured-blurb {
+  margin: 8px 0 0;
+  max-width: 68ch;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.featured-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 9px 0 0;
+  font-size: 0.8rem;
+}
+.featured-roles { font-weight: 600; color: var(--accent); }
+.featured-site { color: var(--ink-faint); }
+.featured-links a:hover { text-decoration: underline; }
+
+@media (max-width: 620px) {
+  .featured { padding-left: 12px; }
+  .featured-blurb { font-size: 0.85rem; }
+}
+
 /* ---- "Companies you've opened" ----
    Your own click history, folded up in the masthead between the description and the
    stats line. Hidden entirely until there is something to show. */

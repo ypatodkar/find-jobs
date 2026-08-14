@@ -1,0 +1,20 @@
+{
+  "_comment": "The featured startup shown at the top of the list. Written by the /feature slash command, read by featured.js in the browser. `current` is what renders; `history` is the ledger that stops a company being featured twice. Set current to null to show nothing.",
+  "staleAfterDays": 14,
+  "current": {
+    "company": "ModernFi",
+    "blurb": "Government insurance on a bank account stops at $250,000. ModernFi splits a big depositor's money into $250,000 chunks spread across other banks in its network, so all of it stays covered while the customer sees one account at their own bank. Credit unions had nothing like this until ModernFi built it in 2024.",
+    "staffCount": 50,
+    "stage": "Growth",
+    "city": "New York",
+    "domain": "modernfi.com",
+    "roles": 4,
+    "featuredOn": "2026-08-13",
+    "sources": [
+      "https://www.modernfi.com/",
+      "https://modernfi.com/cuso",
+      "https://www.cutoday.info/Fresh-Today/Seeking-to-Scale-First-Deposit-Network-in-Credit-Unions-ModernFI-Forms-CUSO"
+    ]
+  },
+  "history": []
+}
