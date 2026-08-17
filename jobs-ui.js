@@ -333,7 +333,7 @@
     // still treat DIMENSIONS as one flat list, so moving a filter between groups
     // changes where it sits on screen and nothing else.
     const GROUPS = [
-      { id: "dev", title: "Developers" },
+      { id: "dev", title: "Developers choice" },
       { id: "rest", title: "Everything else" },
     ];
 
@@ -492,9 +492,29 @@
       return `
       <section class="filter-section">
         <p class="filter-section-title" id="fg-${g.id}">${escapeHtml(g.title)}</p>
-        <div class="filter-grid" role="group" aria-labelledby="fg-${g.id}">${dims.map(pickerMarkup).join("")}</div>
+        <div class="filter-grid" id="grid-${g.id}" role="group" aria-labelledby="fg-${g.id}">${dims.map(pickerMarkup).join("")}</div>
       </section>`;
     }).join("");
+
+    // Posted and Salary are filters, so they belong with the filters rather than in the
+    // tail, which is left holding the two controls that are not filters at all: what to
+    // hide, and how to order what remains.
+    //
+    // Moved rather than re-rendered here, because that keeps one copy of the markup in
+    // the page: the ids, the options already populated into them and the listeners bound
+    // to them all survive a move, where re-emitting the same <select> from JS would need
+    // its own copy of the option lists and a second place to keep them in step. #picker-row
+    // is built once at init and never rebuilt on re-render, so the move happens once.
+    //
+    // They are single-selects sitting in a grid of multi-select pickers, which is why the
+    // grid gives them the picker's shape rather than the tail's.
+    const restGrid = $("grid-rest");
+    if (restGrid) {
+      [el.dateSelect, el.salarySelect].forEach((sel) => {
+        const wrap = sel && sel.closest(".sort-wrap");
+        if (wrap) restGrid.appendChild(wrap);
+      });
+    }
 
     const pickers = DIMENSIONS.map((d) => {
       const labelFor = d.labelFor || ((v) => v);

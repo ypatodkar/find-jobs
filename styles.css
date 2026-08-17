@@ -1045,6 +1045,12 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   gap: 10px 16px;
   width: 100%;
 }
+/* Posted and Salary are moved into the "Everything else" grid at init. They are plain
+   <select>s rather than pickers, so they need the one rule that makes them fill their
+   cell the way .picker-wrap's dropdown does — the label typography already matches,
+   because .sort-wrap and .picker-label were always the same type. */
+.filter-grid .sort-wrap > select { flex: 1 1 auto; min-width: 0; }
+
 .filter-tail {
   display: flex;
   align-items: center;
@@ -1414,6 +1420,15 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   }
   .picker-wrap > .company-picker,
   .picker-wrap > .company-picker > summary { width: 100%; }
+  /* Posted and Salary now sit in this grid, so in the drawer they stack like the
+     pickers beside them rather than keeping the tail's label-left/control-right row.
+     min-width has to be undone, or the 170px floor below stops them stretching. */
+  .filter-grid .sort-wrap {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  .filter-grid .sort-wrap > select { min-width: 0; }
   .company-panel {
     position: static;
     width: 100%;
