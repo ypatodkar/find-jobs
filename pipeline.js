@@ -134,6 +134,15 @@ function summarize(results) {
   return out;
 }
 
+/** Refuse a deploy when every configured board on a supported platform failed. */
+function failedPlatforms(results) {
+  const platforms = new Set(Object.values(BOARDS).map((cfg) => cfg.platform).filter(Boolean));
+  return [...platforms].filter((platform) => {
+    const ids = Object.keys(BOARDS).filter((id) => BOARDS[id].platform === platform);
+    return ids.length > 0 && ids.every((id) => results.firms[id]?.status !== "ok");
+  });
+}
+
 /** The firms-index payload. */
 function resultsPayload(data) {
   return { scrapedAt: data.scrapedAt, firms: summarize(data) };
@@ -233,4 +242,4 @@ function firmPayload(data, id) {
   return null;
 }
 
-module.exports = { runScrape, summarize, resultsPayload, allJobsPayload, firmPayload };
+module.exports = { runScrape, summarize, failedPlatforms, resultsPayload, allJobsPayload, firmPayload };

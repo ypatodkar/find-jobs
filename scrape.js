@@ -7,7 +7,7 @@
 
 const fsp = require("fs/promises");
 const path = require("path");
-const { runScrape } = require("./pipeline");
+const { runScrape, failedPlatforms } = require("./pipeline");
 
 const RESULTS_FILE = path.join(__dirname, "results.json");
 
@@ -31,6 +31,11 @@ async function main() {
       if (e.failures.length) console.log(`${e.failures.length} company boards unreachable.`);
     }
   });
+
+  const failed = failedPlatforms(results);
+  if (failed.length) {
+    throw new Error(`refusing to replace results.json: every ${failed.join(" and ")} board failed`);
+  }
 
   await fsp.writeFile(RESULTS_FILE, JSON.stringify(results, null, 2));
   console.log(`Wrote results.json`);

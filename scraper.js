@@ -43,6 +43,7 @@ const CONSIDER_PAGE_SIZE = 1000; // hard ceiling: 2000 returns an empty body
 const GETRO_PAGE_SIZE = 500;
 const GETRO_MAX_PAGES = 12;
 const SCRAPE_RETRIES = 2; // backs off 2s then 4s
+const considerSessions = new Map();
 
 async function postJson(url, body, headers) {
   const res = await fetch(url, {
@@ -54,10 +55,45 @@ async function postJson(url, body, headers) {
   return res.json();
 }
 
+/**
+ * Consider began requiring its normal browser CSRF handshake in August 2026. The
+ * public jobs page seeds both a signed session cookie and a token in
+ * `window.serverInitialData`; the search endpoint rejects a bare POST with 412.
+ * Cache one handshake per host because a scrape can split into several requests.
+ */
+async function considerSession(cfg) {
+  if (considerSessions.has(cfg.host)) return considerSessions.get(cfg.host);
+
+  const pending = (async () => {
+    const url = `https://${cfg.host}/jobs`;
+    const res = await fetch(url, { headers: { accept: "text/html", "user-agent": UA } });
+    if (!res.ok) throw new Error(`Consider session HTTP ${res.status}`);
+    const html = await res.text();
+    const match = html.match(/"csrfToken":"([^"]+)"/);
+    if (!match) throw new Error("Consider session did not include a CSRF token");
+
+    const setCookies = typeof res.headers.getSetCookie === "function"
+      ? res.headers.getSetCookie()
+      : [res.headers.get("set-cookie")].filter(Boolean);
+    const cookie = setCookies.map((value) => value.split(";", 1)[0]).join("; ");
+    if (!cookie) throw new Error("Consider session did not include cookies");
+    return { token: match[1], cookie };
+  })();
+
+  considerSessions.set(cfg.host, pending);
+  try {
+    return await pending;
+  } catch (err) {
+    considerSessions.delete(cfg.host);
+    throw err;
+  }
+}
+
 // Consider caps a response at 1000 rows and offers no offset, so a location set that
 // matches more than that would silently truncate. Split the set and recurse until
 // every chunk comes back under the cap.
 async function considerFetch(cfg, locations, depth = 0) {
+  const session = await considerSession(cfg);
   const data = await postJson(
     `https://${cfg.host}/api-boards/search-jobs`,
     {
@@ -65,7 +101,12 @@ async function considerFetch(cfg, locations, depth = 0) {
       board: { id: cfg.boardId, isParent: true },
       query: { locations, jobFunctions: ["Engineering"] },
     },
-    { referer: `https://${cfg.host}/jobs`, origin: `https://${cfg.host}` }
+    {
+      referer: `https://${cfg.host}/jobs`,
+      origin: `https://${cfg.host}`,
+      cookie: session.cookie,
+      "x-csrf-token": session.token,
+    }
   );
   const jobs = data.jobs || [];
 
@@ -231,4 +272,4 @@ async function scrapeFirm(firmId) {
   return { firmId, status: "error", host: cfg.host, platform: cfg.platform, reason: lastErr.message, jobs: [] };
 }
 
-module.exports = { scrapeFirm, BOARDS };
+module.exports = { scrapeFirm, BOARDS, considerSession };
