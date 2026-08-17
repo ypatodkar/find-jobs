@@ -158,7 +158,10 @@ const CITY_MATCHERS = METROS.map((m) => ({ city: m.city, re: m.re }));
 // roles — real engineering, but not what this board is for. Anything that matches
 // no pattern is dropped, so hardware titles need no exclusion of their own.
 const ROLE_PATTERNS = [
-  { key: "ai", label: "AI / ML", re: /\b(a\.?i\.?|artificial intelligence|machine learning|ml|mlops|llms?|genai|gen[-\s]ai|deep learning|nlp|computer vision|applied scientist|research engineer|research scientist|agentic|agents?|foundation models?|inference|rag|fine[-\s]?tuning|perception|robot learning)\b/i },
+  { key: "ai", label: "AI / ML", re: /\b(a\.?i\.?|artificial intelligence|machine learning|reinforcement learning|ml|mlops|llms?|genai|gen[-\s]ai|deep learning|nlp|computer vision|applied scientist|research engineer|research scientist|agentic|agents?|foundation models?|inference|rag|fine[-\s]?tuning|perception|robot learning)\b/i },
+  // Robotics is intentionally separate from the broad hardware catch-all we avoid.
+  // A robotics title is in scope; a generic Mechanical Engineer still is not.
+  { key: "robotics", label: "Robotics", re: /\b(robot|robotic|robotics|mechatronic|mechatronics)\b/i },
   { key: "backend", label: "Backend", re: /\b(back[-\s]?end|server[-\s]?side|api engineer|distributed systems)\b/i },
   { key: "infra", label: "Infra / Platform", re: /\b(platform engineer|infrastructure|infra engineer|systems engineer|site reliability|sre|devops|cloud engineer)\b/i },
   { key: "fullstack", label: "Full-stack", re: /\bfull[-\s]?stack\b/i },

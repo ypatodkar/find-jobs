@@ -34,3 +34,22 @@ test("keeps xAI's actual engineering roles", () => {
     assert.notEqual(keep(title, loc), null, `${title} should survive`);
   }
 });
+
+test("classifies robotics roles without admitting generic hardware jobs", () => {
+  const loc = ["San Francisco, CA"];
+  const expected = [
+    ["Research Engineer - Robot Learning", ["ai", "robotics"]],
+    ["Robot Research Scientist", ["ai", "robotics"]],
+    ["Reinforcement Learning", ["ai"]],
+    ["Research Scientist - Reinforcement Learning, Robotics", ["ai", "robotics"]],
+    ["Mechatronics Engineer", ["robotics"]],
+    ["Robot FDE", ["robotics"]],
+    ["Forward Deployed Robotics Engineer", ["robotics", "solutions"]],
+  ];
+
+  for (const [title, roles] of expected) {
+    assert.deepEqual(keep(title, loc)?.roles, roles, title);
+  }
+  assert.equal(keep("Mechanical Engineer", loc), null);
+  assert.equal(keep("Robotics Product Manager", loc), null);
+});

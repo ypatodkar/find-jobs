@@ -10,6 +10,7 @@
   // missed here surfaces in the filter as a raw slug rather than breaking.
   const ROLE_LABELS = {
     ai: "AI / ML",
+    robotics: "Robotics",
     backend: "Backend",
     infra: "Infra / Platform",
     fullstack: "Full-stack",
