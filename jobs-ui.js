@@ -201,7 +201,18 @@
       // only way to undo the selection would be Clear.
       selected.forEach((v) => { if (!counts.has(v)) counts.set(v, 0); });
 
+      // An ordinal dimension carries its own scale and has to stay on it: a company
+      // size list running 1,000+ → 51–200 → 201–1,000 reads as broken however well it
+      // is sorted by volume, and ticking a box must not move the row you just ticked.
+      // Everything else — companies, cities, industries — has no natural order, so it
+      // leads with what you have selected and then with what has the most roles.
+      // A value missing from the scale sorts to the end rather than to the front,
+      // which is where indexOf's -1 would otherwise put it.
+      const rank = opts.order
+        ? (v) => { const i = opts.order.indexOf(v); return i < 0 ? Infinity : i; }
+        : null;
       const entries = [...counts.entries()].sort((a, b) => {
+        if (rank) return rank(a[0]) - rank(b[0]);
         const sel = (v) => (selected.has(v) ? 0 : 1);
         return sel(a[0]) - sel(b[0]) || b[1] - a[1] || opts.labelFor(a[0]).localeCompare(opts.labelFor(b[0]));
       });
@@ -495,16 +506,18 @@
             selected: state.selected[d.key],
             label: d.label,
             labelFor,
+            order: d.order || null,
             maxOptions: 60,
             // Counts come from everything *except* this dimension, so an option only
             // appears if it would still return rows under the other active filters.
             counts: () => {
               const m = new Map();
               filtered(d.key).forEach((j) => d.values(j).forEach((v) => { if (v) m.set(v, (m.get(v) || 0) + 1); }));
-              const arr = [...m.entries()];
-              return d.order
-                ? arr.sort((a, b) => d.order.indexOf(a[0]) - d.order.indexOf(b[0]))
-                : arr.sort((a, b) => b[1] - a[1] || labelFor(a[0]).localeCompare(labelFor(b[0])));
+              // Deliberately unsorted: the picker owns ordering, because it is the only
+              // one that can see which options are selected and which zero-count rows it
+              // had to add back. Sorting here as well is what let the two disagree — this
+              // ordered by the scale, the picker re-sorted by volume, and the picker won.
+              return [...m.entries()];
             },
             onChange: () => {
               state.page = 1;
