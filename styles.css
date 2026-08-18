@@ -1618,7 +1618,7 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 .featured-kicker {
   margin: 0 0 6px;
   font-family: var(--mono);
-  font-size: 1.4rem;
+  font-size: 1.1rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1626,8 +1626,8 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 }
 .featured-name {
   margin: 0;
-  font-size: clamp(1.15rem, 2.4vw, 1.45rem);
-  font-weight: 500;
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  font-weight: 400;
   line-height: 1.25;
   color: var(--ink);
 }
