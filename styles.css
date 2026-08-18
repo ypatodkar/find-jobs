@@ -1595,48 +1595,25 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 #featured-slot:empty { display: none; }
 #featured-slot { margin: 0 0 18px; }
 
-/* Temporary controls for comparing five treatments on the experiment branch. */
-.featured-lab {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 18px 0 22px;
-  padding: 8px;
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: 8px;
-}
-.featured-lab-label {
-  padding: 0 6px;
-  font-family: var(--mono);
-  font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-.featured-lab button {
-  padding: 5px 9px;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--ink-soft);
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  cursor: pointer;
-}
-.featured-lab button:hover { color: var(--accent); }
-.featured-lab button[aria-pressed="true"] {
-  color: var(--accent);
-  background: var(--accent-fill);
-  border-color: var(--accent);
-}
-.featured-lab button:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
-
 .featured {
-  padding: 2px 0 2px 16px;
-  border-left: 2px solid var(--accent);
+  position: relative;
+  overflow: hidden;
+  padding: 24px 26px;
+  border: 1px solid var(--rule-strong);
+  border-left: 8px solid #5411bd;
+  border-radius: 12px;
+  background-color: #fcfaff;
+  background-image: radial-gradient(circle at 92% 12%, var(--accent2-fill) 0, transparent 42%);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+.featured::after {
+  content: "✦";
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  color: var(--accent);
+  font-size: 1.3rem;
 }
 .featured-kicker {
   margin: 0 0 6px;
@@ -1648,7 +1625,7 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 }
 .featured-name {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: clamp(1.35rem, 3vw, 1.8rem);
   font-weight: 600;
   line-height: 1.25;
   color: var(--ink);
@@ -1679,86 +1656,14 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 .featured-site { color: var(--ink-faint); }
 .featured-links a:hover { text-decoration: underline; }
 
-/* 1 — A quiet surface and border: unmistakably a card, still native to the UI. */
-html[data-feature-variant="1"] .featured {
-  padding: 18px 20px;
-  border: 1px solid var(--rule);
-  border-left: 3px solid var(--accent);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) .featured { background-color: var(--surface); }
 }
-
-/* 2 — A full-width accent band, like an editorial section marker. */
-html[data-feature-variant="2"] .featured {
-  padding: 18px 20px 20px;
-  border: 0;
-  border-top: 5px solid var(--accent);
-  border-bottom: 1px solid var(--rule);
-  background: linear-gradient(180deg, var(--accent-fill), transparent 76%);
-}
-html[data-feature-variant="2"] .featured-kicker { letter-spacing: 0.16em; }
-
-/* 3 — Magazine-style label rail beside the story. */
-html[data-feature-variant="3"] .featured {
-  display: grid;
-  grid-template-columns: minmax(120px, 0.32fr) minmax(0, 1fr);
-  gap: 24px;
-  padding: 20px 0;
-  border: 0;
-  border-top: 1px solid var(--ink);
-  border-bottom: 1px solid var(--rule);
-}
-html[data-feature-variant="3"] .featured-kicker {
-  margin: 2px 0 0;
-  padding-right: 20px;
-  border-right: 1px solid var(--rule);
-}
-
-/* 4 — More whitespace, a larger company name, and a soft radial glow. */
-html[data-feature-variant="4"] .featured {
-  position: relative;
-  overflow: hidden;
-  padding: 24px 26px;
-  border: 1px solid var(--rule-strong);
-  border-radius: 12px;
-  background: radial-gradient(circle at 92% 12%, var(--accent2-fill) 0, transparent 42%), var(--bg);
-}
-html[data-feature-variant="4"] .featured::after {
-  content: "✦";
-  position: absolute;
-  top: 16px;
-  right: 20px;
-  color: var(--accent);
-  font-size: 1.3rem;
-}
-html[data-feature-variant="4"] .featured-name { font-size: clamp(1.35rem, 3vw, 1.8rem); }
-
-/* 5 — The strongest option: the existing accent becomes the whole canvas. */
-html[data-feature-variant="5"] .featured {
-  padding: 22px 24px;
-  border: 0;
-  border-radius: 10px;
-  background: var(--accent);
-  box-shadow: var(--shadow);
-}
-html[data-feature-variant="5"] .featured-kicker,
-html[data-feature-variant="5"] .featured-name,
-html[data-feature-variant="5"] .featured-facts,
-html[data-feature-variant="5"] .featured-blurb,
-html[data-feature-variant="5"] .featured-links a { color: var(--on-accent); }
-html[data-feature-variant="5"] .featured-facts,
-html[data-feature-variant="5"] .featured-kicker { opacity: 0.78; }
-html[data-feature-variant="5"] .featured-links a { text-decoration-color: color-mix(in srgb, var(--on-accent) 45%, transparent); }
+html[data-theme="dark"] .featured { background-color: var(--surface); }
 
 @media (max-width: 620px) {
-  .featured { padding-left: 12px; }
+  .featured { padding: 20px 18px; border-left-width: 6px; }
   .featured-blurb { font-size: 0.85rem; }
-  .featured-lab { align-items: stretch; }
-  .featured-lab-label { width: 100%; padding-bottom: 2px; }
-  .featured-lab button { flex: 1 1 calc(50% - 6px); }
-  html[data-feature-variant="3"] .featured { display: block; padding: 16px 0; }
-  html[data-feature-variant="3"] .featured-kicker { margin-bottom: 8px; padding: 0; border: 0; }
 }
 
 /* ---- "Companies you've opened" ----

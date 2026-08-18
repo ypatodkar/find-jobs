@@ -29,7 +29,7 @@ const ASSETS = [
   "data.js", "jobs-ui.js", "presets.js", "filter-drawer.js", "all.js", "app.js", "firm.js", "track.js", "theme.js", "visitor.js", "viewed.js", "counter.js", "heart.js", "feedback.js",
   // Content, not code: rewritten by the /feature command between scrapes, and shipped
   // as-is so the browser can fetch it at the same relative path server.js serves.
-  "featured.js", "featured-lab.js", "featured.json",
+  "featured.js", "featured.json",
 ];
 
 async function writeJson(rel, body) {
