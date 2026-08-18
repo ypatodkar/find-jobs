@@ -186,7 +186,12 @@ header.masthead {
   color: var(--accent);
   margin: 0;
 }
-.theme-toggle {
+/* The LinkedIn link is the same 32px round control as the theme toggle sitting beside
+   it, so the shape is described once rather than twice. The icon is an inline SVG on
+   currentColor, which is what lets it pick up the hover and the theme without a second
+   asset to load or a light/dark pair to keep in step. */
+.theme-toggle,
+.masthead-link {
   background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: 999px;
@@ -198,9 +203,12 @@ header.masthead {
   cursor: pointer;
   color: var(--ink-soft);
   font-size: 1rem;
+  flex: none;
 }
-.theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
-.theme-toggle:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+.theme-toggle:hover,
+.masthead-link:hover { border-color: var(--accent); color: var(--accent); }
+.theme-toggle:focus-visible,
+.masthead-link:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
 
 .masthead-actions { display: flex; align-items: center; gap: 10px; }
 
