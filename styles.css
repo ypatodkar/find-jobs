@@ -1626,7 +1626,7 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 }
 .featured-name {
   margin: 0;
-  font-size: clamp(1rem, 2vw, 1.2rem);
+  font-size: 1.1rem;
   font-weight: 400;
   line-height: 1.25;
   color: var(--ink);

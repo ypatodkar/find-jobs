@@ -62,7 +62,7 @@
       '<aside class="featured" aria-labelledby="featured-heading">' +
       '<p class="featured-kicker" id="featured-heading">Startup of the day</p>' +
       '<div class="featured-body">' +
-      '<h2 class="featured-name">' + esc(f.company) + "</h2>" +
+      '<p class="featured-name">' + esc(f.company) + "</p>" +
       (facts ? '<p class="featured-facts">' + facts + "</p>" : "") +
       '<p class="featured-blurb">' + esc(f.blurb) + "</p>" +
       '<p class="featured-links">' + roles + site + "</p>" +
