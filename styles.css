@@ -1600,8 +1600,8 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   overflow: hidden;
   padding: 24px 26px;
   border: 1px solid var(--rule-strong);
-  border-left: 8px solid #5411bd;
-  border-radius: 12px;
+  border-left: 2px solid #5411bd;
+  border-radius: 5px;
   background-color: #fcfaff;
   background-image: radial-gradient(circle at 92% 12%, var(--accent2-fill) 0, transparent 42%);
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
@@ -1663,7 +1663,7 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 html[data-theme="dark"] .featured { background-color: var(--surface); }
 
 @media (max-width: 620px) {
-  .featured { padding: 20px 18px; border-left-width: 6px; }
+  .featured { padding: 20px 18px; }
   .featured-blurb { font-size: 0.85rem; }
 }
 
