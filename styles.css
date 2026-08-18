@@ -411,7 +411,7 @@ h1.title {
 }
 a.joblink {
   font-family: var(--mono);
-  font-size: 1.4rem;
+  font-size: 0.8rem;
   color: var(--accent);
   text-decoration: none;
   border-bottom: 1px solid var(--accent);
@@ -1618,7 +1618,7 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 .featured-kicker {
   margin: 0 0 6px;
   font-family: var(--mono);
-  font-size: 0.8rem;
+  font-size: 1.4rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
