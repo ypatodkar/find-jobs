@@ -2,19 +2,21 @@
   "_comment": "The featured startup shown at the top of the list. Written by the /feature slash command, read by featured.js in the browser. `current` is what renders; `history` is the ledger that stops a company being featured twice. Set current to null to show nothing.",
   "staleAfterDays": 14,
   "current": {
-    "company": "ModernFi",
-    "blurb": "Government insurance on a bank account stops at $250,000. ModernFi splits a big depositor's money into $250,000 chunks spread across other banks in its network, so all of it stays covered while the customer sees one account at their own bank. Credit unions had nothing like this until ModernFi built it in 2024.",
-    "staffCount": 50,
-    "stage": "Growth",
-    "city": "New York",
-    "domain": "modernfi.com",
-    "roles": 4,
-    "featuredOn": "2026-08-13",
+    "company": "Cogent Security",
+    "blurb": "The bottleneck in vulnerability management is rarely finding the flaw — it is chasing down which team owns the affected system, filing the ticket, and proving the fix actually happened. Cogent puts agents on that coordination work and verifies the patch landed.",
+    "staffCount": 27,
+    "stage": "Series A",
+    "city": "San Francisco",
+    "domain": "cogent.security",
+    "roles": 17,
+    "featuredOn": "2026-08-20",
     "sources": [
-      "https://www.modernfi.com/",
-      "https://modernfi.com/cuso",
-      "https://www.cutoday.info/Fresh-Today/Seeking-to-Scale-First-Deposit-Network-in-Credit-Unions-ModernFI-Forms-CUSO"
+      "https://cogent.com/",
+      "https://www.securityweek.com/cogent-security-raises-42-million-for-ai-driven-vulnerability-management/",
+      "https://siliconangle.com/2026/02/18/cogent-security-raises-42m-scale-ai-agents-enterprise-vulnerability-remediation/"
     ]
   },
-  "history": []
+  "history": [
+    { "company": "ModernFi", "featuredOn": "2026-08-13" }
+  ]
 }
