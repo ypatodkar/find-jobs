@@ -1062,23 +1062,18 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
    <select>s rather than pickers, so they need the one rule that makes them fill their
    cell the way .picker-wrap's dropdown does — the label typography already matches,
    because .sort-wrap and .picker-label were always the same type. */
-.filter-grid .sort-wrap > select,
-.filter-grid .sort-wrap > input[type="number"] { flex: 1 1 auto; min-width: 0; }
+.filter-grid .sort-wrap > select { flex: 1 1 auto; min-width: 0; }
 
-/* The opened-count box. Styled off .sort-wrap select rather than the search input,
-   because it sits in the filter grid beside Posted and Salary and should read as one
-   of them, not as a second search field. */
-.sort-wrap > input[type="number"] {
-  font-family: var(--sans);
-  font-size: 0.82rem;
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: 5px;
-  padding: 6px 9px;
-  width: 100%;
+/* A checkbox among the dropdowns. It takes a grid cell like the rest, but its label is
+   a whole sentence rather than a word, so it is allowed to wrap where .toggle would
+   otherwise hold it on one line and push the grid wider than its column. */
+.filter-grid .filter-toggle {
+  align-items: flex-start;
+  white-space: normal;
+  min-width: 0;
+  font-size: 0.8rem;
 }
-.sort-wrap > input[type="number"]:focus-visible { outline: 2px solid var(--accent2); outline-offset: 1px; }
+.filter-grid .filter-toggle input { margin-top: 2px; flex: none; }
 
 .filter-tail {
   display: flex;
@@ -1458,6 +1453,9 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
     gap: 4px;
   }
   .filter-grid .sort-wrap > select { min-width: 0; }
+  /* The checkbox keeps its row — box then label — where the selects stack. Stacking a
+     tick above its own caption would read as a heading with a stray control under it. */
+  .filter-grid .filter-toggle { flex-direction: row; align-items: flex-start; }
   .company-panel {
     position: static;
     width: 100%;

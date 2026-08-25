@@ -85,7 +85,10 @@
         <div class="filter-tail">
           <label class="sort-wrap"><span>Posted</span><select id="date-select" aria-label="Filter by date posted"></select></label>
           <label class="sort-wrap"><span>Salary</span><select id="salary-select" aria-label="Filter by minimum salary"></select></label>
-          <label class="sort-wrap"><span>Opened</span><input id="opened-count" type="number" min="0" step="1" inputmode="numeric" placeholder="Any" aria-label="Show only companies where you have opened exactly this many roles" /></label>
+          <label class="toggle filter-toggle" title="Leaves only companies you have never opened a role at">
+            <input type="checkbox" id="hide-opened-companies" />
+            <span>Hide companies I&rsquo;ve opened</span>
+          </label>
           <label class="toggle applied-toggle" title="Roles you have already opened from this site">
             <input type="checkbox" id="hide-opened" />
             <span>Hide roles I&rsquo;ve opened</span>

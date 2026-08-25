@@ -133,22 +133,6 @@
   }
 
   /**
-   * Read the opened-count filter from a string, or null for "any".
-   *
-   * Deliberately strict, because this value arrives from a URL anyone can edit and
-   * from a number input a browser will happily let you type "e" and "-" into. Blank,
-   * negative, fractional or non-numeric all mean "no filter" rather than becoming NaN
-   * and silently matching nothing at all — an empty list with no visible cause is the
-   * worst outcome here, and it is the one a bare Number() would produce.
-   */
-  function parseOpened(value) {
-    if (value === null || value === undefined || String(value).trim() === "") return null;
-    const n = Number(value);
-    if (!Number.isInteger(n) || n < 0) return null;
-    return n;
-  }
-
-  /**
    * Update the badges already on screen.
    *
    * track.js marks a click and repaints that one row rather than re-rendering the
@@ -383,14 +367,13 @@
       // closest thing to "applied" without asking you to tell us twice. See the
       // checkbox's own label, which says opened rather than applied for that reason.
       hideOpened: false,
-      // Exact number of roles you have opened at a company, or null for "any".
+      // Leaves only companies you have never opened a role at.
       //
-      // Null rather than -1 or 0 for off, because 0 is a filter someone actually wants:
-      // "companies I have never opened anything at" is the whole untouched half of the
-      // list, and it is the reason this is a number box rather than another checkbox
-      // beside Hide-opened. It filters on the company's total, not the row, so asking
-      // for 0 removes every role at a company you have touched even once.
-      openedCount: null,
+      // The company-level sibling of hideOpened above: that one hides the individual
+      // rows you have already been to, this one hides the company entirely the moment
+      // you open anything there. Together they are the difference between "not this
+      // exact role again" and "I have looked at this company, show me somewhere new".
+      hideOpenedCompanies: false,
       selected: {}, // dimension key -> Set of chosen values
       jobs: [], page: 1,
       view: "flat",               // "flat" (every role) | "grouped" (by company)
@@ -407,7 +390,7 @@
       undoBtn: $("undo-filters"),
       sortSelect: $("sort-select"),
       hideOpened: $("hide-opened"),
-      openedCount: $("opened-count"),
+      hideOpenedCompanies: $("hide-opened-companies"),
       count: $("job-count"),
       list: $("job-list"),
       pagination: $("job-pagination"),
@@ -450,9 +433,10 @@
         // track.js owns the opened set and loads after this file, so read it lazily
         // rather than capturing a reference that would still be undefined.
         if (state.hideOpened && global.Seen && j.job_id && global.Seen.has(j.job_id)) return false;
-        // Company-level, so every row at a company passes or fails together. The count
-        // is a cached Map lookup rather than a scan — see openedCountFor.
-        if (state.openedCount !== null && openedCountFor(j.company) !== state.openedCount) return false;
+        // Company-level, so every row at a company passes or fails together: one click
+        // anywhere at a company takes all of its roles out of the list. The count is a
+        // cached Map lookup rather than a scan — see openedCountFor.
+        if (state.hideOpenedCompanies && openedCountFor(j.company) > 0) return false;
         return true;
       });
     }
@@ -549,8 +533,10 @@
     // grid gives them the picker's shape rather than the tail's.
     const restGrid = $("grid-rest");
     if (restGrid) {
-      [el.dateSelect, el.salarySelect, el.openedCount].forEach((sel) => {
-        const wrap = sel && sel.closest(".sort-wrap");
+      [el.dateSelect, el.salarySelect, el.hideOpenedCompanies].forEach((ctrl) => {
+        // Two shapes here: the selects arrive wrapped in .sort-wrap, the checkbox in
+        // .filter-toggle, and the grid takes whichever wrapper it finds.
+        const wrap = ctrl && ctrl.closest(".sort-wrap, .filter-toggle");
         if (wrap) restGrid.appendChild(wrap);
       });
     }
@@ -920,7 +906,7 @@
       if (state.salary !== "all") n++;
       if (state.query.trim()) n++;
       if (state.hideOpened) n++;
-      if (state.openedCount !== null) n++;
+      if (state.hideOpenedCompanies) n++;
       return n;
     }
 
@@ -1026,7 +1012,7 @@
     //
     // Everything is written as repeated params (?city=A&city=B) rather than a joined
     // string, because company names and markets contain commas of their own.
-    const OURS = ["q", "posted", "salary", "sort", "view", "page", "unseen", "opened"];
+    const OURS = ["q", "posted", "salary", "sort", "view", "page", "unseen", "unopened"];
     let syncing = false;      // guard: applying a URL must not write one straight back
     let pushNext = false;     // set immediately before a navigation-like render
 
@@ -1043,7 +1029,7 @@
       if (state.salary !== "all") p.set("salary", state.salary);
       if (state.sort !== "newest") p.set("sort", state.sort);
       if (state.hideOpened) p.set("unseen", "1");
-      if (state.openedCount !== null) p.set("opened", String(state.openedCount));
+      if (state.hideOpenedCompanies) p.set("unopened", "1");
       if (state.view === "grouped") p.set("view", "grouped");
       if (state.page > 1) p.set("page", String(state.page));
       const qs = p.toString();
@@ -1066,7 +1052,7 @@
           sort: p.get("sort") || "newest",
           view: p.get("view") === "grouped" ? "grouped" : "flat",
           hideOpened: p.get("unseen") === "1",
-          openedCount: parseOpened(p.get("opened")),
+          hideOpenedCompanies: p.get("unopened") === "1",
         },
         page: Math.max(1, Math.floor(Number(p.get("page"))) || 1),
       };
@@ -1106,13 +1092,13 @@
       state.salary = f.salary || "all";
       state.sort = f.sort || "newest";
       state.hideOpened = !!f.hideOpened;
-      state.openedCount = f.openedCount == null ? null : f.openedCount;
+      state.hideOpenedCompanies = !!f.hideOpenedCompanies;
       if (el.search) el.search.value = state.query;
       if (el.dateSelect) el.dateSelect.value = state.range;
       if (el.salarySelect) el.salarySelect.value = state.salary;
       if (el.sortSelect) el.sortSelect.value = state.sort;
       if (el.hideOpened) el.hideOpened.checked = state.hideOpened;
-      if (el.openedCount) el.openedCount.value = state.openedCount === null ? "" : String(state.openedCount);
+      if (el.hideOpenedCompanies) el.hideOpenedCompanies.checked = state.hideOpenedCompanies;
 
       setView(f.view === "grouped" ? "grouped" : "flat");
     }
@@ -1159,12 +1145,9 @@
     if (el.hideOpened) {
       el.hideOpened.addEventListener("change", (e) => { state.hideOpened = e.target.checked; render(); });
     }
-    if (el.openedCount) {
-      // "input" rather than "change", so the list follows each keystroke the way the
-      // search box does instead of waiting for a blur. parseOpened turns a half-typed
-      // "-" or an empty box back into "any" rather than into a filter matching nothing.
-      el.openedCount.addEventListener("input", (e) => {
-        state.openedCount = parseOpened(e.target.value);
+    if (el.hideOpenedCompanies) {
+      el.hideOpenedCompanies.addEventListener("change", (e) => {
+        state.hideOpenedCompanies = e.target.checked;
         render();
       });
     }
@@ -1287,12 +1270,12 @@
       el.resetBtn.addEventListener("click", () => {
         DIMENSIONS.forEach((d) => state.selected[d.key].clear());
         state.range = "all"; state.salary = "all"; state.query = ""; state.hideOpened = false;
-        state.openedCount = null;
+        state.hideOpenedCompanies = false;
         if (el.search) el.search.value = "";
         if (el.dateSelect) el.dateSelect.value = "all";
         if (el.salarySelect) el.salarySelect.value = "all";
         if (el.hideOpened) el.hideOpened.checked = false;
-        if (el.openedCount) el.openedCount.value = "";
+        if (el.hideOpenedCompanies) el.hideOpenedCompanies.checked = false;
         render();
       });
     }
@@ -1336,7 +1319,7 @@
           sort: state.sort,
           view: state.view,
           hideOpened: state.hideOpened,
-          openedCount: state.openedCount,
+          hideOpenedCompanies: state.hideOpenedCompanies,
         };
       },
 
