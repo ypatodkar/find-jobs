@@ -120,6 +120,35 @@
   }
 
   /**
+   * What the badge says. A bare "(4)" beside a company name is a number with no unit —
+   * it could as easily be open roles or investors — so the row states what it counts.
+   *
+   * "Opened", not "applied", and the distinction is not pedantry: clicking a title
+   * hands you to the employer's own application page and nothing ever comes back from
+   * it. The site knows you looked. It cannot know what you did next, and a row reading
+   * "applied" would be claiming otherwise every time you opened a job and closed it.
+   */
+  function openedLabel(n) {
+    return n ? `${n} role${n === 1 ? "" : "s"} opened at this company` : "";
+  }
+
+  /**
+   * Read the opened-count filter from a string, or null for "any".
+   *
+   * Deliberately strict, because this value arrives from a URL anyone can edit and
+   * from a number input a browser will happily let you type "e" and "-" into. Blank,
+   * negative, fractional or non-numeric all mean "no filter" rather than becoming NaN
+   * and silently matching nothing at all — an empty list with no visible cause is the
+   * worst outcome here, and it is the one a bare Number() would produce.
+   */
+  function parseOpened(value) {
+    if (value === null || value === undefined || String(value).trim() === "") return null;
+    const n = Number(value);
+    if (!Number.isInteger(n) || n < 0) return null;
+    return n;
+  }
+
+  /**
    * Update the badges already on screen.
    *
    * track.js marks a click and repaints that one row rather than re-rendering the
@@ -133,12 +162,9 @@
     const scope = root && root.querySelectorAll ? root : document;
     const nodes = scope.querySelectorAll(".job-company-opened[data-opened-for]");
     for (const el of nodes) {
-      const n = openedCountFor(el.getAttribute("data-opened-for"));
-      const text = n ? `(${n})` : "";
+      const text = openedLabel(openedCountFor(el.getAttribute("data-opened-for")));
       if (el.textContent === text) continue;
       el.textContent = text;
-      if (n) el.setAttribute("title", `You've opened ${n} role${n === 1 ? "" : "s"} at this company`);
-      else el.removeAttribute("title");
     }
   }
 
@@ -357,6 +383,14 @@
       // closest thing to "applied" without asking you to tell us twice. See the
       // checkbox's own label, which says opened rather than applied for that reason.
       hideOpened: false,
+      // Exact number of roles you have opened at a company, or null for "any".
+      //
+      // Null rather than -1 or 0 for off, because 0 is a filter someone actually wants:
+      // "companies I have never opened anything at" is the whole untouched half of the
+      // list, and it is the reason this is a number box rather than another checkbox
+      // beside Hide-opened. It filters on the company's total, not the row, so asking
+      // for 0 removes every role at a company you have touched even once.
+      openedCount: null,
       selected: {}, // dimension key -> Set of chosen values
       jobs: [], page: 1,
       view: "flat",               // "flat" (every role) | "grouped" (by company)
@@ -373,6 +407,7 @@
       undoBtn: $("undo-filters"),
       sortSelect: $("sort-select"),
       hideOpened: $("hide-opened"),
+      openedCount: $("opened-count"),
       count: $("job-count"),
       list: $("job-list"),
       pagination: $("job-pagination"),
@@ -415,6 +450,9 @@
         // track.js owns the opened set and loads after this file, so read it lazily
         // rather than capturing a reference that would still be undefined.
         if (state.hideOpened && global.Seen && j.job_id && global.Seen.has(j.job_id)) return false;
+        // Company-level, so every row at a company passes or fails together. The count
+        // is a cached Map lookup rather than a scan — see openedCountFor.
+        if (state.openedCount !== null && openedCountFor(j.company) !== state.openedCount) return false;
         return true;
       });
     }
@@ -511,7 +549,7 @@
     // grid gives them the picker's shape rather than the tail's.
     const restGrid = $("grid-rest");
     if (restGrid) {
-      [el.dateSelect, el.salarySelect].forEach((sel) => {
+      [el.dateSelect, el.salarySelect, el.openedCount].forEach((sel) => {
         const wrap = sel && sel.closest(".sort-wrap");
         if (wrap) restGrid.appendChild(wrap);
       });
@@ -614,9 +652,8 @@
       const openedN = inGroup ? 0 : openedCountFor(j.company);
       const openedBit = inGroup
         ? ""
-        : ` <span class="job-company-opened" data-opened-for="${escapeHtml(j.company)}"` +
-          (openedN ? ` title="You've opened ${openedN} role${openedN === 1 ? "" : "s"} at this company"` : "") +
-          `>${openedN ? `(${openedN})` : ""}</span>`;
+        : ` <span class="job-company-opened" data-opened-for="${escapeHtml(j.company)}">` +
+          `${escapeHtml(openedLabel(openedN))}</span>`;
       const companyBit = inGroup
         ? ""
         : `<span class="job-company">${escapeHtml(j.company)}${acquiredNote(j.company)}${openedBit}</span>`;
@@ -883,6 +920,7 @@
       if (state.salary !== "all") n++;
       if (state.query.trim()) n++;
       if (state.hideOpened) n++;
+      if (state.openedCount !== null) n++;
       return n;
     }
 
@@ -988,7 +1026,7 @@
     //
     // Everything is written as repeated params (?city=A&city=B) rather than a joined
     // string, because company names and markets contain commas of their own.
-    const OURS = ["q", "posted", "salary", "sort", "view", "page", "unseen"];
+    const OURS = ["q", "posted", "salary", "sort", "view", "page", "unseen", "opened"];
     let syncing = false;      // guard: applying a URL must not write one straight back
     let pushNext = false;     // set immediately before a navigation-like render
 
@@ -1005,6 +1043,7 @@
       if (state.salary !== "all") p.set("salary", state.salary);
       if (state.sort !== "newest") p.set("sort", state.sort);
       if (state.hideOpened) p.set("unseen", "1");
+      if (state.openedCount !== null) p.set("opened", String(state.openedCount));
       if (state.view === "grouped") p.set("view", "grouped");
       if (state.page > 1) p.set("page", String(state.page));
       const qs = p.toString();
@@ -1027,6 +1066,7 @@
           sort: p.get("sort") || "newest",
           view: p.get("view") === "grouped" ? "grouped" : "flat",
           hideOpened: p.get("unseen") === "1",
+          openedCount: parseOpened(p.get("opened")),
         },
         page: Math.max(1, Math.floor(Number(p.get("page"))) || 1),
       };
@@ -1066,11 +1106,13 @@
       state.salary = f.salary || "all";
       state.sort = f.sort || "newest";
       state.hideOpened = !!f.hideOpened;
+      state.openedCount = f.openedCount == null ? null : f.openedCount;
       if (el.search) el.search.value = state.query;
       if (el.dateSelect) el.dateSelect.value = state.range;
       if (el.salarySelect) el.salarySelect.value = state.salary;
       if (el.sortSelect) el.sortSelect.value = state.sort;
       if (el.hideOpened) el.hideOpened.checked = state.hideOpened;
+      if (el.openedCount) el.openedCount.value = state.openedCount === null ? "" : String(state.openedCount);
 
       setView(f.view === "grouped" ? "grouped" : "flat");
     }
@@ -1116,6 +1158,15 @@
     if (el.sortSelect) el.sortSelect.addEventListener("change", (e) => { state.sort = e.target.value; render(); });
     if (el.hideOpened) {
       el.hideOpened.addEventListener("change", (e) => { state.hideOpened = e.target.checked; render(); });
+    }
+    if (el.openedCount) {
+      // "input" rather than "change", so the list follows each keystroke the way the
+      // search box does instead of waiting for a blur. parseOpened turns a half-typed
+      // "-" or an empty box back into "any" rather than into a filter matching nothing.
+      el.openedCount.addEventListener("input", (e) => {
+        state.openedCount = parseOpened(e.target.value);
+        render();
+      });
     }
     if (el.pagination) {
       const scrollToResults = () => {
@@ -1236,10 +1287,12 @@
       el.resetBtn.addEventListener("click", () => {
         DIMENSIONS.forEach((d) => state.selected[d.key].clear());
         state.range = "all"; state.salary = "all"; state.query = ""; state.hideOpened = false;
+        state.openedCount = null;
         if (el.search) el.search.value = "";
         if (el.dateSelect) el.dateSelect.value = "all";
         if (el.salarySelect) el.salarySelect.value = "all";
         if (el.hideOpened) el.hideOpened.checked = false;
+        if (el.openedCount) el.openedCount.value = "";
         render();
       });
     }
@@ -1283,6 +1336,7 @@
           sort: state.sort,
           view: state.view,
           hideOpened: state.hideOpened,
+          openedCount: state.openedCount,
         };
       },
 

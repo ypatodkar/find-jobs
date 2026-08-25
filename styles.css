@@ -919,13 +919,18 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
    Rendered empty for a company you've never opened, so :empty is what keeps those
    rows identical to before. Without it every company name would trail a stray space
    and an empty inline box. */
+/* Now a short sentence rather than a bare "(4)", so it drops the mono face and the
+   tabular figures — those earn their place on a column of numbers, not on prose — and
+   sits smaller than the company name it trails, which is what keeps the row reading as
+   a name with a note after it rather than as two competing labels. */
 .job-company-opened {
-  font-family: var(--mono);
-  font-size: 0.78em;
-  font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
   color: color-mix(in oklab, var(--accent) 62%, var(--ink-faint));
   white-space: nowrap;
 }
+/* Separator lives in CSS so refreshOpenedCounts can compare textContent against the
+   label alone, and so a company you have never opened renders exactly as before. */
+.job-company-opened:not(:empty)::before { content: "· "; }
 .job-company-opened:empty { display: none; }
 .job-salary {
   font-family: var(--mono);
@@ -1057,7 +1062,23 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
    <select>s rather than pickers, so they need the one rule that makes them fill their
    cell the way .picker-wrap's dropdown does — the label typography already matches,
    because .sort-wrap and .picker-label were always the same type. */
-.filter-grid .sort-wrap > select { flex: 1 1 auto; min-width: 0; }
+.filter-grid .sort-wrap > select,
+.filter-grid .sort-wrap > input[type="number"] { flex: 1 1 auto; min-width: 0; }
+
+/* The opened-count box. Styled off .sort-wrap select rather than the search input,
+   because it sits in the filter grid beside Posted and Salary and should read as one
+   of them, not as a second search field. */
+.sort-wrap > input[type="number"] {
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  padding: 6px 9px;
+  width: 100%;
+}
+.sort-wrap > input[type="number"]:focus-visible { outline: 2px solid var(--accent2); outline-offset: 1px; }
 
 .filter-tail {
   display: flex;
