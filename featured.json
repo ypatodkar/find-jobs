@@ -2,21 +2,22 @@
   "_comment": "The featured startup shown at the top of the list. Written by the /feature slash command, read by featured.js in the browser. `current` is what renders; `history` is the ledger that stops a company being featured twice. Set current to null to show nothing.",
   "staleAfterDays": 14,
   "current": {
-    "company": "Cogent Security",
-    "blurb": "The bottleneck in vulnerability management is rarely finding the flaw — it is chasing down which team owns the affected system, filing the ticket, and proving the fix actually happened. Cogent puts agents on that coordination work and verifies the patch landed.",
-    "staffCount": 27,
-    "stage": "Series A",
+    "company": "Phylo",
+    "blurb": "An IDE for biology: agents that move data between the tools a lab already uses, so a scientist can upload a protein's composition and ask for its predicted shape in one place. Grew out of an open-source agent now used by 4,300 organizations, including 18 of the 20 largest pharma companies.",
+    "staffCount": 7,
+    "stage": "Seed",
     "city": "San Francisco",
-    "domain": "cogent.security",
-    "roles": 17,
-    "featuredOn": "2026-08-20",
+    "domain": "phylo.bio",
+    "roles": 5,
+    "featuredOn": "2026-08-26",
     "sources": [
-      "https://cogent.com/",
-      "https://www.securityweek.com/cogent-security-raises-42-million-for-ai-driven-vulnerability-management/",
-      "https://siliconangle.com/2026/02/18/cogent-security-raises-42m-scale-ai-agents-enterprise-vulnerability-remediation/"
+      "https://phylo.bio",
+      "https://siliconangle.com/2026/02/03/ai-startup-phylo-nabs-13-5m-integrated-biology-environment/",
+      "https://www.synbiobeta.com/read/phylo-launches-biomni-lab-and-secures-13.5m-seed-round"
     ]
   },
   "history": [
-    { "company": "ModernFi", "featuredOn": "2026-08-13" }
+    { "company": "ModernFi", "featuredOn": "2026-08-13" },
+    { "company": "Cogent Security", "featuredOn": "2026-08-20" }
   ]
 }
