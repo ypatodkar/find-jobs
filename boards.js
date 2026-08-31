@@ -5,14 +5,22 @@
 // Getro boards expose POST https://api.getro.com/api/v2/collections/<networkId>/search/jobs
 
 const BOARDS = {
-  "andreessen-horowitz": { platform: "consider", host: "jobs.a16z.com", boardId: "andreessen-horowitz" },
+  // Rewritten off Consider in Aug 2026: /api-boards/search-jobs now 404s and the page
+  // ships a server-rendered front end with no session cookie. jobs.a16z.com/companies
+  // still lists all 852 portfolio companies with domains, so this is recoverable — but
+  // it needs an adapter that can turn those into apply URLs, which is what buildRegistry
+  // keys off. Until then it is honestly unsupported rather than quietly failing nightly.
+  "andreessen-horowitz": { platform: "a16z", host: "jobs.a16z.com" },
   "sequoia-capital":     { platform: "consider", host: "jobs.sequoiacap.com", boardId: "sequoia-capital" },
   "lightspeed":          { platform: "consider", host: "jobs.lsvp.com", boardId: "lightspeed" },
   "nea":                 { platform: "consider", host: "careers.nea.com", boardId: "nea" },
   "norwest":             { platform: "consider", host: "careers.nvp.com", boardId: "norwest-venture-partners" },
   "bessemer":            { platform: "consider", host: "jobs.bvp.com", boardId: "bessemer-ventures" },
   "kleiner-perkins":     { platform: "consider", host: "jobs.kleinerperkins.com", boardId: "kleiner-perkins" },
-  "greylock":            { platform: "consider", host: "jobs.greylock.com", boardId: "greylock-partners" },
+  // Same migration, different destination: jobs.greylock.com now 301s to
+  // greylock.com/jobs/portfolio-jobs, which embeds only its first 60 rows and no
+  // company index at all — a harder target than a16z for a much smaller portfolio.
+  "greylock":            { platform: "greylock", host: "greylock.com", path: "/jobs/portfolio-jobs" },
   "ivp":                 { platform: "consider", host: "careers.ivp.com", boardId: "ivp" },
   "felicis":             { platform: "consider", host: "jobs.felicis.com", boardId: "felicis" },
   "point72-ventures":    { platform: "consider", host: "jobs.p72.vc", boardId: "point72-ventures" },

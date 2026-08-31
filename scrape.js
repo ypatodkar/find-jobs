@@ -7,7 +7,7 @@
 
 const fsp = require("fs/promises");
 const path = require("path");
-const { runScrape, failedPlatforms } = require("./pipeline");
+const { runScrape, failedPlatforms, failedBoards } = require("./pipeline");
 
 const RESULTS_FILE = path.join(__dirname, "results.json");
 
@@ -35,6 +35,15 @@ async function main() {
   const failed = failedPlatforms(results);
   if (failed.length) {
     throw new Error(`refusing to replace results.json: every ${failed.join(" and ")} board failed`);
+  }
+
+  // Named individually, because the totals hide this. Two boards going quiet costs
+  // whole portfolios' worth of companies while the run still reports success, and the
+  // only visible symptom is a job count that looks plausibly like ordinary churn.
+  const lost = failedBoards(results);
+  if (lost.length) {
+    console.warn(`\n${lost.length} configured board${lost.length === 1 ? "" : "s"} did not return:`);
+    for (const [id, reason] of lost) console.warn(`  ${id.padEnd(24)} ${reason}`);
   }
 
   await fsp.writeFile(RESULTS_FILE, JSON.stringify(results, null, 2));

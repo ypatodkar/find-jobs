@@ -143,6 +143,26 @@ function failedPlatforms(results) {
   });
 }
 
+/**
+ * Boards that were configured to work and didn't, as [firmId, reason] pairs.
+ *
+ * The all-or-nothing check above only fires on a total outage, which is the failure
+ * nobody misses. The one that hurt was quieter: two boards stopped working, twenty
+ * kept going, the run reported success and the site silently shed 86 companies that no
+ * other portfolio covers. Attrition needs naming, not just extinction.
+ *
+ * Reported rather than thrown, because one board failing is usually a bad minute
+ * upstream and not a reason to withhold a scrape that is otherwise complete. The
+ * decision to abort stays with failedPlatforms; this exists so the log says which
+ * firms are missing before anyone has to work it out from the totals.
+ */
+function failedBoards(results) {
+  return Object.keys(BOARDS)
+    .filter((id) => BOARDS[id].platform)
+    .filter((id) => results.firms[id]?.status !== "ok")
+    .map((id) => [id, results.firms[id]?.reason || "no result"]);
+}
+
 /** The firms-index payload. */
 function resultsPayload(data) {
   return { scrapedAt: data.scrapedAt, firms: summarize(data) };
@@ -242,4 +262,4 @@ function firmPayload(data, id) {
   return null;
 }
 
-module.exports = { runScrape, summarize, failedPlatforms, resultsPayload, allJobsPayload, firmPayload };
+module.exports = { runScrape, summarize, failedPlatforms, failedBoards, resultsPayload, allJobsPayload, firmPayload };

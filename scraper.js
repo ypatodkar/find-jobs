@@ -45,8 +45,19 @@ const GETRO_MAX_PAGES = 12;
 const SCRAPE_RETRIES = 2; // backs off 2s then 4s
 const considerSessions = new Map();
 
+// Every request here is capped, because undici's default is 300s and nothing upstream
+// is worth five minutes. Without this a single stalled board costs 300s per attempt and
+// 15 minutes across the retries, which is how a manual refresh once burned 20 of its 25
+// minute budget on two firms and was killed before reaching the other 52. ats.js has
+// always done this; phase 1 had not.
+const REQUEST_TIMEOUT_MS = 25000;
+
+function withTimeout(url, init) {
+  return fetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+}
+
 async function postJson(url, body, headers) {
-  const res = await fetch(url, {
+  const res = await withTimeout(url, {
     method: "POST",
     headers: { "content-type": "application/json", accept: "application/json", "user-agent": UA, ...headers },
     body: JSON.stringify(body),
@@ -66,11 +77,21 @@ async function considerSession(cfg) {
 
   const pending = (async () => {
     const url = `https://${cfg.host}/jobs`;
-    const res = await fetch(url, { headers: { accept: "text/html", "user-agent": UA } });
+    const res = await withTimeout(url, { headers: { accept: "text/html", "user-agent": UA } });
     if (!res.ok) throw new Error(`Consider session HTTP ${res.status}`);
     const html = await res.text();
     const match = html.match(/"csrfToken":"([^"]+)"/);
-    if (!match) throw new Error("Consider session did not include a CSRF token");
+    // A missing token used to be reported as if the page had merely left one out. It
+    // more often means the board is no longer the Consider app at all: the rewritten
+    // ones serve a large server-rendered page with no session cookie and answer 404 on
+    // /api-boards/search-jobs, so no retry or header will ever recover them. Say which
+    // of the two it is, because they need completely different responses.
+    if (!match) {
+      const migrated = /_next\//.test(html) && !/serverInitialData/.test(html);
+      throw new Error(migrated
+        ? "board no longer runs Consider (rewritten front end, old API is gone) — needs a new adapter"
+        : "Consider session did not include a CSRF token");
+    }
 
     const setCookies = typeof res.headers.getSetCookie === "function"
       ? res.headers.getSetCookie()
@@ -171,6 +192,226 @@ async function scrapeConsider(cfg) {
   return { jobs: out, scanned: (data.jobs || []).length, totalOnBoard: data.total ?? null };
 }
 
+// ---- a16z's rewritten board ----
+//
+// In August 2026 jobs.a16z.com stopped being the Consider app: /api-boards/search-jobs
+// answers 404 and the page is now server-rendered with no session to establish. The
+// data is still there, just delivered rather than queried — which means no search
+// endpoint to ask for "engineering roles in these cities", and no way to page the
+// 18,000 listings from the index.
+//
+// So it is read the other way round. /companies server-renders the entire portfolio in
+// one request — 852 companies, each with a domain, headcount, stage, markets and a
+// jobCount — and each company's own page carries its openings with real apply URLs.
+// Fetching the ~400 companies that are actually hiring costs about as much as phase 2
+// already spends, and skips the 440 that would return nothing.
+//
+// What matters downstream is the apply URL: buildRegistry reads the ATS and slug out of
+// it, and phase 2 then goes to the employer's own board for the authoritative list. The
+// jobs collected here are the fallback for companies whose ATS we cannot read.
+const A16Z_COMPANY_CONCURRENCY = 6;
+
+/**
+ * Decode the JSON a Next.js page ships inside self.__next_f.push([1,"…"]) chunks.
+ *
+ * Each chunk is a JavaScript string literal, so JSON.parse is what decodes it — hand
+ * unescaping gets every description containing a quote or a backslash wrong, and this
+ * payload is mostly prose. Chunks that fail to parse are skipped rather than aborting
+ * the page: the array we want may already be complete.
+ */
+function decodeFlight(html) {
+  let out = "";
+  const re = /self\.__next_f\.push\(\[1,\s*("(?:[^"\\]|\\.)*")\s*\]\)/g;
+  let m;
+  while ((m = re.exec(html))) {
+    try { out += JSON.parse(m[1]); } catch { /* unreadable chunk */ }
+  }
+  return out;
+}
+
+/** Find `"key":[ … ]` in decoded text and parse it, matching brackets rather than regex. */
+function extractArray(text, key) {
+  const marker = `"${key}":[`;
+  const start = text.indexOf(marker);
+  if (start < 0) return null;
+  const open = start + marker.length - 1;
+  let depth = 0, inStr = false, esc = false;
+  for (let i = open; i < text.length; i++) {
+    const c = text[i];
+    if (esc) { esc = false; continue; }
+    if (c === "\\") { esc = true; continue; }
+    if (inStr) { if (c === '"') inStr = false; continue; }
+    if (c === '"') { inStr = true; continue; }
+    if (c === "[" || c === "{") depth++;
+    else if (c === "]" || c === "}") {
+      if (--depth === 0) {
+        try { return JSON.parse(text.slice(open, i + 1)); } catch { return null; }
+      }
+    }
+  }
+  return null;
+}
+
+async function fetchFlightArray(url, key) {
+  const res = await withTimeout(url, { headers: { accept: "text/html", "user-agent": UA } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return extractArray(decodeFlight(await res.text()), key);
+}
+
+async function scrapeA16z(cfg) {
+  const companies = await fetchFlightArray(`https://${cfg.host}/companies`, "companies");
+  if (!Array.isArray(companies) || !companies.length) {
+    throw new Error("a16z: no company list in /companies — page shape changed");
+  }
+
+  // jobCount is published per company, so the 440-odd with nothing open are never
+  // requested. Sorted by size so a truncated run still gets the biggest employers.
+  const hiring = companies
+    .filter((c) => c && c.slug && c.jobCount > 0)
+    .sort((a, b) => b.jobCount - a.jobCount);
+
+  const out = [];
+  const seen = new Set();
+  let scanned = 0;
+  let failures = 0;
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < hiring.length) {
+      const co = hiring[cursor++];
+      let jobs;
+      try {
+        jobs = await fetchFlightArray(`https://${cfg.host}/jobs/${encodeURIComponent(co.slug)}`, "jobs");
+      } catch {
+        failures++;
+        continue;
+      }
+      if (!Array.isArray(jobs)) { failures++; continue; }
+      scanned += jobs.length;
+
+      for (const j of jobs) {
+        const url = j.apply_url || "";
+        const dedupeKey = url || `${co.name}|${j.title}`;
+        if (seen.has(dedupeKey)) continue;
+        seen.add(dedupeKey);
+
+        const locations = (j.locations || []).filter(Boolean);
+        const hit = keep(j.title, locations);
+        if (!hit) continue;
+        const company = j.company_name || co.name || "";
+        if (isBlockedCompany({ company, domain: co.domain, slug: (detectAts(url) || {}).slug })) continue;
+
+        const staffCount = co.headcount || null;
+        const sponsorship = classifySponsorship(j.description_html || "");
+        out.push({
+          job_id: boardJobId(company, j.title, hit.city, url),
+          title: j.title,
+          company,
+          city: hit.city,
+          locations: locations.slice(0, 3),
+          roles: hit.roles,
+          url,
+          posted: j.posted_at || null,
+          remote: !!j.remote,
+          salaryMin: j.salary_min || null,
+          salaryMax: j.salary_max || null,
+          salary: fmtSalary(j.salary_min, j.salary_max, j.salary_currency || "USD", j.salary_period),
+          seniority: deriveSeniority(j.title),
+          sponsorship: sponsorship.status,
+          sponsorshipEvidence: sponsorship.evidence,
+          sponsorshipTypes: sponsorship.types,
+          staffCount,
+          size: sizeBucket(staffCount),
+          stage: co.stage || j.company_stage || null,
+          markets: co.markets || j.company_markets || [],
+          domain: co.domain || null,
+          logo: co.logoUrl || j.company_logo || null,
+          source: "board",
+        });
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(A16Z_COMPANY_CONCURRENCY, hiring.length) }, worker)
+  );
+
+  // A handful of unreachable company pages is ordinary; losing most of them means the
+  // page shape moved again, and shipping a near-empty a16z is worse than failing loudly.
+  if (failures > hiring.length / 2) {
+    throw new Error(`a16z: ${failures}/${hiring.length} company pages unreadable`);
+  }
+  return { jobs: out, scanned, totalOnBoard: companies.reduce((a, c) => a + (c.jobCount || 0), 0) };
+}
+
+/**
+ * Greylock's rewritten board.
+ *
+ * jobs.greylock.com now 301s to greylock.com/jobs/portfolio-jobs, which server-renders
+ * its first 60 rows and nothing else: there is no company index to walk, and page,
+ * offset and limit params are all ignored, so 60 of a claimed 1,962 is genuinely all
+ * that one request can see.
+ *
+ * That is a much smaller loss than it sounds. Those 60 rows span 23 companies and 12 of
+ * them appear on no other portfolio, which is nearly the entire set Greylock uniquely
+ * contributed. Discovery is what phase 1 owes phase 2 — once a company is named, its own
+ * ATS is fetched for the real listing — so seeing a fraction of the roles still recovers
+ * almost all of the companies.
+ */
+async function scrapeGreylock(cfg) {
+  const jobs = await fetchFlightArray(`https://${cfg.host}${cfg.path || "/jobs/portfolio-jobs"}`, "jobs");
+  if (!Array.isArray(jobs) || !jobs.length) {
+    throw new Error("greylock: no jobs in the page — shape changed");
+  }
+
+  const seen = new Set();
+  const out = [];
+  for (const j of jobs) {
+    const url = j.applyUrl || "";
+    const dedupeKey = url || `${j.companyName}|${j.title}`;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+
+    const locations = (j.locations || j.normalizedLocations || []).filter(Boolean);
+    const hit = keep(j.title, locations);
+    if (!hit) continue;
+    const company = j.companyName || "";
+    if (isBlockedCompany({ company, domain: j.companyDomain, slug: (detectAts(url) || {}).slug })) continue;
+
+    const s = j.salary || {};
+    const sponsorship = classifySponsorship("");
+    out.push({
+      job_id: boardJobId(company, j.title, hit.city, url),
+      title: j.title,
+      company,
+      city: hit.city,
+      locations: locations.slice(0, 3),
+      roles: hit.roles,
+      url,
+      posted: j.createdAt || null,
+      remote: j.workMode === "remote",
+      salaryMin: s.min || null,
+      salaryMax: s.max || null,
+      salary: fmtSalary(s.min, s.max, s.currency || "USD", s.period),
+      seniority: deriveSeniority(j.title),
+      // No description ships with the row — hasDescription only says one exists behind
+      // another request — so sponsorship stays unknown rather than being guessed from
+      // a title. Phase 2 classifies it properly from the employer's own posting.
+      sponsorship: sponsorship.status,
+      sponsorshipEvidence: null,
+      sponsorshipTypes: [],
+      staffCount: null,
+      size: null,
+      stage: j.stage || null,
+      markets: j.markets || [],
+      domain: j.companyDomain || null,
+      logo: j.logoUrl || null,
+      source: "board",
+    });
+  }
+  return { jobs: out, scanned: jobs.length, totalOnBoard: null };
+}
+
 async function scrapeGetro(cfg) {
   const out = [];
   let scanned = 0;
@@ -253,7 +494,10 @@ async function scrapeFirm(firmId) {
   let lastErr;
   for (let attempt = 0; attempt <= SCRAPE_RETRIES; attempt++) {
     try {
-      const res = cfg.platform === "consider" ? await scrapeConsider(cfg) : await scrapeGetro(cfg);
+      const res = cfg.platform === "consider" ? await scrapeConsider(cfg)
+        : cfg.platform === "a16z" ? await scrapeA16z(cfg)
+        : cfg.platform === "greylock" ? await scrapeGreylock(cfg)
+        : await scrapeGetro(cfg);
       return {
         firmId,
         status: "ok",
