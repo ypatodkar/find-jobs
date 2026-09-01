@@ -106,10 +106,20 @@ function main() {
 
   // Anything not in this scrape has come off the boards. Kept, not deleted — a click
   // recorded last week should still resolve to a company and a title.
-  lines.push(`UPDATE jobs SET active = 0 WHERE last_seen < ${ts};`);
+  //
+  // `AND active = 1` is not a tidiness clause, it is most of the cost. Without it this
+  // rewrites every row that is not in the current scrape on every single run, including
+  // the thousands that were already inactive and are being set to the value they
+  // already hold. On a table of 18,562 rows with 12,588 live, that was ~6,000 writes a
+  // run spent changing nothing, and D1's free tier bills 100,000 writes a day.
+  lines.push(`UPDATE jobs SET active = 0 WHERE last_seen < ${ts} AND active = 1;`);
 
   fs.writeFileSync(OUT, lines.join("\n\n") + "\n");
-  console.log(`${jobs.length} jobs -> ${path.basename(OUT)}`);
+  // Printed because this number is the D1 bill. The free tier allows 100,000 written
+  // rows a day across every run combined, and one sync writes at least one row per live
+  // job — so the ceiling is roughly (100,000 / this number) syncs in a day, and it is
+  // worth seeing that arithmetic in the log rather than in a warning email.
+  console.log(`${jobs.length} jobs -> ${path.basename(OUT)} (~${jobs.length.toLocaleString()} rows written per sync)`);
   console.log(`Next: npx wrangler d1 execute vcjobs --remote --file=sync.sql`);
 }
 

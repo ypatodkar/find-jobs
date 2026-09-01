@@ -53,7 +53,13 @@ jobs:
       # jobs table in step with the scrape so click counts resolve to real roles.
       # Never touches clicks or first_seen.
       - name: Sync job metadata to D1
-        if: env.CF_TOKEN != ''
+        # Scheduled and manual runs only. Every sync writes one row per live job —
+        # ~12,500 — against a free-tier allowance of 100,000 written rows per day, so
+        # six runs in a day exhausts it and D1 then refuses writes until midnight UTC.
+        # A push usually changes the site rather than the jobs, and the next scheduled
+        # run re-syncs from scratch anyway, so pushes deploy without touching D1.
+        # Trigger the workflow manually if a push does need the table updated.
+        if: env.CF_TOKEN != '' && github.event_name != 'push'
         # Analytics must never hold the site hostage: if D1 is down or the token is
         # wrong, the deploy below still ships. The next run re-syncs from scratch.
         continue-on-error: true
