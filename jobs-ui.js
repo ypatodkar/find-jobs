@@ -197,9 +197,9 @@
     function updateSummary(available) {
       const n = selected.size;
       const value =
-        n === 0 ? `All (${available})`
+        n === 0 ? (opts.emptyLabel ? `${opts.emptyLabel} (${available})` : `All (${available})`)
         : n === 1 ? opts.labelFor([...selected][0])
-        : `${n} selected`;
+        : `${n} ${opts.exclude ? "excluded" : "selected"}`;
       summary.textContent = value;
       summary.setAttribute("aria-label", `${opts.label} filter: ${value}`);
       root.classList.toggle("has-selection", n > 0);
@@ -266,7 +266,11 @@
       // takes every available option, not only the ones inside the display cap —
       // "Select all 60" next to a list of 127 would be a lie.
       visibleValues = (query ? visible : entries).map(([v]) => v);
-      if (selectAll) {
+      // Hidden on an exclude filter, where "Select all" means "exclude every company"
+      // and empties the list — a one-click way to reach a blank page and no obvious way
+      // back. Excluding is done a company or two at a time; there is no bulk case.
+      if (selectAll && opts.exclude) selectAll.hidden = true;
+      else if (selectAll) {
         const unselected = visibleValues.filter((v) => !selected.has(v)).length;
         selectAll.hidden = unselected === 0;
         selectAll.textContent = query ? `Select all ${unselected} matching` : `Select all ${unselected}`;
@@ -353,6 +357,13 @@
       { key: "role", label: "Role", group: "rest", values: (j) => j.roles || [], labelFor: (v) => ROLE_LABELS[v] || v },
       { key: "seniority", label: "Seniority", group: "dev", values: (j) => (j.seniority ? [j.seniority] : []), labelFor: (v) => SENIORITY_LABELS[v] || v, order: SENIORITY_ORDER },
       { key: "company", label: "Company", group: "dev", values: (j) => [j.company] },
+      // The only subtractive filter here. Everything else narrows to what you picked;
+      // this one removes it, which is the difference between "show me these six
+      // companies" and "show me everything except this one". Worth having because a
+      // single employer that never closes a requisition can dominate a whole page —
+      // one currently carries 665 roles, none posted in the last three months — and
+      // the include filter cannot express "all of them but that".
+      { key: "notcompany", label: "Exclude company", group: "dev", values: (j) => [j.company], exclude: true },
       { key: "industry", label: "Industry", group: "rest", values: (j) => j.markets || [] },
       { key: "size", label: "Company size", group: "dev", values: (j) => (j.size ? [j.size] : []), labelFor: (v) => SIZE_LABELS[v] || v, order: SIZE_ORDER },
       { key: "stage", label: "Funding", group: "rest", values: (j) => (j.stage ? [j.stage] : []) },
@@ -419,7 +430,10 @@
           if (d.key === skip) continue;
           const sel = state.selected[d.key];
           if (!sel.size) continue;
-          if (!d.values(j).some((v) => sel.has(v))) return false;
+          const hit = d.values(j).some((v) => sel.has(v));
+          // An exclude dimension drops what it matches; every other one keeps only
+          // what it matches. Same set, opposite sign.
+          if (d.exclude ? hit : !hit) return false;
         }
         if (range && range.days !== null) {
           const a = ageInDays(j.posted);
@@ -552,6 +566,10 @@
             label: d.label,
             labelFor,
             order: d.order || null,
+            exclude: !!d.exclude,
+            // "All (1617)" would be a lie on a filter that removes things: with nothing
+            // ticked it excludes nothing at all.
+            emptyLabel: d.exclude ? "None" : null,
             maxOptions: 60,
             // Counts come from everything *except* this dimension, so an option only
             // appears if it would still return rows under the other active filters.
