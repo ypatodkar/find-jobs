@@ -20,7 +20,7 @@
 
   // Same convention as track.js: blank ENDPOINT means nothing is ever sent. Reports
   // which slices get saved — no identifier, and it can never block the save itself.
-  var ENDPOINT = "https://vcjobs-clicks.ypatodkar.workers.dev";
+  var ENDPOINT = (window.API_ENDPOINT || "https://vcjobs-clicks.ypatodkar.workers.dev");
 
   function report(action, name, filters) {
     if (!ENDPOINT || !navigator.sendBeacon) return;

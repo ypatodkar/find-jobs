@@ -34,8 +34,6 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    env:
-      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -49,34 +47,42 @@ jobs:
       - name: Build static site
         run: node build.js
 
-      # Optional: only runs once you add a CLOUDFLARE_API_TOKEN secret. Keeps the D1
-      # jobs table in step with the scrape so click counts resolve to real roles.
-      # Never touches clicks or first_seen.
-      - name: Sync job metadata to D1
-        # Scheduled and manual runs only. Every sync writes one row per live job —
-        # ~12,500 — against a free-tier allowance of 100,000 written rows per day, so
-        # six runs in a day exhausts it and D1 then refuses writes until midnight UTC.
-        # A push usually changes the site rather than the jobs, and the next scheduled
-        # run re-syncs from scratch anyway, so pushes deploy without touching D1.
-        # Trigger the workflow manually if a push does need the table updated.
-        if: env.CF_TOKEN != '' && github.event_name != 'push'
-        # Analytics must never hold the site hostage: if D1 is down or the token is
-        # wrong, the deploy below still ships. The next run re-syncs from scratch.
-        continue-on-error: true
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          # Required. Without it wrangler calls /memberships to discover the account,
-          # which a scoped token cannot read — it fails with "Authentication error".
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          node sync-jobs.js
-          npx --yes wrangler d1 execute vcjobs --remote --file=sync.sql -y
+      # The D1 sync is gone rather than ported. It existed so a click could be joined
+      # back to a job title, but the /click handler already writes company, title and
+      # city for any job it has not seen, so the table fills itself with exactly the
+      # jobs someone actually opened. Pushing all ~12,700 scraped rows every run was
+      # writing 38,000 rows a day — including index writes — to decorate a few hundred
+      # clicks, which is what kept exhausting D1's free tier.
+      #
+      # sync-jobs.js is still in the repo and still emits valid Postgres; run it by
+      # hand against RDS if the full catalogue is ever wanted in the database. Nothing
+      # in the site or the API needs it.
 
-      # Direct upload of dist/, the same thing `wrangler pages deploy` does locally.
-      # No Cloudflare Git integration needed, so the repo can stay private.
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=find-jobs --branch=main
+      - name: Publish to S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          # --delete so a file removed from the build leaves the bucket too. The short
+          # max-age is what lets a scrape land within minutes; CloudFront still serves
+          # from cache until the invalidation below clears it.
+          aws s3 sync dist/ s3://find-jobs-site-075521919080/ --delete \
+            --cache-control "public, max-age=300, must-revalidate" \
+            --exclude "*.woff2" --only-show-errors
+          # Fonts are content-addressed by name and never change under the same URL.
+          aws s3 sync dist/ s3://find-jobs-site-075521919080/ \
+            --exclude "*" --include "*.woff2" \
+            --cache-control "public, max-age=31536000, immutable" --only-show-errors
+
+      - name: Invalidate CloudFront
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+        # A wildcard invalidation counts as one path against the 1,000-a-month free
+        # allowance, so this is well inside it at two scheduled runs a day.
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id E1ST056VLPSM75 --paths "/*" \
+            --query 'Invalidation.[Id,Status]' --output text

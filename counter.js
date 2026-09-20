@@ -11,7 +11,7 @@
   "use strict";
 
   // Same convention as track.js: blank means the feature is off.
-  var ENDPOINT = "https://vcjobs-clicks.ypatodkar.workers.dev";
+  var ENDPOINT = (window.API_ENDPOINT || "https://vcjobs-clicks.ypatodkar.workers.dev");
   var MOUNT_ID = "counter-slot";
   var MIN_TO_SHOW = 10; // below this it reads as "nobody is here", so stay hidden
 

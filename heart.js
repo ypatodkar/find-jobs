@@ -9,7 +9,7 @@
 (function (global) {
   "use strict";
 
-  var ENDPOINT = "https://vcjobs-clicks.ypatodkar.workers.dev";
+  var ENDPOINT = (window.API_ENDPOINT || "https://vcjobs-clicks.ypatodkar.workers.dev");
   var KEY = "vc-directory-liked";
   var MOUNT_ID = "heart-slot";
 

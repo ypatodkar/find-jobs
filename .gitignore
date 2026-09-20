@@ -15,3 +15,8 @@ node_modules/
 
 # Database exports — contain visitor names and countries.
 backups/
+
+# AWS Lambda build artefacts. node_modules is installed at package time and the zip is
+# rebuilt from it, so neither belongs in the repo — the repo itself stays dependency-free.
+aws/lambda/node_modules/
+aws/function.zip

@@ -10,7 +10,7 @@
 (function (global) {
   "use strict";
 
-  var ENDPOINT = "https://vcjobs-clicks.ypatodkar.workers.dev";
+  var ENDPOINT = (window.API_ENDPOINT || "https://vcjobs-clicks.ypatodkar.workers.dev");
   var MOUNT_ID = "feedback-slot";
   var SENT_KEY = "vc-directory-feedback-sent";
   var MAX = 4000;

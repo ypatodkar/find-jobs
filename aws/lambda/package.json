@@ -1,0 +1,11 @@
+{
+  "name": "find-jobs-api",
+  "version": "1.0.0",
+  "description": "Click collector for jobs.ypatodkar.com — the Cloudflare Worker, on Lambda",
+  "type": "module",
+  "main": "index.mjs",
+  "private": true,
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}

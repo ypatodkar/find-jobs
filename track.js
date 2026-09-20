@@ -12,7 +12,7 @@
 
   // Your deployed Worker, e.g. "https://vcjobs-clicks.<subdomain>.workers.dev".
   // Left blank, analytics stay off — "seen" is unaffected either way.
-  var ENDPOINT = "https://vcjobs-clicks.ypatodkar.workers.dev";
+  var ENDPOINT = (window.API_ENDPOINT || "https://vcjobs-clicks.ypatodkar.workers.dev");
 
   var KEY = "vc-directory-seen";
   var MAX_ENTRIES = 5000; // ~250 KB of JSON; well inside the ~5 MB localStorage budget
