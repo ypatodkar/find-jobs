@@ -75,6 +75,18 @@ jobs:
             --exclude "*" --include "*.woff2" \
             --cache-control "public, max-age=31536000, immutable" --only-show-errors
 
+      # Both hosts, deliberately, until DNS moves. jobs.ypatodkar.com still resolves to
+      # Cloudflare Pages, so dropping this step would freeze what visitors actually see
+      # while the scraper kept running — a stale job list with no outward sign anything
+      # was wrong. S3 above keeps the AWS copy current so the cutover stays a DNS change
+      # and nothing else. Delete this step once DNS points at CloudFront.
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=find-jobs --branch=main
+
       - name: Invalidate CloudFront
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
