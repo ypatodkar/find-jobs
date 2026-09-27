@@ -96,7 +96,8 @@
   // opened from this site — not applications, which the site has no way of knowing
   // about.
   let openedByCompany = null;
-  let openedStamp = -1; // the Seen size the cached map was built from
+  let openedStamp = -1;
+  let openedJobs = null;
 
   function openedCountFor(company) {
     const seen = global.Seen;
@@ -104,17 +105,18 @@
     const n = seen.count();
     if (!n) return 0;
 
-    // Rebuilding is O(all jobs), so it is keyed off the opened count rather than done
-    // per render: a filter change, a sort or a page turn reuses the map, and only an
-    // actual new click invalidates it.
-    if (openedStamp !== n) {
+    // Both checks are constant time. Count alone cannot invalidate this cache:
+    // history stays at 5,000 entries while new clicks replace its oldest entries.
+    const stamp = seen.revision ? seen.revision() : n;
+    const all = global.JobsData ? global.JobsData.all() : null;
+    if (openedStamp !== stamp || openedJobs !== all) {
       openedByCompany = new Map();
-      const all = (global.JobsData && global.JobsData.all()) || [];
-      for (const j of all) {
+      for (const j of all || []) {
         if (!j.job_id || !seen.has(j.job_id)) continue;
         openedByCompany.set(j.company, (openedByCompany.get(j.company) || 0) + 1);
       }
-      openedStamp = n;
+      openedStamp = stamp;
+      openedJobs = all;
     }
     return openedByCompany.get(company) || 0;
   }

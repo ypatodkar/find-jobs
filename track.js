@@ -22,6 +22,8 @@
   // { job_id: timestamp }. Falls back to memory-only if localStorage is unavailable
   // (Safari private mode throws on write), so the page never breaks over history.
   var seen = read();
+  var seenCount = Object.keys(seen).length;
+  var revision = 0;
   var persistent = true;
 
   function read() {
@@ -46,17 +48,20 @@
   // Drops the oldest entries rather than refusing new ones: recent history is the
   // part anyone actually looks at.
   function prune() {
+    if (seenCount <= MAX_ENTRIES) return;
     var ids = Object.keys(seen);
-    if (ids.length <= MAX_ENTRIES) return;
     ids.sort(function (a, b) { return seen[a] - seen[b]; })
        .slice(0, ids.length - MAX_ENTRIES)
        .forEach(function (id) { delete seen[id]; });
+    seenCount = MAX_ENTRIES;
   }
 
   function mark(id, ts) {
     if (!id || seen[id]) return false;
     seen[id] = ts || Date.now();
+    seenCount++;
     prune();
+    revision++;
     write();
     return true;
   }
@@ -178,9 +183,13 @@
   global.Seen = {
     has: function (id) { return !!seen[id]; },
     at: function (id) { return seen[id] || 0; },
-    count: function () { return Object.keys(seen).length; },
+    // Called once per job by the company filter; never enumerate history here.
+    count: function () { return seenCount; },
+    revision: function () { return revision; },
     clear: function () {
       seen = {};
+      seenCount = 0;
+      revision++;
       write();
       repaint();
     },
