@@ -114,15 +114,22 @@ const BLOCKED_COMPANIES = [
 // Order matters: the first matching pattern wins, so Seattle sits above Washington
 // DC ("Seattle, Washington"). The UI starts with no city selected, which means all
 // tracked metros.
+// Suburbs are listed individually rather than matched by state, and that is a
+// deliberate cost. State would be one rule instead of forty names, but the unplaced
+// US roles are not evenly spread: San Carlos and Hayward really are the Bay Area,
+// while Fort Walton Beach is 600 miles from Miami, Olympia is not Seattle and Trenton
+// is not New York. A state rule buys a dozen roles by mislabelling a dozen others,
+// and a job filed under the wrong metro is worse than one missing — someone filtering
+// for Miami and getting the Florida panhandle stops trusting the filter.
 const METROS = [
   { city: "San Francisco", re: /san\s*francisco/i,
     consider: ["San Francisco, California"], getro: ["San Francisco, CA, USA"] },
   { city: "New York", re: /new\s*york|\bnyc\b|brooklyn|manhattan/i,
     consider: ["New York, New York", "Brooklyn, New York"], getro: ["New York, NY, USA", "Brooklyn, NY, USA"] },
-  { city: "San Diego", re: /san\s*diego/i,
+  { city: "San Diego", re: /san\s*diego|poway|carlsbad|la jolla/i,
     consider: ["San Diego, California"], getro: ["San Diego, CA, USA"] },
 
-  { city: "Bay Area", re: /palo alto|mountain view|menlo park|sunnyvale|santa clara|redwood city|san jose|oakland|berkeley|cupertino|fremont|foster city|san mateo|burlingame|milpitas/i,
+  { city: "Bay Area", re: /palo alto|mountain view|menlo park|sunnyvale|santa clara|redwood city|san jose|oakland|berkeley|cupertino|fremont|foster city|san mateo|burlingame|milpitas|san carlos|hayward|belmont,\s*ca|emeryville|alameda,\s*ca|south san francisco|brisbane,\s*ca|san bruno|daly city/i,
     consider: ["Palo Alto, California", "Mountain View, California", "Menlo Park, California", "Sunnyvale, California", "Santa Clara, California", "Redwood City, California", "San Jose, California", "Oakland, California", "Berkeley, California"],
     getro: ["Palo Alto, CA, USA", "Mountain View, CA, USA", "Menlo Park, CA, USA", "Sunnyvale, CA, USA", "Santa Clara, CA, USA", "Redwood City, CA, USA", "San Jose, CA, USA", "Oakland, CA, USA"] },
 

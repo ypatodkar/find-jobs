@@ -113,13 +113,36 @@ function money(range) {
   return range.max ? `${cur} ${fmt(range.min)}–${fmt(range.max)}${per}` : `${cur} ${fmt(range.min)}${per}`;
 }
 
+
+// "Palo Alto, CA" from Ashby's structured address, or null. Region is included because
+// several metro matchers disambiguate on it — "Portland, OR" is tracked and Portland,
+// Maine is not, and "Cambridge, MA" has to be told apart from Cambridge, England.
+function postalPlace(address) {
+  const a = address && address.postalAddress;
+  if (!a || !a.addressLocality) return null;
+  return a.addressRegion ? `${a.addressLocality}, ${a.addressRegion}` : a.addressLocality;
+}
+
 const ADAPTERS = {
   async ashby(slug) {
     const data = await getJson(`https://api.ashbyhq.com/posting-api/job-board/${encodeURIComponent(slug)}`);
     return (data.jobs || []).map((j) => ({
       id: j.id || null,
       title: j.title,
-      locations: [j.location, ...(j.secondaryLocations || []).map((s) => (typeof s === "string" ? s : s && s.location))],
+      // `location` is whatever the employer typed, which is often a label rather than
+      // a place: "HQ", "Main Office", a team name. address.postalAddress is Ashby's
+      // structured field and carries the real city, so it is appended as one more
+      // candidate rather than replacing anything — matchCity already takes the first
+      // tracked metro it finds across the whole list, so a good display string still
+      // wins and a useless one no longer costs the posting.
+      //
+      // It is also sometimes the more accurate of the two: NorthwoodSpace labels its
+      // roles "Torrance, CA" while the postal address says Los Angeles.
+      locations: [
+        j.location,
+        ...(j.secondaryLocations || []).map((s) => (typeof s === "string" ? s : s && s.location)),
+        postalPlace(j.address),
+      ],
       url: j.jobUrl || j.applyUrl,
       posted: j.publishedAt || null,
       remote: j.isRemote === true || /remote/i.test(j.workplaceType || ""),

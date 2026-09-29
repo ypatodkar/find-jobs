@@ -53,3 +53,23 @@ test("classifies robotics roles without admitting generic hardware jobs", () => 
   assert.equal(keep("Mechanical Engineer", loc), null);
   assert.equal(keep("Robotics Product Manager", loc), null);
 });
+
+// Suburbs that sit inside a tracked metro but are not the metro's own name. These were
+// silently dropped: a Bay Area company posting from its actual address in San Carlos
+// looked, to matchCity, exactly like a company in a city we do not cover.
+test("places suburbs inside the metro they belong to", () => {
+  const { matchCity } = require("../match");
+  assert.equal(matchCity(["San Carlos, California"]), "Bay Area");
+  assert.equal(matchCity(["Hayward, California"]), "Bay Area");
+  assert.equal(matchCity(["Poway, California"]), "San Diego");
+});
+
+// The reason this is a list of suburbs and not a state lookup. Each of these is in a
+// state that contains a tracked metro, and none of them is in that metro — a state
+// rule would file the first under Miami, 600 miles from where the job is.
+test("does not drag a whole state into its nearest tracked metro", () => {
+  const { matchCity } = require("../match");
+  for (const place of ["Fort Walton Beach, Florida", "Olympia, Washington", "Trenton, New Jersey"]) {
+    assert.equal(matchCity([place]), null, place);
+  }
+});
