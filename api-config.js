@@ -13,3 +13,7 @@
 // script loses its click tracking rather than throwing on load and taking the job list
 // down with it.
 window.API_ENDPOINT = "https://v7ogkcujy5bcq6hhyygjrs6v5y0xygut.lambda-url.us-east-1.on.aws";
+// Browsing and matching use the local API during development and Lambda on either
+// static host. This endpoint contains no credentials; Jev is called only by Node.
+window.JOBS_ENDPOINT = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)
+  ? "/api" : window.API_ENDPOINT;

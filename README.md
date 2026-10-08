@@ -7,10 +7,20 @@ roles across **19 US metros**.
 
 ```bash
 node scrape.js     # populate results.json
-node server.js
+npm start
 ```
 
-Then open <http://localhost:4173>. No dependencies — Node 18+ only.
+Then open <http://localhost:4173>. Local browsing needs only Node 20+.
+
+The homepage and investor pages now load jobs in pages of 45, with filtering and
+sorting performed by the API. Production uses the AWS Postgres catalogue; local
+development uses `results.json`. Descriptions load when opened. Choosing a valid résumé
+file automatically compares up to 30 likely roles with Jev, using a server-only
+`TYPESAFE_API_KEY`. See [AWS catalogue and matching setup](aws/CATALOGUE.md) for
+the required migration, deployment configuration, local setup, and tests.
+
+The infrastructure notes below describe the original static/Cloudflare design.
+The catalogue guide above documents the current job-serving and matching path.
 
 ## Refresh the live feed
 

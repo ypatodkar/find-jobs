@@ -220,9 +220,10 @@
     var bar = document.createElement("div");
     bar.className = "preset-bar";
     bar.id = "preset-bar";
-    // Saved filters are a reusable starting point, so keep them above search and
-    // the rest of the controls rather than presenting them as an afterthought.
-    host.insertBefore(bar, host.firstChild);
+    // Saving belongs with the quiet sort and reset actions, after the search fields.
+    var tail = host.querySelector('.filter-tail');
+    if (tail) tail.insertBefore(bar, host.querySelector('.undo-btn'));
+    else host.appendChild(bar);
 
     // null = not editing. { id: null } = naming a new one, { id: "f…" } = renaming.
     var editing = null;
@@ -398,14 +399,13 @@
   function injectCss() {
     if (document.querySelector("[data-preset-styles]")) return;
     var css =
-      ".preset-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%;margin-bottom:12px}" +
+      ".preset-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}" +
       ".preset-label{font:600 11px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}" +
 
-      // Save is a deliberate action rather than another filter, so it is filled.
-      ".preset-save{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--accent);" +
-      "border-radius:5px;background:var(--accent-fill);color:var(--accent);" +
+      ".preset-save{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);" +
+      "border-radius:5px;background:transparent;color:var(--ink-soft);" +
       "font:600 12px/1 var(--sans);padding:7px 11px;cursor:pointer}" +
-      ".preset-save:hover{background:var(--accent);color:var(--bg)}" +
+      ".preset-save:hover{background:var(--accent-fill);border-color:var(--accent);color:var(--accent)}" +
       ".preset-save svg{flex:none}" +
 
       ".preset-apply:hover{color:var(--accent)}" +

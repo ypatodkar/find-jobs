@@ -71,6 +71,9 @@
 
       <div id="mobile-filter-backdrop" class="mobile-filter-backdrop" hidden></div>
       <button type="button" id="mobile-filter-toggle" class="mobile-filter-toggle" aria-controls="job-controls" aria-expanded="false" hidden>Filters</button>
+      <div class="mobile-search-wrap search-wrap">
+        <input id="mobile-job-search" type="search" placeholder="Search title or company…" aria-label="Search roles" autocomplete="off" />
+      </div>
       <div class="controls" id="job-controls" aria-label="Job filters" hidden>
         <!-- Mobile only. Above 720px the filters are an ordinary block in the page and
              this collapses away; under it they are a modal sheet, which needs a title
@@ -78,6 +81,14 @@
         <div class="drawer-head">
           <h2 class="drawer-title" id="filter-drawer-title">Filters</h2>
           <button type="button" class="drawer-close" id="filter-drawer-close">Done</button>
+        </div>
+
+        <div class="search-wrap">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+            <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.3"/>
+            <line x1="10.2" y1="10.2" x2="14" y2="14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <input id="job-search" type="search" placeholder="Search title or company…" aria-label="Search roles" autocomplete="off" />
         </div>
 
         <div class="filter-sections" id="picker-row"></div>
@@ -107,16 +118,6 @@
           <button type="button" class="reset-btn" id="reset-filters" hidden>Reset filters</button>
         </div>
 
-        <!-- Last, so it reads as "narrow what the filters left" rather than as the
-             starting point. Alone on its flex line, so it spans the full width. -->
-        <div class="search-wrap">
-          <svg class="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-            <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.3"/>
-            <line x1="10.2" y1="10.2" x2="14" y2="14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-          </svg>
-          <input id="job-search" type="search" placeholder="Search title or company…" aria-label="Search roles" autocomplete="off" />
-        </div>
-
         <!-- Mobile only. The list is behind the drawer, so without this you filter
              blind and only discover you cut it to nothing after closing. Doubles as a
              full-width exit at the bottom of the sheet, where the thumb already is. -->
@@ -125,21 +126,22 @@
         </div>
       </div>
 
-      <div class="view-tabs" id="job-view-tabs" role="group" aria-label="List view" hidden>
-        <button type="button" class="seg" id="view-flat" aria-pressed="true">Flat list<span class="seg-n" id="count-flat"></span></button>
-        <button type="button" class="seg" id="view-grouped" aria-pressed="false">By company<span class="seg-n" id="count-grouped"></span></button>
-      </div>
-
-      <div class="results-bar" id="job-results-bar" hidden>
-        <p class="results-meta" id="job-count"></p>
-        <div class="group-actions" id="group-actions">
-          <button type="button" class="linkish" id="expand-all">Expand visible</button>
-          <button type="button" class="linkish" id="collapse-all">Collapse all</button>
+      <section class="results-shell" aria-label="Job results">
+        <div class="results-bar" id="job-results-bar" hidden>
+          <div class="results-heading"><h2 id="results-title">Open roles</h2><p class="results-meta" id="job-count"></p></div>
+          <div class="view-tabs" id="job-view-tabs" role="group" aria-label="Browse results by" hidden>
+            <button type="button" class="seg" id="view-flat" aria-pressed="true">Job list<span class="seg-n" id="count-flat"></span></button>
+            <button type="button" class="seg" id="view-grouped" aria-pressed="false">Company directory<span class="seg-n" id="count-grouped"></span></button>
+          </div>
+          <div class="group-actions" id="group-actions">
+            <button type="button" class="linkish" id="expand-all">Expand visible</button>
+            <button type="button" class="linkish" id="collapse-all">Collapse all</button>
+          </div>
         </div>
-      </div>
-      <div id="job-list" class="job-list" hidden></div>
-      <nav id="job-pagination" class="pagination" aria-label="Job result pages" hidden></nav>
-      <div id="firm-message" class="firm-message" hidden></div>
+        <div id="job-list" class="job-list" hidden></div>
+        <nav id="job-pagination" class="pagination" aria-label="Job result pages" hidden></nav>
+        <div id="firm-message" class="firm-message" hidden></div>
+      </section>
 
       <footer>
         <div>
@@ -166,6 +168,8 @@
   <script src="jobs-ui.js"></script>
   <script src="visitor.js"></script>
   <script src="api-config.js"></script>
+  <script src="description-format.js"></script>
+  <script src="jobs-api.js"></script>
   <script src="heart.js"></script>
   <script src="presets.js"></script>
   <script src="filter-drawer.js"></script>

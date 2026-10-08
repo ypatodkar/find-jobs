@@ -34,6 +34,20 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: jobs_test
+          POSTGRES_PASSWORD: test_only
+          POSTGRES_DB: jobs_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -41,22 +55,52 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Check catalogue configuration
+        env:
+          CATALOGUE_LAMBDA_FUNCTION: ${{ vars.CATALOGUE_LAMBDA_FUNCTION }}
+        run: |
+          if [ -z "$CATALOGUE_LAMBDA_FUNCTION" ]; then
+            echo "Set the CATALOGUE_LAMBDA_FUNCTION repository variable after following aws/CATALOGUE.md."
+            exit 1
+          fi
+
+      - name: Test catalogue and matching
+        env:
+          TEST_DATABASE_URL: postgresql://jobs_test:test_only@127.0.0.1:5432/jobs_test
+        run: |
+          npm ci --prefix aws/lambda --omit=dev
+          npm ci
+          node --test test/*.test.js
+          npx playwright install --with-deps chromium
+          npm run test:browser
+
+      - name: Package and update the API
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+          CATALOGUE_LAMBDA_FUNCTION: ${{ vars.CATALOGUE_LAMBDA_FUNCTION }}
+        run: |
+          node aws/package-lambda.js
+          aws lambda update-function-code --function-name "$CATALOGUE_LAMBDA_FUNCTION" --zip-file fileb://aws/function.zip --query LastUpdateStatus
+          aws lambda wait function-updated --function-name "$CATALOGUE_LAMBDA_FUNCTION"
+
       - name: Scrape all boards
         run: node scrape.js
 
       - name: Build static site
         run: node build.js
 
-      # The D1 sync is gone rather than ported. It existed so a click could be joined
-      # back to a job title, but the /click handler already writes company, title and
-      # city for any job it has not seen, so the table fills itself with exactly the
-      # jobs someone actually opened. Pushing all ~12,700 scraped rows every run was
-      # writing 38,000 rows a day — including index writes — to decorate a few hundred
-      # clicks, which is what kept exhausting D1's free tier.
-      #
-      # sync-jobs.js is still in the repo and still emits valid Postgres; run it by
-      # hand against RDS if the full catalogue is ever wanted in the database. Nothing
-      # in the site or the API needs it.
+      - name: Import the catalogue before publishing
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+          CATALOGUE_BUCKET: find-jobs-site-075521919080
+          CATALOGUE_LAMBDA_FUNCTION: ${{ vars.CATALOGUE_LAMBDA_FUNCTION }}
+        run: |
+          node catalogue-export.js
+          node aws/import-catalogue.js
 
       - name: Publish to S3
         env:
@@ -69,7 +113,7 @@ jobs:
           # from cache until the invalidation below clears it.
           aws s3 sync dist/ s3://find-jobs-site-075521919080/ --delete \
             --cache-control "public, max-age=300, must-revalidate" \
-            --exclude "*.woff2" --only-show-errors
+            --exclude "*.woff2" --exclude "catalogue/*" --only-show-errors
           # Fonts are content-addressed by name and never change under the same URL.
           aws s3 sync dist/ s3://find-jobs-site-075521919080/ \
             --exclude "*" --include "*.woff2" \

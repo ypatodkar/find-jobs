@@ -1,6 +1,6 @@
 const { BOARDS, LOCATIONS } = require("./boards");
 const { keep, dedupe, deriveSeniority, sizeBucket, isBlockedCompany } = require("./match");
-const { classifySponsorship } = require("./sponsorship");
+const { classifySponsorship, toPlainText } = require("./sponsorship");
 
 // Consider exposes a few logo variants keyed by where it found them; `manual` is the
 // curated 160px one and the best of them, with the LinkedIn scrape as a fallback.
@@ -172,6 +172,7 @@ async function scrapeConsider(cfg) {
       roles: hit.roles,
       url,
       posted: j.timeStamp || null,
+      description: toPlainText(j.descriptionPlain || j.description || j.descriptionHtml || j.content || "").slice(0, 200000),
       remote: !!j.remote,
       salaryMin: s.minValue || null,
       salaryMax: s.maxValue || null,
@@ -313,6 +314,7 @@ async function scrapeA16z(cfg) {
           url,
           posted: j.posted_at || null,
           remote: !!j.remote,
+          description: toPlainText(j.description_html || "").slice(0, 200000),
           salaryMin: j.salary_min || null,
           salaryMax: j.salary_max || null,
           salary: fmtSalary(j.salary_min, j.salary_max, j.salary_currency || "USD", j.salary_period),
@@ -453,6 +455,7 @@ async function scrapeGetro(cfg) {
         roles: hit.roles,
         url,
         posted: j.created_at ? new Date(j.created_at * 1000).toISOString() : null,
+        description: toPlainText(j.descriptionPlain || j.description || j.descriptionHtml || j.content || "").slice(0, 200000),
         remote: j.work_mode === "remote",
         salaryMin: j.compensation_amount_min_cents ? j.compensation_amount_min_cents / 100 : null,
         salaryMax: j.compensation_amount_max_cents ? j.compensation_amount_max_cents / 100 : null,

@@ -256,9 +256,10 @@ h1.title {
 .mobile-filter-backdrop,
 .drawer-head,
 .drawer-foot { display: none; }
+.mobile-search-wrap { display: none; }
 .search-wrap {
   position: relative;
-  flex: 1 1 220px;
+  flex: 1 1 100%;
   min-width: 200px;
 }
 .search-icon {
@@ -327,10 +328,9 @@ h1.title {
 .toggle input { accent-color: var(--accent2); cursor: pointer; }
 
 .results-meta {
-  font-family: var(--mono);
-  font-size: 0.76rem;
-  color: var(--ink-faint);
-  margin: 14px 0 20px;
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+  margin: 4px 0 0;
 }
 
 /* ---- Grid / cards ---- */
@@ -595,50 +595,52 @@ footer code {
 .page-total { color: var(--ink-faint); }
 .pagination .page-go { padding: 9px 12px; }
 
-/* ---- View tabs ----
-   Full-width and set on the page's own rule line, so switching how the list is
-   organised reads as a primary control rather than one more filter. */
+/* Switching between individual roles and companies changes the browsing model. */
 .view-tabs {
   display: flex;
-  width: 100%;
-  gap: 0;
-  border-bottom: 1px solid var(--rule);
-  margin: 22px 0 4px;
+  align-items: center;
+  width: fit-content;
+  gap: 4px;
+  margin: 0;
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 7px;
 }
+.view-tabs-label { padding: 0 9px; color: var(--ink-faint); font: 600 .7rem/1 var(--sans); text-transform: uppercase; letter-spacing: .06em; }
 .view-tabs .seg {
-  flex: 1 1 0;
   display: inline-flex;
   align-items: baseline;
   justify-content: center;
   gap: 8px;
   font-family: var(--mono);
-  font-size: 0.82rem;
-  color: var(--ink-faint);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--ink-soft);
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  padding: 11px 14px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 7px 10px;
   cursor: pointer;
   white-space: nowrap;
 }
 .view-tabs .seg:hover { color: var(--ink); background: var(--accent-fill); }
-.view-tabs .seg.active { color: var(--accent); border-bottom-color: var(--accent); }
+.view-tabs .seg.active { color: var(--accent); background: var(--bg); border-color: var(--rule-strong); box-shadow: var(--shadow); }
 .view-tabs .seg:focus-visible { outline: 2px solid var(--accent2); outline-offset: -3px; }
-.seg-n {
-  font-size: 0.74rem;
-  color: var(--ink-faint);
-  font-variant-numeric: tabular-nums;
-}
-.view-tabs .seg.active .seg-n { color: var(--accent); opacity: 0.8; }
+.seg-n { display: none; }
 
 .results-bar {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px 20px;
   flex-wrap: wrap;
+  margin: 28px 0 15px;
 }
+.results-shell { max-width: 1020px; margin-inline: auto; }
+.results-heading h2 { margin: 0; font-size: clamp(1.24rem, 2vw, 1.55rem); line-height: 1.2; letter-spacing: -.025em; }
+.results-heading { margin-right: auto; }
 .group-actions { display: flex; gap: 14px; }
 
 /* ---- Company groups ---- */
@@ -834,37 +836,89 @@ footer code {
   .cg-action { align-self: flex-end; }
 }
 
-.job-list { display: flex; flex-direction: column; gap: 0; }
+.job-list { display: flex; flex-direction: column; gap: 10px; }
 .job {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 20px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--rule);
-  flex-wrap: wrap;
+  position: relative;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 11px;
+  box-shadow: 0 2px 10px rgba(20, 18, 33, .025);
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
-.job:hover { background: var(--accent-fill); }
-.job-main { min-width: 0; flex: 1 1 320px; }
-a.job-title, span.job-title {
-  font-family: var(--serif);
-  font-size: 1.02rem;
+.job:hover { border-color: var(--rule-strong); box-shadow: var(--shadow); transform: translateY(-1px); }
+.job-card-open {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) minmax(125px, auto);
+  align-items: start;
+  gap: 16px;
+  width: 100%;
+  padding: 17px 20px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.job-card-open:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+.job.has-description .job-card-open { padding-right: 66px; }
+.job-description-open {
+  position: absolute;
+  z-index: 1;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--rule-strong);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--ink-soft);
+  font: 400 1.35rem/1 var(--sans);
+  cursor: pointer;
+}
+.job-description-open:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-fill); }
+.job-description-open:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+.job-card-open:not(button):not(a) { cursor: default; }
+.job.in-group { background: var(--bg); border-radius: 7px; box-shadow: none; }
+.job.in-group .job-card-open { grid-template-columns: minmax(0, 1fr) minmax(125px, auto); padding: 12px 16px; }
+.job.in-group.has-description .job-card-open { padding-right: 66px; }
+.job-logo { display: grid; place-items: center; width: 46px; height: 46px; overflow: hidden; border: 1px solid var(--rule); border-radius: 9px; background: var(--bg); color: var(--ink-soft); }
+.job-logo img { display: block; width: 100%; height: 100%; padding: 5px; box-sizing: border-box; object-fit: contain; }
+.job-logo img[hidden] { display: none; }
+.job-logo-fallback { font: 700 .68rem/1 var(--sans); letter-spacing: -.02em; }
+.job-logo-fallback[hidden] { display: none; }
+.job-main { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 0; }
+.job-title {
+  font-family: var(--sans);
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.3;
   color: var(--ink);
   text-decoration: none;
-  display: inline-block;
+  overflow-wrap: anywhere;
 }
-a.job-title:hover { color: var(--accent); text-decoration: underline; }
-a.job-title:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
-a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint); }
-/* Company and salary sit on one line, wrapping together on narrow screens. */
-.job-sub {
+.job-card-open:is(button, a):hover .job-title { color: var(--accent); }
+.job-keyline {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 0 9px;
-  margin: 3px 0 0;
+  gap: 2px 7px;
+  font-size: .86rem;
+  color: var(--ink-soft);
 }
-.job-company { font-size: 0.85rem; color: var(--ink-soft); }
+.job-company { font-weight: 650; color: var(--ink); }
+.job-place { color: var(--ink-soft); }
+.job-meta-sep { color: var(--ink-faint); }
+.job-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.job-tag { display: inline-flex; align-items: center; min-height: 23px; padding: 2px 8px; border: 1px solid var(--rule); border-radius: 5px; background: var(--bg); color: var(--ink-soft); font: 600 .67rem/1.2 var(--sans); white-space: nowrap; }
+.job-work-mode { background: var(--chip-bg); color: var(--ink); }
+.job-aside { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; padding-top: 2px; text-align: right; }
 /* Quieter than the company name it trails, because it is a caveat rather than part of
    the name — but not so quiet that someone clicks through without reading it. */
 /* Prose, not a dashboard: a measure narrow enough to read comfortably, which the rest
@@ -911,21 +965,11 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   white-space: nowrap;
 }
 
-/* How many roles you've opened at this company, in brackets after the name.
-   Tabular figures so the brackets don't shift as the number grows, and the accent
-   colour because it is your own history rather than a fact about the company —
-   the same purple the "clicked" stamp and the opened title already use.
-
-   Rendered empty for a company you've never opened, so :empty is what keeps those
-   rows identical to before. Without it every company name would trail a stray space
-   and an empty inline box. */
-/* Now a short sentence rather than a bare "(4)", so it drops the mono face and the
-   tabular figures — those earn their place on a column of numbers, not on prose — and
-   sits smaller than the company name it trails, which is what keeps the row reading as
-   a name with a note after it rather than as two competing labels. */
+/* Browser history stays subordinate to company and location, and empty counts hide. */
 .job-company-opened {
   font-size: 0.72rem;
-  color: color-mix(in oklab, var(--accent) 62%, var(--ink-faint));
+  font-weight: 400;
+  color: var(--ink-faint);
   white-space: nowrap;
 }
 /* Separator lives in CSS so refreshOpenedCounts can compare textContent against the
@@ -933,57 +977,18 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 .job-company-opened:not(:empty)::before { content: "· "; }
 .job-company-opened:empty { display: none; }
 .job-salary {
-  font-family: var(--mono);
-  font-size: 0.76rem;
-  color: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
   cursor: help;
 }
-/* Separator only between the two — never leading, when salary stands alone. */
-.job-company + .job-salary::before {
-  content: "·";
-  margin-right: 9px;
-  color: var(--rule-strong);
-}
-.job-side { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex: 0 0 auto; }
-.job-tags { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
-.role-tag {
-  font-family: var(--mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.03em;
-  color: var(--ink-soft);
-  background: var(--chip-bg);
-  border-radius: 5px;
-  padding: 2px 6px;
-  white-space: nowrap;
-}
-.role-tag.ai {
-  color: var(--accent2);
-  background: var(--accent2-fill);
-  border: 1px solid var(--accent2);
-}
+.job-posted { color: var(--ink-faint); font: 500 .7rem/1.3 var(--sans); white-space: nowrap; }
 .sponsor-tag {
-  font-family: var(--mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.02em;
-  color: var(--ink-faint);
-  background: transparent;
-  border: 1px solid var(--rule-strong);
-  border-radius: 5px;
-  padding: 2px 5px;
-  white-space: nowrap;
   cursor: help;
 }
-.sponsor-tag.yes { color: var(--accent); border-color: var(--accent); background: var(--accent-fill); }
-.sponsor-tag.no { color: var(--ink-soft); border-style: dotted; }
-.sponsor-tag.unknown { color: var(--ink-faint); border-color: var(--rule); }
-.job-meta {
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  color: var(--ink-faint);
-  margin: 0;
-  text-align: right;
-}
+.sponsor-tag.no { color: var(--ink-faint); }
 
 /* ---- Sort control ---- */
 .sort-wrap {
@@ -1010,13 +1015,7 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 }
 .sort-wrap select:focus-visible { outline: 2px solid var(--accent2); outline-offset: 1px; }
 
-/* ---- Multi-select dropdowns ----
-   Deliberately styled like the Sort control, NOT like the filter chips beside
-   them — a pill that opens a panel reads as a chip and never gets clicked. */
-/* The dropdowns are split into two labelled groups — the filters a developer reaches
-   for first, then the rest. Stacked rather than side by side so each group keeps the
-   full width to wrap across, which is what stops a four-item group from being squeezed
-   into a narrow column beside a five-item one. */
+/* Core filters stay visible; the remaining pickers live in Advanced Search. */
 /* Named -section, not -group: `.filter-group` is already the tier chip row on
    firms.html, and a column flex rule would flatten it. */
 .filter-sections {
@@ -1025,6 +1024,24 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   gap: 16px;
   width: 100%;
 }
+.advanced-filters { width: 100%; border-top: 1px solid var(--rule); padding-top: 12px; }
+.advanced-filters > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink-soft);
+  font-size: .81rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.advanced-filters > summary::-webkit-details-marker { display: none; }
+.advanced-filters > summary::before { content: "+"; color: var(--accent); font: 700 1.1rem/1 var(--sans); }
+.advanced-filters[open] > summary::before { content: "−"; }
+.advanced-filters > summary:hover { color: var(--accent); }
+.advanced-filters > summary:focus-visible { outline: 2px solid var(--accent2); outline-offset: 3px; }
+.advanced-filters > summary span:not(:empty) { color: var(--accent); background: var(--accent-fill); border-radius: 999px; padding: 3px 7px; font: 600 .68rem/1 var(--mono); }
+.advanced-filters > .filter-section { padding-top: 15px; }
 .filter-section {
   display: flex;
   flex-direction: column;
@@ -1058,7 +1075,7 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   gap: 10px 16px;
   width: 100%;
 }
-/* Posted and Salary are moved into the "Everything else" grid at init. They are plain
+/* Posted and Salary are moved into the advanced grid at init. They are plain
    <select>s rather than pickers, so they need the one rule that makes them fill their
    cell the way .picker-wrap's dropdown does — the label typography already matches,
    because .sort-wrap and .picker-label were always the same type. */
@@ -1231,21 +1248,6 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 .company-row.is-zero .company-name, .company-row.is-zero .company-n { color: var(--ink-faint); }
 .company-none { font-size: 0.82rem; color: var(--ink-faint); margin: 4px; }
 
-/* ---- Source tag ---- */
-.src-tag {
-  font-family: var(--mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  background: transparent;
-  border: 1px dotted var(--rule-strong);
-  border-radius: 5px;
-  padding: 2px 5px;
-  white-space: nowrap;
-}
-.src-tag.ats { color: var(--accent); border-style: solid; border-color: var(--accent); }
-
 .firm-message {
   background: var(--surface);
   border: 1px solid var(--rule);
@@ -1288,6 +1290,9 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
     font: 600 0.82rem/1.2 var(--sans);
     cursor: pointer;
   }
+  .mobile-search-wrap { display: block; margin: 0 0 12px; }
+  .mobile-search-wrap input[type="search"] { min-height: 44px; padding-left: 12px; font-size: 16px; }
+  #job-controls > .search-wrap { display: none; }
   .mobile-filter-toggle::after {
     content: "Open";
     font: 500 0.7rem/1 var(--mono);
@@ -1478,14 +1483,18 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   .sort-wrap { width: 100%; justify-content: space-between; }
   .sort-wrap select { min-width: 170px; }
   .reset-btn { width: 100%; margin-left: 0; }
-  .view-tabs { margin-top: 16px; }
-  .job { flex-direction: column; gap: 8px; }
-  /* The row's flex axis is now vertical, so job-main's 320px basis would become a
-     320px-tall gap. Reset it to content height. */
-  .job-main { flex: 0 0 auto; }
-  .job-side { align-items: flex-start; }
-  .job-tags { justify-content: flex-start; }
-  .job-meta { text-align: left; }
+  .view-tabs { margin-top: 0; }
+  .results-bar { align-items: flex-start; }
+  .job-card-open { grid-template-columns: 40px minmax(0, 1fr); gap: 10px 12px; padding: 14px; }
+  .job.has-description .job-card-open { padding-right: 54px; }
+  .job-description-open { top: 13px; right: 12px; width: 30px; height: 30px; }
+  .job-logo { width: 40px; height: 40px; }
+  .job-aside { grid-column: 2; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 8px; padding-top: 0; text-align: left; }
+  .job.in-group .job-card-open { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+  .job.in-group.has-description .job-card-open { padding-right: 54px; }
+  .job.in-group .job-aside { grid-column: 1; }
+  .job-title { font-size: 1rem; }
+  .job-company-opened { display: none; }
   .pagination {
     width: 100%;
     display: grid;
@@ -1590,6 +1599,10 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 .visitor-save:focus-visible, .visitor-skip:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
 
 @media (max-width: 620px) {
+  .masthead-top { display: block; }
+  .masthead-top .nav-links { gap: 18px; margin-bottom: 14px; }
+  .masthead-top .masthead-actions { justify-content: flex-end; gap: 8px; }
+  .masthead-top #visitor-slot { flex: 1 1 auto; min-width: 0; }
   .visitor-ask-label { width: 100%; }
   .visitor-input { flex: 1 1 auto; width: auto; min-width: 0; }
 }
@@ -1605,6 +1618,161 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   line-height: 1.5;
   color: var(--ink-faint);
   max-width: 78ch;
+}
+
+.resume-match {
+  margin: 0 0 30px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.resume-match > details > summary {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  list-style: none;
+  padding: 24px 28px 24px 31px;
+  cursor: pointer;
+}
+.resume-match > details > summary::-webkit-details-marker { display: none; }
+.resume-match > details > summary::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--accent);
+}
+.resume-match.is-unavailable { background: var(--surface); }
+.resume-match.is-unavailable > details > summary::before { background: var(--rule-strong); }
+.resume-match.is-unavailable .resume-kicker { color: var(--ink-faint); }
+.resume-match.is-unavailable .resume-summary-action { color: var(--ink-soft); }
+.resume-availability { margin: 0; color: var(--ink-soft); font-size: .83rem; line-height: 1.5; }
+.resume-match > details > summary:hover { background: var(--accent-fill); }
+.resume-match details[open] > summary { border-bottom: 1px solid var(--rule); }
+.resume-summary-copy { display: grid; gap: 3px; min-width: 0; }
+.resume-kicker {
+  color: var(--accent);
+  font-size: .66rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+#resume-heading { color: var(--ink); font-size: clamp(1.16rem, 2vw, 1.42rem); font-weight: 600; letter-spacing: -.025em; line-height: 1.25; }
+.resume-summary-note { color: var(--ink-soft); font-size: .83rem; line-height: 1.5; }
+.resume-summary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  flex: none;
+  padding: 10px 13px 10px 16px;
+  color: var(--accent);
+  background: var(--bg);
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  font-size: .8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.resume-summary-action .resume-action-arrow { font-size: 1rem; line-height: 1; }
+.resume-action-open, .resume-match details[open] .resume-action-closed { display: none; }
+.resume-match details[open] .resume-action-open { display: inline; }
+.resume-match summary:hover .resume-summary-action { border-color: var(--accent); }
+.resume-match details[open] .resume-action-arrow { transform: rotate(90deg); }
+.resume-panel-body { padding: 24px 28px 28px; }
+#resume-form { font-size: .82rem; }
+.resume-upload-note { margin: 11px 0 0; color: var(--ink-soft); font-size: .76rem; line-height: 1.6; }
+.resume-selected { display: flex; align-items: center; gap: 11px; margin-top: 17px; padding: 11px 13px; background: var(--bg); border: 1px solid var(--rule); border-radius: 7px; }
+.resume-selected-icon { display: grid; place-items: center; width: 25px; height: 25px; flex: none; color: var(--accent); background: var(--accent-fill); border-radius: 50%; font-weight: 700; }
+.resume-selected[data-state="reading"] .resume-selected-icon,
+.resume-selected[data-state="error"] .resume-selected-icon { color: var(--ink-soft); background: var(--chip-bg); }
+.resume-selected-copy { display: grid; gap: 2px; min-width: 0; }
+.resume-selected-copy strong { color: var(--ink); font-size: .8rem; overflow-wrap: anywhere; }
+.resume-selected-copy span { color: var(--ink-soft); font-size: .72rem; }
+.resume-form-footer { border-top: 1px solid var(--rule); margin-top: 20px; padding-top: 18px; }
+.resume-note { max-width: 88ch; margin: 0; color: var(--ink-soft); font-size: .75rem; line-height: 1.6; }
+.resume-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 18px; }
+.resume-actions button, .group-more { font: inherit; cursor: pointer; }
+#resume-retry { padding: 10px 15px; border: 1px solid var(--accent); border-radius: 6px; color: var(--on-accent); background: var(--accent); font-size: .81rem; font-weight: 600; }
+#resume-retry::after { content: "↻"; margin-left: 10px; font-size: 1rem; line-height: 0; }
+#resume-retry:hover:not(:disabled) { background: var(--accent2); border-color: var(--accent2); }
+#resume-retry:disabled { opacity: .65; cursor: progress; }
+#resume-retry:disabled::after { content: none; }
+#resume-clear { padding: 9px 3px; border: 0; color: var(--ink-soft); background: none; font-size: .78rem; }
+#resume-clear:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.resume-status { margin: 18px 0 0; color: var(--ink-soft); font-size: .79rem; }
+.resume-status:empty { display: none; }
+.resume-results { margin-top: 16px; }
+.resume-results:empty { display: none; }
+.resume-result { margin-top: 10px; padding: 18px 20px; background: var(--bg); border: 1px solid var(--rule); border-radius: 8px; }
+.resume-result-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.resume-result h3 { margin: 0; font-size: .96rem; line-height: 1.4; }
+.resume-score { flex: none; padding: 5px 9px; color: var(--accent); background: var(--accent-fill); border-radius: 5px; white-space: nowrap; font-size: .76rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.resume-meta { margin: 4px 0 13px; font-size: .76rem; color: var(--ink-soft); }
+.resume-dimensions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin: 12px 0; }
+.resume-dimensions > div { padding: 10px 12px; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }
+.resume-dimensions dt { font-size: .7rem; color: var(--ink-soft); }
+.resume-dimensions dd { margin: 4px 0 0; font-size: .84rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.resume-evidence-label { margin: 14px 0 5px; font-size: .73rem; font-weight: 600; }
+.resume-result blockquote { margin: 0 0 10px; border-left: 2px solid var(--rule-strong); padding-left: 11px; color: var(--ink-soft); font-size: .78rem; line-height: 1.6; }
+.job-description-link { display: inline-block; margin-top: 6px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: .72rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.group-more { margin: 12px 0; padding: 8px 12px; border: 1px solid var(--rule-strong); border-radius: 4px; color: var(--ink); background: var(--bg); font-size: .78rem; }
+.job-description-dialog {
+  width: min(820px, calc(100% - 32px));
+  max-height: min(88dvh, 880px);
+  padding: 0;
+  overflow: hidden;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--rule-strong);
+  border-radius: 12px;
+  box-shadow: 0 22px 70px rgba(20, 12, 30, .24);
+}
+.job-description-dialog::backdrop { background: rgba(17, 12, 25, .58); }
+.description-shell { display: flex; flex-direction: column; max-height: min(88dvh, 880px); }
+.description-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 25px 30px 20px; background: var(--surface); border-bottom: 1px solid var(--rule); }
+.description-heading { min-width: 0; }
+.description-kicker { margin: 0 0 6px; color: var(--accent); font-size: .66rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.job-description-dialog h2 { margin: 0; font-size: clamp(1.22rem, 2.4vw, 1.65rem); font-weight: 600; letter-spacing: -.025em; line-height: 1.3; text-wrap: balance; }
+.description-company { margin: 8px 0 0; color: var(--ink-soft); font-size: .8rem; line-height: 1.5; }
+.description-close { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; flex: none; color: var(--ink-soft); background: var(--bg); border: 1px solid var(--rule); border-radius: 7px; font: inherit; font-size: 1.35rem; line-height: 1; cursor: pointer; }
+.description-close:hover { color: var(--ink); border-color: var(--rule-strong); }
+.description-scroll { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 26px 30px 30px; }
+.description-body { max-width: 72ch; color: var(--ink); font-size: .9rem; line-height: 1.75; overflow-wrap: anywhere; }
+.description-body p { margin: 0 0 16px; }
+.description-body p:last-child, .description-body ul:last-child { margin-bottom: 0; }
+.description-body h3 { margin: 26px 0 10px; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--ink); font-size: .96rem; font-weight: 700; line-height: 1.4; }
+.description-body h3:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.description-body ul { margin: 0 0 20px; padding-left: 22px; }
+.description-body li { padding-left: 3px; margin-bottom: 8px; }
+.description-body li::marker { color: var(--accent); }
+.description-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 30px; border-top: 1px solid var(--rule); background: var(--surface); }
+.description-footer p { margin: 0; color: var(--ink-soft); font-size: .73rem; }
+.description-original { flex: none; padding: 9px 12px; color: var(--accent); background: var(--bg); border: 1px solid var(--rule-strong); border-radius: 6px; font-size: .78rem; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.description-original:hover { border-color: var(--accent); background: var(--accent-fill); }
+@media (max-width: 650px) {
+  .job-description-dialog { width: calc(100% - 20px); max-height: calc(100dvh - 20px); }
+  .description-shell { max-height: calc(100dvh - 20px); }
+  .description-header { padding: 18px; }
+  .description-scroll { padding: 20px 18px 24px; }
+  .description-body { font-size: .88rem; }
+  .description-footer { align-items: stretch; flex-direction: column; gap: 10px; padding: 13px 18px 18px; }
+  .description-original { text-align: center; }
+}
+.resume-match :focus-visible, .job-description-dialog :focus-visible, .job-description-link:focus-visible, .group-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.job-list[aria-busy="true"] { opacity: .55; }
+@media (max-width: 650px) {
+  .resume-match > details > summary { align-items: flex-start; flex-direction: column; gap: 17px; padding: 21px 20px 21px 23px; }
+  .resume-summary-action { width: 100%; }
+  .resume-panel-body { padding: 20px; }
+  .resume-result { padding: 15px; }
+  .resume-result-heading { flex-direction: column; gap: 7px; }
+  .resume-dimensions { grid-template-columns: 1fr; gap: 6px; }
+  .resume-dimensions > div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; }
+  .resume-dimensions dd { margin: 0; }
 }
 
 /* ---- Startup of the day ----
@@ -2002,4 +2170,124 @@ html[data-theme="dark"] .fb-done.is-error { color: #ff8f8f; }
 @media (max-width: 620px) {
   .fb-btn { padding: 5px 10px; font-size: 0.73rem; }
   .fb-panel { width: calc(100vw - 32px); }
+}
+
+/* The drop-zone file picker was replaced by the two-button control further down;
+   its icon and copy elements no longer exist in the markup. */
+
+  .resume-file-btn { margin-left: 54px; }
+}
+
+/* Per-job matching stays available as a quiet text action in the metadata line. */
+.job-match-link {
+  background: none;
+  border: 0;
+  padding: 0 20px 14px 82px;
+  font-family: inherit;
+  font-size: .68rem;
+  color: var(--ink-faint);
+  cursor: pointer;
+  text-decoration: none;
+}
+body:not(.resume-has-file) .job-match-link { display: none; }
+.job-match-link:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.job-match-link:disabled { color: var(--ink-faint); cursor: default; text-decoration: none; }
+.job-match-link:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; border-radius: 3px; }
+
+.job-match-result:empty { display: none; }
+.job-match-result {
+  margin: 0 20px 16px;
+  padding: 13px 15px;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  border-radius: 0 6px 6px 0;
+}
+@media (max-width: 720px) {
+  .job-match-link { padding: 0 14px 14px 66px; }
+  .job.in-group .job-match-link { padding-left: 12px; }
+  .job-match-result { margin-inline: 14px; }
+}
+.job-match-msg { margin: 0; font-size: 0.8rem; color: var(--ink-soft); }
+/* The result card is the same component the shortlist uses, so it arrives with its own
+   heading and link. Inside a row that duplicates what is already above it. */
+.job-match-result .resume-result-heading { display: none; }
+.job-match-result .resume-result { border: 0; padding: 0; margin: 0; background: none; }
+
+/* ---- Résumé controls ----
+   One row, two controls. The primary is whichever action is actually available: match
+   the saved résumé, or upload one if there is none. A disclosed "Forget it" sits at the
+   end because removing something should never be as prominent as doing it. */
+.resume-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 10px;
+}
+#resume-run {
+  padding: 10px 18px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--surface);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#resume-run:hover { background: color-mix(in oklab, var(--accent) 85%, black); }
+#resume-run[hidden] { display: none; }
+
+/* The file input is hidden behind its label so the button can be styled; the label is a
+   legitimate activator, so keyboard and screen-reader behaviour stay the browser's. */
+.resume-file { display: inline-flex; margin: 0; }
+.resume-file input[type="file"] {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.resume-file-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.resume-file-btn::before { content: "\2191"; font-weight: 600; }
+.resume-file:hover .resume-file-btn { background: color-mix(in oklab, var(--accent) 8%, var(--surface)); }
+.resume-file:focus-within .resume-file-btn,
+#resume-run:focus-visible,
+.resume-forget:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+
+/* With a résumé saved, uploading is the alternative rather than the main event. */
+body.resume-saved-ready .resume-file-btn {
+  font-weight: 400;
+  color: var(--ink-soft);
+  border-color: var(--rule);
+}
+body.resume-saved-ready .resume-file-btn::before { content: none; }
+
+.resume-forget {
+  background: none; border: 0; padding: 4px;
+  margin-left: auto;
+  font-family: inherit; font-size: 0.78rem;
+  color: var(--ink-faint); cursor: pointer; text-decoration: underline;
+}
+.resume-forget:hover { color: var(--ink); }
+.resume-forget[hidden] { display: none; }
+
+.resume-upload-note { font-size: 0.75rem; color: var(--ink-faint); margin: 0 0 12px; max-width: 72ch; }
+
+@media (max-width: 620px) {
+  .resume-controls { flex-direction: column; align-items: stretch; }
+  #resume-run, .resume-file, .resume-file-btn { width: 100%; justify-content: center; }
+  .resume-forget { margin-left: 0; text-align: center; }
 }
