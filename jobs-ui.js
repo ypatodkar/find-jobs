@@ -666,7 +666,7 @@
         ? `href="${escapeHtml(j.url)}" target="_blank" rel="noopener noreferrer" data-job-id="${escapeHtml(j.job_id || "")}" data-company="${escapeHtml(j.company)}" data-city="${escapeHtml(j.city || "")}" data-title="${escapeHtml(j.title)}" aria-label="Open posting for ${escapeHtml(j.title)} at ${escapeHtml(j.company)}"`
         : "";
       return `
-        <article class="job${inGroup ? " in-group" : ""}${cfg.loadPage ? " has-description" : ""}" data-job-id="${escapeHtml(j.job_id || "")}">
+        <article class="job${inGroup ? " in-group" : ""}${cfg.loadPage ? " has-actions" : ""}" data-job-id="${escapeHtml(j.job_id || "")}">
           <${cardTag} class="job-card-open" ${cardProps}>
             ${logo}
             <span class="job-main">
@@ -676,7 +676,18 @@
             </span>
             <span class="job-aside">${payBit}${posted ? `<span class="job-posted">Posted ${escapeHtml(posted)}</span>` : ""}</span>
           </${cardTag}>
-          ${cfg.loadPage ? `<button type="button" class="job-description-open" data-description="${escapeHtml(j.job_id)}" aria-label="Read description for ${escapeHtml(j.title)} at ${escapeHtml(j.company)}" title="Read description"><span aria-hidden="true">+</span></button>` : ""}
+          ${/* Two actions, because reading and applying are different intentions and
+               the card click only covers one of them. "See description" is offered
+               only when there is something behind it — the list carries a
+               hasDescription flag rather than the text, which is the whole reason a
+               page of 45 is 162 KB — so a button that opens "not available" is never
+               drawn. "Open role" carries the same data attributes the card does, so
+               a posting opened from here is counted exactly as one opened from the
+               card used to be. */ ""}
+          <div class="job-actions">
+            ${cfg.loadPage && j.hasDescription ? `<button type="button" class="job-description-open" data-description="${escapeHtml(j.job_id)}" aria-label="Read description for ${escapeHtml(j.title)} at ${escapeHtml(j.company)}">See description</button>` : ""}
+            ${j.url ? `<a class="job-open-role" href="${escapeHtml(j.url)}" target="_blank" rel="noopener noreferrer" data-job-id="${escapeHtml(j.job_id || "")}" data-company="${escapeHtml(j.company)}" data-city="${escapeHtml(j.city || "")}" data-title="${escapeHtml(j.title)}" aria-label="Open the posting for ${escapeHtml(j.title)} at ${escapeHtml(j.company)}">Open role <span aria-hidden="true">↗</span></a>` : ""}
+          </div>
           ${cfg.enableMatching ? `<button type="button" class="job-match-link" data-match="${escapeHtml(j.job_id)}" aria-label="Check my résumé against ${escapeHtml(j.title)} at ${escapeHtml(j.company)}">Check résumé</button>` : ""}
           <div class="job-match-result" data-match-result="${escapeHtml(j.job_id)}"></div>
         </article>`;

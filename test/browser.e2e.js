@@ -51,14 +51,22 @@ async function main() {
     assert.equal(await firstCard.locator('a.job-card-open').getAttribute('href'), data.jobs[0].url);
     assert.equal(await firstCard.locator('a.job-card-open').getAttribute('target'), '_blank');
     let popups = 0; page.on('popup', () => popups++);
+    await firstCard.locator('a.job-card-open').click();
+    await page.waitForFunction(() => document.querySelector('#job-detail .description-body')?.textContent.includes('Five years'));
+    assert.equal(popups, 0, 'a plain card click previews rather than opening the posting');
+    assert.ok(new URL(page.url()).searchParams.get('job'), 'the open job is in the URL so it can be shared');
+    assert.equal(await page.locator('.job.is-selected').count(), 1);
+    // track.js captures clicks, so the preview must cancel before it is counted.
+    assert.equal(await page.evaluate(() => window.Seen.has('job_0')), false, 'previewing is not opening');
     await firstCard.locator('.job-description-open').click();
-    await page.waitForFunction(() => document.querySelector('.description-body')?.textContent.includes('Five years'));
+    await page.waitForFunction(() => document.querySelector('#job-detail .description-body')?.textContent.includes('Five years'));
     assert.equal(popups, 0);
     assert.equal(await page.evaluate(() => window.Seen.has('job_0')), false);
-    await page.getByRole('button', { name: 'Close job description' }).click();
     await page.context().route('https://example.com/jobs/**', route => route.fulfill({ contentType: 'text/html', body: '<title>Original posting</title>' }));
+    // The posting is opened from the pane now, not by clicking the card — a plain
+    // card click previews. A modified click still goes straight to the posting.
     const postingPromise = page.waitForEvent('popup');
-    await firstCard.locator('a.job-card-open').click();
+    await page.locator('#job-detail .description-original').click();
     const posting = await postingPromise;
     await posting.waitForLoadState();
     assert.equal(posting.url(), data.jobs[0].url);
@@ -90,20 +98,18 @@ async function main() {
     const groupedCard = page.locator('.cgroup.is-open .job').first();
     assert.match(await groupedCard.locator('a.job-card-open').getAttribute('href'), /^https:\/\/example\.com\/jobs\//);
     await groupedCard.locator('.job-description-open').click();
-    await page.waitForFunction(() => document.querySelector('.description-body')?.textContent.includes('Five years'));
-    await page.getByRole('button', { name: 'Close job description' }).click();
+    await page.waitForFunction(() => document.querySelector('#job-detail .description-body')?.textContent.includes('Five years'));
     await page.locator('[data-company-more]').first().click();
     await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('19 matching roles'));
     await page.locator('[data-description]').first().click();
-    await page.waitForFunction(() => document.querySelector('.description-body').textContent.includes('Five years'));
-    assert.equal(await page.locator('.job-description-dialog h2').textContent(), await page.locator('#job-list .job-title').first().textContent());
+    await page.waitForFunction(() => document.querySelector('#job-detail .description-body').textContent.includes('Five years'));
+    assert.equal(await page.locator('#job-detail h2').textContent(), await page.locator('#job-list .job-title').first().textContent());
     assert.ok(await page.locator('.description-body p').count() > 0);
     assert.ok(await page.locator('.description-original').isVisible());
     const openedId = await page.locator('.description-original').getAttribute('data-job-id');
     await page.locator('.description-original').evaluate(link => link.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     assert.equal(await page.evaluate(id => window.Seen.has(id), openedId), true);
     assert.equal(await page.locator(`.job[data-job-id="${openedId}"]`).first().evaluate(row => row.classList.contains('row-seen')), true);
-    await page.getByRole('button', { name: 'Close job description' }).click();
     assert.equal(await page.locator('#advanced-filters').evaluate(el => el.open), false);
     await page.locator('#advanced-filters > summary').click();
     assert.ok(await page.locator('#sum-company').isVisible());
