@@ -71,8 +71,53 @@
         <div class="stats" id="all-stats"></div>
       </header>
 
+      <section class="resume-match is-unavailable" aria-labelledby="resume-heading">
+        <details id="resume-panel">
+          <summary>
+            <span class="resume-summary-copy">
+              <span class="resume-kicker">A more personal search</span>
+              <span id="resume-heading">Find jobs that fit your experience</span>
+              <span class="resume-summary-note" id="resume-summary-note">Résumé matching is unavailable right now.</span>
+            </span>
+            <span class="resume-summary-action"><span class="resume-action-closed" id="resume-action-closed">View status</span><span class="resume-action-open">Close</span><span class="resume-action-arrow" aria-hidden="true">↗</span></span>
+          </summary>
+          <div class="resume-panel-body">
+            <p id="resume-availability" class="resume-availability" role="status">Résumé matching is unavailable right now. You can still search and filter jobs.</p>
+            <div id="resume-form" hidden>
+              <!-- Two controls, and only one of them is ever the obvious thing to press.
+                   With a résumé saved, matching is one click and uploading is the quiet
+                   alternative; with none, uploading is the only thing to do. Everything
+                   that used to be a separate button here said the same as one of these
+                   two: "Compare current filters" is this match, "Remove résumé and
+                   results" is this forget. -->
+              <div class="resume-controls">
+                <button type="button" id="resume-run" hidden>Find matching jobs for r&eacute;sum&eacute;</button>
+                <label class="resume-file">
+                  <input id="resume-file" type="file" accept=".pdf,.docx,.txt,.md,.markdown,application/pdf,text/plain,text/markdown" aria-describedby="resume-upload-note" disabled>
+                  <span class="resume-file-btn" id="resume-file-btn">Upload r&eacute;sum&eacute;</span>
+                </label>
+                <button type="button" id="resume-forget" class="resume-forget" hidden>Forget it</button>
+              </div>
+              <p id="resume-upload-note" class="resume-upload-note">PDF, Word, .txt or .md. Compares up to 30 jobs from your current filters. Your r&eacute;sum&eacute; stays in this browser; its text is sent to TypeSafe AI only to score it.</p>
+              <div id="resume-selected" class="resume-selected" hidden>
+                <span class="resume-selected-icon" aria-hidden="true">&#10003;</span>
+                <span class="resume-selected-copy"><strong id="resume-file-name"></strong><span id="resume-file-state"></span></span>
+              </div>
+              <!-- Kept for the tests and for keyboard users who know them; the controls
+                   above now cover both actions, so these are not shown. -->
+              <div class="resume-actions" hidden><button type="button" id="resume-retry" hidden>Compare current filters</button><button type="button" id="resume-clear" hidden>Remove r&eacute;sum&eacute; and results</button></div>
+            </div>
+            <p id="resume-status" class="resume-status" role="status" aria-live="polite"></p>
+            <div id="resume-results" class="resume-results"></div>
+          </div>
+        </details>
+      </section>
+
       <div id="mobile-filter-backdrop" class="mobile-filter-backdrop" hidden></div>
       <button type="button" id="mobile-filter-toggle" class="mobile-filter-toggle" aria-controls="job-controls" aria-expanded="false" hidden>Filters</button>
+      <div class="mobile-search-wrap search-wrap">
+        <input id="mobile-job-search" type="search" placeholder="Search title or company…" aria-label="Search roles" autocomplete="off" />
+      </div>
       <div class="controls" id="job-controls" aria-label="Job filters" hidden>
         <!-- Mobile only. Above 720px the filters are an ordinary block in the page and
              this collapses away; under it they are a modal sheet, which needs a title
@@ -80,6 +125,14 @@
         <div class="drawer-head">
           <h2 class="drawer-title" id="filter-drawer-title">Filters</h2>
           <button type="button" class="drawer-close" id="filter-drawer-close">Done</button>
+        </div>
+
+        <div class="search-wrap">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+            <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.3"/>
+            <line x1="10.2" y1="10.2" x2="14" y2="14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+          <input id="job-search" type="search" placeholder="Search title or company…" aria-label="Search roles" autocomplete="off" />
         </div>
 
         <div class="filter-sections" id="picker-row"></div>
@@ -109,16 +162,6 @@
           <button type="button" class="reset-btn" id="reset-filters" hidden>Reset filters</button>
         </div>
 
-        <!-- Last, so it reads as "narrow what the filters left" rather than as the
-             starting point. Alone on its flex line, so it spans the full width. -->
-        <div class="search-wrap">
-          <svg class="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-            <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.3"/>
-            <line x1="10.2" y1="10.2" x2="14" y2="14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-          </svg>
-          <input id="job-search" type="search" placeholder="Search title or company…" aria-label="Search roles" autocomplete="off" />
-        </div>
-
         <!-- Mobile only. The list is behind the drawer, so without this you filter
              blind and only discover you cut it to nothing after closing. Doubles as a
              full-width exit at the bottom of the sheet, where the thumb already is. -->
@@ -127,21 +170,22 @@
         </div>
       </div>
 
-      <div class="view-tabs" id="job-view-tabs" role="group" aria-label="List view" hidden>
-        <button type="button" class="seg" id="view-flat" aria-pressed="true">Flat list<span class="seg-n" id="count-flat"></span></button>
-        <button type="button" class="seg" id="view-grouped" aria-pressed="false">By company<span class="seg-n" id="count-grouped"></span></button>
-      </div>
-
-      <div class="results-bar" id="job-results-bar" hidden>
-        <p class="results-meta" id="job-count"></p>
-        <div class="group-actions" id="group-actions">
-          <button type="button" class="linkish" id="expand-all">Expand visible</button>
-          <button type="button" class="linkish" id="collapse-all">Collapse all</button>
+      <section class="results-shell" aria-label="Job results">
+        <div class="results-bar" id="job-results-bar" hidden>
+          <div class="results-heading"><h2 id="results-title">Open roles</h2><p class="results-meta" id="job-count"></p></div>
+          <div class="view-tabs" id="job-view-tabs" role="group" aria-label="Browse results by" hidden>
+            <button type="button" class="seg" id="view-flat" aria-pressed="true">Job list<span class="seg-n" id="count-flat"></span></button>
+            <button type="button" class="seg" id="view-grouped" aria-pressed="false">Company directory<span class="seg-n" id="count-grouped"></span></button>
+          </div>
+          <div class="group-actions" id="group-actions">
+            <button type="button" class="linkish" id="expand-all">Expand visible</button>
+            <button type="button" class="linkish" id="collapse-all">Collapse all</button>
+          </div>
         </div>
-      </div>
-      <div id="job-list" class="job-list" hidden></div>
-      <nav id="job-pagination" class="pagination" aria-label="Job result pages" hidden></nav>
-      <div id="all-message" class="firm-message" hidden></div>
+        <div id="job-list" class="job-list" hidden></div>
+        <nav id="job-pagination" class="pagination" aria-label="Job result pages" hidden></nav>
+        <div id="all-message" class="firm-message" hidden></div>
+      </section>
 
       <footer>
         <div>
@@ -155,8 +199,9 @@
         <p class="privacy-note">
           <span aria-hidden="true">*</span> This site stores a random ID in your browser to
           remember which roles you've opened and the views you've saved, plus your first name
-          if you choose to give one. No email, no password, no IP address, and no account.
-          Clearing your browser's site data erases all of it.
+          if you choose to give one. Choosing a résumé file starts matching and sends its extracted text to TypeSafe AI.
+          Find Jobs keeps scores in a private cache and temporarily uses a hashed network address to limit requests; it does not save résumé text.
+          Clearing site data removes your browser history and saved views. Cached assessments expire after one day.
         </p>
       </footer>
 
@@ -168,10 +213,14 @@
   <script src="jobs-ui.js"></script>
   <script src="visitor.js"></script>
   <script src="api-config.js"></script>
+  <script src="description-format.js"></script>
+  <script src="jobs-api.js"></script>
   <script src="heart.js"></script>
   <script src="presets.js"></script>
   <script src="filter-drawer.js"></script>
   <script src="all.js"></script>
+  <script src="resume-import.js"></script>
+  <script src="resume-match.js"></script>
   <script src="track.js"></script>
   <script src="viewed.js"></script>
   <script src="counter.js"></script>

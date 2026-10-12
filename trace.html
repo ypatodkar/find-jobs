@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Match observability · Find Jobs</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  /* Local to this page: it is a development instrument, not part of the site, so its
+     styles live here rather than growing styles.css for something visitors never see. */
+  .tr-wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 80px; }
+  .tr-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+  .tr-head h1 { font-size: 1.45rem; margin: 0; }
+  .tr-head span { font-size: .8rem; color: var(--ink-faint); }
+  .tr-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 18px 0 10px; }
+  .tr-form textarea { flex: 1 1 100%; min-height: 110px; padding: 10px 12px; font: inherit; font-size: .85rem;
+    border: 1px solid var(--rule); border-radius: 7px; background: var(--surface); color: var(--ink); }
+  .tr-form button { padding: 9px 18px; font: inherit; font-size: .86rem; font-weight: 500; color: var(--surface);
+    background: var(--accent); border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; }
+  .tr-form button:disabled { opacity: .55; cursor: default; }
+  .tr-form label { font-size: .8rem; color: var(--ink-soft); display: inline-flex; gap: 6px; align-items: center; }
+  .tr-form input[type=number] { width: 70px; padding: 6px 8px; font: inherit; font-size: .82rem;
+    border: 1px solid var(--rule); border-radius: 5px; background: var(--surface); color: var(--ink); }
+  .tr-status { font-size: .84rem; color: var(--ink-soft); margin: 8px 0 20px; }
+
+  /* The funnel is the whole point: one row per stage, with the bar showing what
+     survived it. A stage that drops 90% is visible before any number is read. */
+  .tr-step { display: grid; grid-template-columns: 26px 150px 1fr 150px; gap: 12px; align-items: start;
+    padding: 12px 0; border-top: 1px solid var(--rule); }
+  .tr-step-n { font-family: var(--mono); font-size: .76rem; color: var(--ink-faint); padding-top: 2px; }
+  .tr-step-name { font-weight: 600; font-size: .88rem; }
+  .tr-step-ms { font-family: var(--mono); font-size: .72rem; color: var(--ink-faint); }
+  .tr-bar { height: 7px; border-radius: 4px; background: color-mix(in oklab, var(--accent) 18%, transparent); overflow: hidden; margin: 5px 0 7px; }
+  .tr-bar i { display: block; height: 100%; background: var(--accent); }
+  .tr-counts { font-family: var(--mono); font-size: .74rem; color: var(--ink-soft); }
+  .tr-note { font-size: .8rem; color: var(--ink-soft); margin: 6px 0 0; max-width: 72ch; }
+  .tr-warn { color: var(--accent); font-weight: 500; }
+  .tr-detail { margin: 8px 0 0; }
+  .tr-detail summary { cursor: pointer; font-size: .78rem; color: var(--accent); }
+  .tr-detail pre { margin: 8px 0 0; padding: 10px 12px; font-size: .72rem; line-height: 1.5; overflow-x: auto;
+    background: var(--bg); border: 1px solid var(--rule); border-radius: 6px; }
+  .tr-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 7px 0 0; }
+  .tr-chip { font-family: var(--mono); font-size: .7rem; padding: 2px 7px; border-radius: 20px;
+    background: color-mix(in oklab, var(--accent) 9%, transparent); color: var(--ink-soft); }
+  .tr-chip.hit { background: color-mix(in oklab, var(--accent) 22%, transparent); color: var(--ink); }
+  table.tr-tbl { width: 100%; border-collapse: collapse; margin: 8px 0 0; font-size: .78rem; }
+  table.tr-tbl th { text-align: left; font-family: var(--mono); font-size: .7rem; text-transform: uppercase;
+    letter-spacing: .05em; color: var(--ink-faint); padding: 5px 8px 5px 0; font-weight: 500; }
+  table.tr-tbl td { padding: 4px 8px 4px 0; border-top: 1px solid var(--rule); vertical-align: top; }
+  table.tr-tbl td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="tr-wrap">
+  <div class="tr-head">
+    <h1>Match observability</h1>
+    <span>What the shortlist picked, and which stage dropped everything else.</span>
+  </div>
+
+  <div class="tr-form" style="margin-bottom:4px">
+    <label>admin token <input id="token" type="password" placeholder="ADMIN_TOKEN" style="width:220px;padding:6px 8px;font:inherit;font-size:.82rem;border:1px solid var(--rule);border-radius:5px;background:var(--surface);color:var(--ink)"></label>
+    <label>last <input id="days" type="number" min="1" max="90" value="7"> days</label>
+    <button id="load" type="button">Load history</button>
+  </div>
+  <div id="stats"></div>
+  <div id="runs"></div>
+
+  <h2 style="font-size:1rem;margin:30px 0 0">Run a new comparison</h2>
+  <div class="tr-form">
+    <textarea id="resume" placeholder="Paste a résumé here, or leave blank to reuse the one saved in this browser."></textarea>
+    <label>window <input id="window" type="number" min="1" max="365" value="4"></label>
+    <label>limit <input id="limit" type="number" min="1" max="60" value="30"></label>
+    <label>per company <input id="per" type="number" min="1" max="10" value="2"></label>
+    <button id="run" type="button">Run</button>
+  </div>
+  <p class="tr-status" id="status"></p>
+  <div id="out"></div>
+</div>
+
+<script src="api-config.js"></script>
+<script src="jobs-api.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var out = $('out'), status = $('status');
+
+  // Reuse whatever the main page saved, so a trace can be run on the same résumé that
+  // produced a confusing result without pasting it again.
+  try {
+    var kept = JSON.parse(localStorage.getItem('find-jobs-resume') || 'null');
+    if (kept && kept.text) { $('resume').value = kept.text; status.textContent = 'Loaded the résumé saved in this browser.'; }
+  } catch (e) {}
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function chips(list, cls) {
+    var wrap = el('div', 'tr-chips');
+    (list || []).forEach(function (t) {
+      // A trailing * marks a term that hit the title rather than the body.
+      var isTitle = typeof t === 'string' && t.slice(-1) === '*';
+      wrap.append(el('span', 'tr-chip' + (isTitle ? ' hit' : ''), isTitle ? t.slice(0, -1) : t));
+    });
+    return wrap;
+  }
+
+  function table(rows, cols) {
+    var t = el('table', 'tr-tbl'), head = el('tr');
+    cols.forEach(function (c) { head.append(el('th', null, c.label)); });
+    t.append(el('thead').appendChild(head).parentNode);
+    var body = el('tbody');
+    rows.forEach(function (r) {
+      var tr = el('tr');
+      cols.forEach(function (c) { tr.append(el('td', c.numeric ? 'n' : null, c.get(r))); });
+      body.append(tr);
+    });
+    t.append(body);
+    return t;
+  }
+
+  function renderStep(s, widest) {
+    var row = el('div', 'tr-step');
+    row.append(el('div', 'tr-step-n', String(s.step)));
+
+    var left = el('div');
+    left.append(el('div', 'tr-step-name', s.name));
+    left.append(el('div', 'tr-step-ms', (s.ms || 0) + 'ms'));
+    row.append(left);
+
+    var mid = el('div');
+    var bar = el('div', 'tr-bar'), fill = el('i');
+    fill.style.width = Math.max(0.6, (s.out / widest) * 100) + '%';
+    bar.append(fill); mid.append(bar);
+    mid.append(el('div', 'tr-counts', s.in.toLocaleString() + ' in → ' + s.out.toLocaleString() + ' out'));
+
+    var d = s.detail || {};
+    if (d.note) mid.append(el('p', 'tr-note', d.note));
+    if (d.shortfall) mid.append(el('p', 'tr-note tr-warn', d.shortfall));
+    if (d.stoppedBecause) mid.append(el('p', 'tr-note', 'Stopped: ' + d.stoppedBecause));
+    if (d.provider) mid.append(el('p', 'tr-note', 'Jev: ' + d.provider));
+
+    if (Array.isArray(d.ladder)) {
+      mid.append(table(d.ladder, [
+        { label: 'window', get: function (r) { return r.days + 'd'; }, numeric: true },
+        { label: 'jobs', get: function (r) { return r.jobs; }, numeric: true },
+        { label: 'companies', get: function (r) { return r.companies; }, numeric: true },
+      ]));
+    }
+    if (Array.isArray(d.chosen)) {
+      mid.append(table(d.chosen.slice(0, 20), [
+        { label: 'relevance', get: function (r) { return r.relevance.toFixed(3); }, numeric: true },
+        { label: 'jobs', get: function (r) { return r.jobs; }, numeric: true },
+        { label: 'title kept', get: function (r) { return r.title; } },
+      ]));
+    }
+    if (Array.isArray(d.rejected) && d.rejected.length) {
+      var rej = el('details', 'tr-detail');
+      rej.append(el('summary', null, 'rejected titles (' + d.rejected.length + ' shown)'));
+      rej.append(table(d.rejected, [
+        { label: 'relevance', get: function (r) { return r.relevance.toFixed(3); }, numeric: true },
+        { label: 'title', get: function (r) { return r.title; } },
+      ]));
+      mid.append(rej);
+    }
+    if (Array.isArray(d.topTerms)) { mid.append(el('p', 'tr-note', 'Résumé terms used for ranking:')); mid.append(chips(d.topTerms)); }
+    if (Array.isArray(d.selected)) {
+      mid.append(table(d.selected.slice(0, 30), [
+        { label: '#', get: function (r) { return r.rank; }, numeric: true },
+        { label: 'score', get: function (r) { return r.score; }, numeric: true },
+        { label: 'title rel', get: function (r) { return r.titleRelevance; }, numeric: true },
+        { label: 'company', get: function (r) { return r.company; } },
+        { label: 'role', get: function (r) { return r.title; } },
+        { label: 'matched terms', get: function (r) { return (r.matched || []).join(' '); } },
+      ]));
+    }
+    if (Array.isArray(d.skipped) && d.skipped.length) {
+      var sk = el('details', 'tr-detail');
+      sk.append(el('summary', null, 'skipped (' + d.skipped.length + ' shown)'));
+      sk.append(table(d.skipped, [
+        { label: 'why', get: function (r) { return r.why; } },
+        { label: 'company', get: function (r) { return r.company; } },
+        { label: 'role', get: function (r) { return r.title; } },
+      ]));
+      mid.append(sk);
+    }
+
+    var raw = el('details', 'tr-detail');
+    raw.append(el('summary', null, 'raw'));
+    raw.append(el('pre', null, JSON.stringify(s, null, 1)));
+    mid.append(raw);
+    row.append(mid);
+
+    row.append(el('div', 'tr-counts', s.out < s.in ? '−' + (s.in - s.out).toLocaleString() : ''));
+    return row;
+  }
+
+  function render(data) {
+    out.replaceChildren();
+    var trace = data.trace;
+    if (!trace) { out.append(el('p', 'tr-note', 'No trace in the response.')); return; }
+    var widest = Math.max.apply(null, trace.steps.map(function (s) { return Math.max(s.in, s.out); }));
+    trace.steps.forEach(function (s) { out.append(renderStep(s, widest)); });
+
+    var sum = el('div', 'tr-step');
+    sum.append(el('div', 'tr-step-n', '✓'));
+    sum.append(el('div', 'tr-step-name', 'assessed'));
+    var m = el('div');
+    m.append(el('div', 'tr-counts', data.assessed + ' scored by Jev, ' + (data.failed || 0) + ' failed'));
+    if (data.matches && data.matches.length) {
+      m.append(table(data.matches.slice(0, 30).map(function (x, i) {
+        return { i: i + 1, score: x.assessment.score, company: x.job.company, title: x.job.title,
+          ev: x.assessment.evidence ? (x.assessment.evidence.text || '').slice(0, 70) : '' };
+      }), [
+        { label: '#', get: function (r) { return r.i; }, numeric: true },
+        { label: 'score', get: function (r) { return r.score; }, numeric: true },
+        { label: 'company', get: function (r) { return r.company; } },
+        { label: 'role', get: function (r) { return r.title; } },
+        { label: 'evidence Jev cited', get: function (r) { return r.ev; } },
+      ]));
+    }
+    sum.append(m);
+    sum.append(el('div'));
+    out.append(sum);
+  }
+
+  // ---- history ----
+  function tokenOf() {
+    var t = $('token').value.trim();
+    // Kept for the session only. This is an operator credential on a page that shows
+    // operator data; it has no business surviving the tab.
+    if (t) { try { sessionStorage.setItem('fj-admin', t); } catch (e) {} return t; }
+    try { return sessionStorage.getItem('fj-admin') || ''; } catch (e) { return ''; }
+  }
+
+  function statCard(label, value, note) {
+    var c = el('div');
+    c.style.cssText = 'padding:12px 14px;border:1px solid var(--rule);border-radius:8px;min-width:132px';
+    var lab = el('div', null, label);
+    lab.style.cssText = 'font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint)';
+    c.append(lab);
+    var v = el('div', null, value == null ? '\u2014' : String(value));
+    v.style.cssText = 'font-size:1.3rem;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums';
+    c.append(v);
+    if (note) { var n = el('div', null, note); n.style.cssText = 'font-size:.72rem;color:var(--ink-faint);margin-top:2px'; c.append(n); }
+    return c;
+  }
+
+  async function loadHistory() {
+    var token = tokenOf();
+    if (!token) { status.textContent = 'Enter the ADMIN_TOKEN to read stored traces.'; return; }
+    var days = Number($('days').value) || 7;
+    status.textContent = 'Loading history\u2026';
+    try {
+      var base = (window.JOBS_ENDPOINT || '/api');
+      var q = 'token=' + encodeURIComponent(token);
+      var sres = await fetch(base + '/traces/stats?days=' + days + '&' + q);
+      if (sres.status === 401) { status.textContent = 'That token was rejected.'; return; }
+      var st = (await sres.json()).stats || {};
+      var lres = await fetch(base + '/traces?limit=100&' + q);
+      var runs = (await lres.json()).runs || [];
+
+      var row = el('div');
+      row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 6px';
+      row.append(statCard('runs', st.runs || 0, 'last ' + days + 'd'));
+      row.append(statCard('median shortlist', st.medianShortlisted, 'of 30 asked'));
+      // The number worth watching: how often the funnel cannot fill the shortlist.
+      row.append(statCard('short of target', (st.shortOfTargetPct || 0) + '%', (st.shortOfTarget || 0) + ' runs'));
+      row.append(statCard('median time', st.medianMs == null ? null : (st.medianMs / 1000).toFixed(1) + 's',
+        st.p90Ms == null ? '' : 'p90 ' + (st.p90Ms / 1000).toFixed(1) + 's'));
+      row.append(statCard('provider degraded', st.providerDegraded || 0, 'title ranking'));
+      row.append(statCard('distinct r\u00e9sum\u00e9s', st.distinctResumes || 0, 'by hash'));
+      $('stats').replaceChildren(row);
+
+      if (st.windows) {
+        var w = el('p', 'tr-note', 'Date windows used: ' + Object.keys(st.windows)
+          .sort(function (a, b) { return a - b; })
+          .map(function (k) { return k + 'd \u00d7' + st.windows[k]; }).join(', ')
+          + '. A run that had to widen is a run where few jobs were posted recently enough.');
+        $('stats').append(w);
+      }
+
+      var tbl = table(runs, [
+        { label: 'when', get: function (r) { return new Date(r.at).toLocaleString(); } },
+        { label: 'window', get: function (r) { return r.window_days + 'd'; }, numeric: true },
+        { label: 'pooled', get: function (r) { return r.pooled; }, numeric: true },
+        { label: 'shortlist', get: function (r) { return r.shortlisted; }, numeric: true },
+        { label: 'assessed', get: function (r) { return r.assessed; }, numeric: true },
+        { label: 'failed', get: function (r) { return r.failed; }, numeric: true },
+        { label: 'time', get: function (r) { return r.ms == null ? '' : (r.ms / 1000).toFixed(1) + 's'; }, numeric: true },
+        { label: 'r\u00e9sum\u00e9', get: function (r) { return (r.resume_hash || '').slice(0, 8); } },
+        { label: 'title ranking', get: function (r) { return r.provider || ''; } },
+      ]);
+      // Any row can be opened; the step view below is the same renderer the live run uses.
+      tbl.querySelectorAll('tbody tr').forEach(function (tr, i) {
+        tr.style.cursor = 'pointer';
+        tr.addEventListener('click', async function () {
+          status.textContent = 'Opening run ' + runs[i].run_id.slice(0, 8) + '\u2026';
+          var r = await fetch(base + '/traces/' + runs[i].run_id + '?' + q);
+          var stored = await r.json();
+          render({ trace: stored.trace, assessed: stored.assessed, failed: stored.failed, matches: [] });
+          status.textContent = 'Run ' + runs[i].run_id.slice(0, 8) + ' \u2014 ' + new Date(stored.at).toLocaleString();
+          out.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+      $('runs').replaceChildren(tbl);
+      status.textContent = runs.length + ' run(s) stored. Click one to open its trace.';
+    } catch (err) {
+      status.textContent = 'Could not load history: ' + err.message;
+    }
+  }
+  $('load').addEventListener('click', loadHistory);
+  try { if (sessionStorage.getItem('fj-admin')) { $('token').value = sessionStorage.getItem('fj-admin'); loadHistory(); } } catch (e) {}
+
+  $('run').addEventListener('click', async function () {
+    var resume = $('resume').value.trim();
+    if (resume.length < 100) { status.textContent = 'Paste at least 100 characters of résumé text.'; return; }
+    $('run').disabled = true;
+    status.textContent = 'Running… title ranking and 30 assessments usually take a few seconds.';
+    out.replaceChildren();
+    var started = Date.now();
+    try {
+      var data = await window.JobsAPI.request('/matches', {
+        resume: resume, consent: true,
+        windowDays: Number($('window').value) || 4,
+        limit: Number($('limit').value) || 30,
+        perCompany: Number($('per').value) || 2,
+        filters: {},
+      });
+      status.textContent = 'Done in ' + ((Date.now() - started) / 1000).toFixed(1) + 's — window '
+        + (data.windowDays || '?') + 'd, ' + data.shortlisted + ' shortlisted, ' + data.assessed + ' assessed.';
+      render(data);
+    } catch (err) {
+      status.textContent = err.message || 'The run failed.';
+    } finally {
+      $('run').disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>

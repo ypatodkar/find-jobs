@@ -218,6 +218,7 @@ async function fetchCompany(entry) {
         roles: hit.roles,
         url: j.url || "",
         posted: j.posted,
+        description: toPlainText(j.description).slice(0, 200000),
         remote: !!j.remote,
         salaryMin: j.salaryMin || null,
         salaryMax: j.salaryMax || null,

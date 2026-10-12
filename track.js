@@ -16,7 +16,7 @@
 
   var KEY = "vc-directory-seen";
   var MAX_ENTRIES = 5000; // ~250 KB of JSON; well inside the ~5 MB localStorage budget
-  var SELECTOR = "a.job-title[data-job-id]";
+  var SELECTOR = "a.description-original[data-job-id], a.job-card-open[data-job-id]";
 
   // ---- store ------------------------------------------------------------------
   // { job_id: timestamp }. Falls back to memory-only if localStorage is unavailable
@@ -63,6 +63,7 @@
     prune();
     revision++;
     write();
+    if (global.dispatchEvent) global.dispatchEvent(new Event('seenchange'));
     return true;
   }
 
@@ -72,17 +73,10 @@
   // done once. That also keeps this file independent of jobs-ui.js's render path.
   function paint(root) {
     var scope = root && root.querySelectorAll ? root : document;
-    var nodes = scope.querySelectorAll(SELECTOR);
+    var nodes = scope.querySelectorAll(".job[data-job-id]");
     for (var i = 0; i < nodes.length; i++) {
-      var a = nodes[i];
-      var on = !!seen[a.getAttribute("data-job-id")];
-      if (on === a.classList.contains("is-seen")) continue;
-      a.classList.toggle("is-seen", on);
-      // The stamp is centred on the whole row, so the row carries a class too.
-      var row = a.closest ? a.closest(".job") : null;
-      if (row) row.classList.toggle("row-seen", on);
-      if (on) a.setAttribute("title", "You've opened this one");
-      else a.removeAttribute("title");
+      var row = nodes[i];
+      row.classList.toggle("row-seen", !!seen[row.getAttribute("data-job-id")]);
     }
   }
 
@@ -97,27 +91,10 @@
   }
 
   function injectCss() {
-    // An opened role gets a faint round "clicked" stamp in the empty middle of the
-    // row, plus a barely-there purple tint on the title. Colours come from the
-    // existing tokens so this tracks both themes and every data-ui mode.
     var css =
-      // very subtle purple wash over the row, and a purple-leaning title
-      ".job.row-seen{position:relative;opacity:.88}" +
-      "a.job-title.is-seen{color:color-mix(in oklab,var(--accent) 42%,var(--ink-faint))}" +
-
-      // the stamp: two rings and rotated type, sitting in the gap between the
-      // title block and the tag block
-      ".job.row-seen::after{content:'clicked';position:absolute;left:50%;top:50%;" +
-      "width:62px;height:62px;transform:translate(-50%,-50%) rotate(-14deg);" +
-      "display:grid;place-items:center;box-sizing:border-box;" +
-      "border:2px solid var(--accent);border-radius:50%;" +
-      "box-shadow:inset 0 0 0 3px transparent,inset 0 0 0 4px var(--accent);" +
-      "font-family:var(--mono);font-size:.56rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;" +
-      "color:var(--accent);opacity:.17;pointer-events:none}" +
-
-      // the row stacks on narrow screens and the middle is no longer empty
-      "@media (max-width:720px){.job.row-seen::after{display:none}}" +
-      "@media (prefers-reduced-motion:no-preference){.job.row-seen::after{transition:opacity .15s}}";
+      ".job.row-seen{border-color:var(--rule-strong)}" +
+      ".job.row-seen .job-title{color:var(--ink-soft)}" +
+      ".job.row-seen .job-aside::after{content:'Viewed';font:600 .68rem/1.2 var(--sans);color:var(--ink-faint)}";
     var el = document.createElement("style");
     el.setAttribute("data-seen-styles", "");
     el.textContent = css;
@@ -143,7 +120,7 @@
         // Mark first and paint this row immediately — the user opened a new tab, so
         // the row stays on screen and should update now, not on the next render.
         if (mark(id)) {
-          paint(a.parentNode || document);
+          paint(document);
           if (global.Viewed) global.Viewed.refresh();
           // The "(N)" beside every company name is derived from this same set, and
           // the list is not re-rendered on a click — so nudge the badges that are
@@ -162,7 +139,7 @@
               user_id: global.Visitor ? global.Visitor.id() : null,
               user_name: global.Visitor ? global.Visitor.name() : null,
               company: a.getAttribute("data-company") || null,
-              title: a.textContent || null,
+              title: a.getAttribute("data-title") || a.textContent || null,
               city: a.getAttribute("data-city") || null,
               page: location.pathname.split("/").pop() || "index.html",
               firm: new URLSearchParams(location.search).get("id"),
@@ -186,12 +163,14 @@
     // Called once per job by the company filter; never enumerate history here.
     count: function () { return seenCount; },
     revision: function () { return revision; },
+    ids: function () { return Object.keys(seen); },
     clear: function () {
       seen = {};
       seenCount = 0;
       revision++;
       write();
       repaint();
+      if (global.dispatchEvent) global.dispatchEvent(new Event('seenchange'));
     },
   };
 })(window);

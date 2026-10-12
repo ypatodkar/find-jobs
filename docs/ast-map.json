@@ -1,0 +1,5265 @@
+{
+  "scope": "Runtime JavaScript; excludes tests, generated output, and dependencies.",
+  "parser": "Acorn bundled with Node (requires --expose-internals)",
+  "summary": {
+    "files": 44,
+    "functions": 748,
+    "lines": 7768,
+    "moduleEdges": 33,
+    "pageEdges": 39,
+    "globalEdges": 23,
+    "cycles": 0
+  },
+  "files": [
+    {
+      "file": "all.js",
+      "lines": 26,
+      "functionCount": 7,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 1,
+          "lines": 25
+        },
+        {
+          "name": "$",
+          "line": 3,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 11,
+          "lines": 1
+        },
+        {
+          "name": "firmLabel",
+          "line": 11,
+          "lines": 1
+        },
+        {
+          "name": "onData",
+          "line": 13,
+          "lines": 5
+        },
+        {
+          "name": "onError",
+          "line": 18,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 21,
+          "lines": 1
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [
+          "JobView"
+        ],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "api-config.js",
+      "lines": 20,
+      "functionCount": 0,
+      "functions": [],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [
+          "API_ENDPOINT"
+        ],
+        "writes": [
+          "API_ENDPOINT",
+          "JOBS_ENDPOINT"
+        ],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "app.js",
+      "lines": 188,
+      "functionCount": 30,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 1,
+          "lines": 187
+        },
+        {
+          "name": "escapeHtml",
+          "line": 22,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 23,
+          "lines": 3
+        },
+        {
+          "name": "buildTierFilters",
+          "line": 28,
+          "lines": 22
+        },
+        {
+          "name": "anonymous",
+          "line": 30,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 30,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 33,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 38,
+          "lines": 2
+        },
+        {
+          "name": "anonymous",
+          "line": 43,
+          "lines": 6
+        },
+        {
+          "name": "anonymous",
+          "line": 44,
+          "lines": 4
+        },
+        {
+          "name": "buildStats",
+          "line": 51,
+          "lines": 7
+        },
+        {
+          "name": "anonymous",
+          "line": 54,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 54,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 56,
+          "lines": 1
+        },
+        {
+          "name": "signalDots",
+          "line": 59,
+          "lines": 7
+        },
+        {
+          "name": "jobsBadge",
+          "line": 67,
+          "lines": 9
+        },
+        {
+          "name": "cardHtml",
+          "line": 77,
+          "lines": 34
+        },
+        {
+          "name": "filteredFirms",
+          "line": 112,
+          "lines": 13
+        },
+        {
+          "name": "anonymous",
+          "line": 114,
+          "lines": 10
+        },
+        {
+          "name": "render",
+          "line": 126,
+          "lines": 14
+        },
+        {
+          "name": "cardTarget",
+          "line": 142,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 147,
+          "lines": 4
+        },
+        {
+          "name": "anonymous",
+          "line": 151,
+          "lines": 8
+        },
+        {
+          "name": "anonymous",
+          "line": 160,
+          "lines": 4
+        },
+        {
+          "name": "anonymous",
+          "line": 164,
+          "lines": 4
+        },
+        {
+          "name": "anonymous",
+          "line": 168,
+          "lines": 4
+        },
+        {
+          "name": "loadResults",
+          "line": 173,
+          "lines": 10
+        },
+        {
+          "name": "anonymous",
+          "line": 176,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 177,
+          "lines": 4
+        },
+        {
+          "name": "anonymous",
+          "line": 181,
+          "lines": 1
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "ats.js",
+      "lines": 308,
+      "functionCount": 23,
+      "functions": [
+        {
+          "name": "detectAts",
+          "line": 28,
+          "lines": 43
+        },
+        {
+          "name": "anonymous",
+          "line": 42,
+          "lines": 7
+        },
+        {
+          "name": "getOnce",
+          "line": 72,
+          "lines": 20
+        },
+        {
+          "name": "anonymous",
+          "line": 74,
+          "lines": 1
+        },
+        {
+          "name": "getJson",
+          "line": 94,
+          "lines": 13
+        },
+        {
+          "name": "anonymous",
+          "line": 102,
+          "lines": 1
+        },
+        {
+          "name": "money",
+          "line": 108,
+          "lines": 7
+        },
+        {
+          "name": "fmt",
+          "line": 110,
+          "lines": 1
+        },
+        {
+          "name": "postalPlace",
+          "line": 120,
+          "lines": 5
+        },
+        {
+          "name": "ashby",
+          "line": 127,
+          "lines": 26
+        },
+        {
+          "name": "anonymous",
+          "line": 129,
+          "lines": 23
+        },
+        {
+          "name": "anonymous",
+          "line": 143,
+          "lines": 1
+        },
+        {
+          "name": "greenhouse",
+          "line": 154,
+          "lines": 13
+        },
+        {
+          "name": "anonymous",
+          "line": 156,
+          "lines": 10
+        },
+        {
+          "name": "anonymous",
+          "line": 159,
+          "lines": 1
+        },
+        {
+          "name": "lever",
+          "line": 168,
+          "lines": 24
+        },
+        {
+          "name": "anonymous",
+          "line": 170,
+          "lines": 21
+        },
+        {
+          "name": "anonymous",
+          "line": 186,
+          "lines": 1
+        },
+        {
+          "name": "isSupported",
+          "line": 195,
+          "lines": 1
+        },
+        {
+          "name": "fetchCompany",
+          "line": 198,
+          "lines": 49
+        },
+        {
+          "name": "fetchAll",
+          "line": 249,
+          "lines": 18
+        },
+        {
+          "name": "worker",
+          "line": 254,
+          "lines": 9
+        },
+        {
+          "name": "buildRegistry",
+          "line": 273,
+          "lines": 33
+        }
+      ],
+      "imports": [
+        "./id",
+        "./match",
+        "./sponsorship"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "ADAPTERS",
+          "CONCURRENCY",
+          "RETRIES",
+          "SUPPORTED",
+          "TIMEOUT_MS",
+          "UA",
+          "buildRegistry",
+          "detectAts",
+          "fetchAll",
+          "fetchCompany",
+          "getJson",
+          "getOnce",
+          "isSupported",
+          "money",
+          "postalPlace"
+        ]
+      }
+    },
+    {
+      "file": "aws/export-d1.js",
+      "lines": 121,
+      "functionCount": 6,
+      "functions": [
+        {
+          "name": "query",
+          "line": 31,
+          "lines": 19
+        },
+        {
+          "name": "lit",
+          "line": 53,
+          "lines": 5
+        },
+        {
+          "name": "emit",
+          "line": 70,
+          "lines": 17
+        },
+        {
+          "name": "anonymous",
+          "line": 77,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 77,
+          "lines": 1
+        },
+        {
+          "name": "main",
+          "line": 88,
+          "lines": 31
+        }
+      ],
+      "imports": [
+        "child_process",
+        "path"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "CHUNK",
+          "DB",
+          "TABLES",
+          "WORKER_DIR",
+          "args",
+          "emit",
+          "lit",
+          "main",
+          "only",
+          "path",
+          "query",
+          "withJobs"
+        ]
+      }
+    },
+    {
+      "file": "aws/import-catalogue.js",
+      "lines": 28,
+      "functionCount": 1,
+      "functions": [
+        {
+          "name": "main",
+          "line": 8,
+          "lines": 19
+        }
+      ],
+      "imports": [
+        "node:child_process",
+        "node:crypto",
+        "node:fs",
+        "node:os",
+        "node:path"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "crypto",
+          "fs",
+          "main",
+          "os",
+          "path"
+        ]
+      }
+    },
+    {
+      "file": "aws/lambda/catalogue-api.cjs",
+      "lines": 23,
+      "functionCount": 2,
+      "functions": [
+        {
+          "name": "parseBody",
+          "line": 3,
+          "lines": 4
+        },
+        {
+          "name": "route",
+          "line": 7,
+          "lines": 15
+        }
+      ],
+      "imports": [
+        "./catalogue.cjs",
+        "./matching.cjs"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "parseBody",
+          "route"
+        ]
+      }
+    },
+    {
+      "file": "aws/lambda/catalogue-import.cjs",
+      "lines": 45,
+      "functionCount": 4,
+      "functions": [
+        {
+          "name": "importCatalogue",
+          "line": 2,
+          "lines": 42
+        },
+        {
+          "name": "anonymous",
+          "line": 27,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 27,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 28,
+          "lines": 1
+        }
+      ],
+      "imports": [
+        "./catalogue.cjs"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "importCatalogue"
+        ]
+      }
+    },
+    {
+      "file": "aws/lambda/catalogue-postgres.cjs",
+      "lines": 133,
+      "functionCount": 18,
+      "functions": [
+        {
+          "name": "builder",
+          "line": 2,
+          "lines": 4
+        },
+        {
+          "name": "bind",
+          "line": 4,
+          "lines": 1
+        },
+        {
+          "name": "where",
+          "line": 6,
+          "lines": 17
+        },
+        {
+          "name": "order",
+          "line": 23,
+          "lines": 5
+        },
+        {
+          "name": "constructor",
+          "line": 29,
+          "lines": 1
+        },
+        {
+          "name": "search",
+          "line": 30,
+          "lines": 60
+        },
+        {
+          "name": "anonymous",
+          "line": 47,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 72,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 75,
+          "lines": 7
+        },
+        {
+          "name": "anonymous",
+          "line": 82,
+          "lines": 1
+        },
+        {
+          "name": "get",
+          "line": 90,
+          "lines": 4
+        },
+        {
+          "name": "history",
+          "line": 94,
+          "lines": 4
+        },
+        {
+          "name": "anonymous",
+          "line": 96,
+          "lines": 1
+        },
+        {
+          "name": "candidates",
+          "line": 98,
+          "lines": 17
+        },
+        {
+          "name": "anonymous",
+          "line": 112,
+          "lines": 2
+        },
+        {
+          "name": "cacheGet",
+          "line": 115,
+          "lines": 3
+        },
+        {
+          "name": "cacheSet",
+          "line": 118,
+          "lines": 4
+        },
+        {
+          "name": "quota",
+          "line": 122,
+          "lines": 9
+        }
+      ],
+      "imports": [
+        "./catalogue.cjs"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "builder",
+          "order",
+          "where"
+        ]
+      }
+    },
+    {
+      "file": "aws/lambda/catalogue.cjs",
+      "lines": 185,
+      "functionCount": 47,
+      "functions": [
+        {
+          "name": "hash",
+          "line": 12,
+          "lines": 1
+        },
+        {
+          "name": "fail",
+          "line": 13,
+          "lines": 1
+        },
+        {
+          "name": "strings",
+          "line": 14,
+          "lines": 7
+        },
+        {
+          "name": "anonymous",
+          "line": 16,
+          "lines": 1
+        },
+        {
+          "name": "normalize",
+          "line": 21,
+          "lines": 18
+        },
+        {
+          "name": "summary",
+          "line": 39,
+          "lines": 10
+        },
+        {
+          "name": "historySummary",
+          "line": 49,
+          "lines": 4
+        },
+        {
+          "name": "anonymous",
+          "line": 51,
+          "lines": 1
+        },
+        {
+          "name": "unpack",
+          "line": 53,
+          "lines": 7
+        },
+        {
+          "name": "anonymous",
+          "line": 54,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 57,
+          "lines": 1
+        },
+        {
+          "name": "entries",
+          "line": 60,
+          "lines": 15
+        },
+        {
+          "name": "values",
+          "line": 75,
+          "lines": 4
+        },
+        {
+          "name": "time",
+          "line": 79,
+          "lines": 1
+        },
+        {
+          "name": "pay",
+          "line": 80,
+          "lines": 1
+        },
+        {
+          "name": "cmp",
+          "line": 81,
+          "lines": 1
+        },
+        {
+          "name": "comparator",
+          "line": 82,
+          "lines": 12
+        },
+        {
+          "name": "anonymous",
+          "line": 83,
+          "lines": 10
+        },
+        {
+          "name": "pageInfo",
+          "line": 94,
+          "lines": 5
+        },
+        {
+          "name": "terms",
+          "line": 100,
+          "lines": 8
+        },
+        {
+          "name": "anonymous",
+          "line": 106,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 106,
+          "lines": 1
+        },
+        {
+          "name": "constructor",
+          "line": 109,
+          "lines": 6
+        },
+        {
+          "name": "anonymous",
+          "line": 111,
+          "lines": 1
+        },
+        {
+          "name": "filter",
+          "line": 115,
+          "lines": 16
+        },
+        {
+          "name": "anonymous",
+          "line": 117,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 117,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 119,
+          "lines": 11
+        },
+        {
+          "name": "anonymous",
+          "line": 123,
+          "lines": 1
+        },
+        {
+          "name": "search",
+          "line": 131,
+          "lines": 31
+        },
+        {
+          "name": "anonymous",
+          "line": 144,
+          "lines": 8
+        },
+        {
+          "name": "anonymous",
+          "line": 145,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 148,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 150,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 152,
+          "lines": 6
+        },
+        {
+          "name": "anonymous",
+          "line": 162,
+          "lines": 1
+        },
+        {
+          "name": "get",
+          "line": 162,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 163,
+          "lines": 1
+        },
+        {
+          "name": "history",
+          "line": 163,
+          "lines": 1
+        },
+        {
+          "name": "candidates",
+          "line": 164,
+          "lines": 7
+        },
+        {
+          "name": "anonymous",
+          "line": 166,
+          "lines": 1
+        },
+        {
+          "name": "rank",
+          "line": 166,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 167,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 169,
+          "lines": 1
+        },
+        {
+          "name": "cacheGet",
+          "line": 171,
+          "lines": 1
+        },
+        {
+          "name": "cacheSet",
+          "line": 172,
+          "lines": 4
+        },
+        {
+          "name": "quota",
+          "line": 176,
+          "lines": 7
+        }
+      ],
+      "imports": [
+        "node:crypto"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "ARRAYS",
+          "DIMENSIONS",
+          "STOP",
+          "SUMMARY_FIELDS",
+          "cmp",
+          "comparator",
+          "crypto",
+          "entries",
+          "fail",
+          "hash",
+          "historySummary",
+          "normalize",
+          "pageInfo",
+          "pay",
+          "strings",
+          "summary",
+          "terms",
+          "time",
+          "unpack",
+          "values"
+        ]
+      }
+    },
+    {
+      "file": "aws/lambda/index.mjs",
+      "lines": 346,
+      "functionCount": 17,
+      "functions": [
+        {
+          "name": "clip",
+          "line": 46,
+          "lines": 1
+        },
+        {
+          "name": "escapeHtml",
+          "line": 47,
+          "lines": 3
+        },
+        {
+          "name": "anonymous",
+          "line": 48,
+          "lines": 2
+        },
+        {
+          "name": "db",
+          "line": 54,
+          "lines": 26
+        },
+        {
+          "name": "tx",
+          "line": 81,
+          "lines": 14
+        },
+        {
+          "name": "anonymous",
+          "line": 89,
+          "lines": 1
+        },
+        {
+          "name": "touchUser",
+          "line": 99,
+          "lines": 11
+        },
+        {
+          "name": "corsFor",
+          "line": 111,
+          "lines": 6
+        },
+        {
+          "name": "anonymous",
+          "line": 112,
+          "lines": 1
+        },
+        {
+          "name": "reply",
+          "line": 118,
+          "lines": 5
+        },
+        {
+          "name": "sendFeedbackEmail",
+          "line": 124,
+          "lines": 30
+        },
+        {
+          "name": "handler",
+          "line": 155,
+          "lines": 191
+        },
+        {
+          "name": "parse",
+          "line": 181,
+          "lines": 8
+        },
+        {
+          "name": "userIdOf",
+          "line": 189,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 221,
+          "lines": 16
+        },
+        {
+          "name": "anonymous",
+          "line": 252,
+          "lines": 8
+        },
+        {
+          "name": "anonymous",
+          "line": 341,
+          "lines": 1
+        }
+      ],
+      "imports": [
+        "./catalogue-api.cjs",
+        "./catalogue-import.cjs",
+        "./catalogue-postgres.cjs",
+        "@aws-sdk/client-s3",
+        "node:crypto",
+        "node:fs/promises",
+        "pg"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "JOB_ID_RE",
+          "MAX_TEXT",
+          "TOPICS",
+          "TOPIC_LABELS",
+          "USER_ID_RE",
+          "clip",
+          "corsFor",
+          "db",
+          "escapeHtml",
+          "pool",
+          "reply",
+          "sendFeedbackEmail",
+          "touchUser",
+          "tx"
+        ]
+      }
+    },
+    {
+      "file": "aws/lambda/jev.cjs",
+      "lines": 99,
+      "functionCount": 18,
+      "functions": [
+        {
+          "name": "clipBytes",
+          "line": 20,
+          "lines": 5
+        },
+        {
+          "name": "passages",
+          "line": 25,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 27,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 27,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 28,
+          "lines": 1
+        },
+        {
+          "name": "requestFor",
+          "line": 30,
+          "lines": 14
+        },
+        {
+          "name": "probabilityMap",
+          "line": 44,
+          "lines": 6
+        },
+        {
+          "name": "anonymous",
+          "line": 45,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 46,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 47,
+          "lines": 1
+        },
+        {
+          "name": "unit",
+          "line": 50,
+          "lines": 1
+        },
+        {
+          "name": "parseAssessment",
+          "line": 51,
+          "lines": 24
+        },
+        {
+          "name": "anonymous",
+          "line": 60,
+          "lines": 1
+        },
+        {
+          "name": "selected",
+          "line": 64,
+          "lines": 6
+        },
+        {
+          "name": "anonymous",
+          "line": 70,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 71,
+          "lines": 1
+        },
+        {
+          "name": "assess",
+          "line": 75,
+          "lines": 23
+        },
+        {
+          "name": "anonymous",
+          "line": 91,
+          "lines": 1
+        }
+      ],
+      "imports": [
+        "./catalogue.cjs"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "MODEL",
+          "RUBRIC_VERSION",
+          "assess",
+          "clipBytes",
+          "criteria",
+          "labels",
+          "parseAssessment",
+          "passages",
+          "probabilityMap",
+          "requestFor",
+          "rules",
+          "scopes",
+          "unit",
+          "weights"
+        ]
+      }
+    },
+    {
+      "file": "aws/lambda/matching.cjs",
+      "lines": 62,
+      "functionCount": 6,
+      "functions": [
+        {
+          "name": "digest",
+          "line": 5,
+          "lines": 1
+        },
+        {
+          "name": "cacheKey",
+          "line": 6,
+          "lines": 3
+        },
+        {
+          "name": "match",
+          "line": 9,
+          "lines": 52
+        },
+        {
+          "name": "anonymous",
+          "line": 35,
+          "lines": 11
+        },
+        {
+          "name": "anonymous",
+          "line": 48,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 56,
+          "lines": 1
+        }
+      ],
+      "imports": [
+        "./catalogue.cjs",
+        "./jev.cjs",
+        "node:crypto"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "LIMIT",
+          "cacheKey",
+          "crypto",
+          "digest",
+          "match"
+        ]
+      }
+    },
+    {
+      "file": "aws/package-lambda.js",
+      "lines": 15,
+      "functionCount": 0,
+      "functions": [],
+      "imports": [
+        "node:child_process",
+        "node:fs",
+        "node:os",
+        "node:path"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "fs",
+          "os",
+          "path",
+          "stage"
+        ]
+      }
+    },
+    {
+      "file": "boards.js",
+      "lines": 209,
+      "functionCount": 3,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 162,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 163,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 166,
+          "lines": 1
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "BLOCKED_COMPANIES",
+          "BOARDS",
+          "CITY_MATCHERS",
+          "EXCLUDE_TITLE",
+          "LOCATIONS",
+          "METROS",
+          "ROLE_PATTERNS"
+        ]
+      }
+    },
+    {
+      "file": "build.js",
+      "lines": 96,
+      "functionCount": 3,
+      "functions": [
+        {
+          "name": "writeJson",
+          "line": 35,
+          "lines": 6
+        },
+        {
+          "name": "main",
+          "line": 42,
+          "lines": 49
+        },
+        {
+          "name": "anonymous",
+          "line": 92,
+          "lines": 4
+        }
+      ],
+      "imports": [
+        "./boards",
+        "./pipeline",
+        "fs",
+        "fs/promises",
+        "path"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "ASSETS",
+          "DIST",
+          "RESULTS_FILE",
+          "ROOT",
+          "fs",
+          "fsp",
+          "main",
+          "path",
+          "writeJson"
+        ]
+      }
+    },
+    {
+      "file": "catalogue-export.js",
+      "lines": 22,
+      "functionCount": 4,
+      "functions": [
+        {
+          "name": "catalogueData",
+          "line": 6,
+          "lines": 8
+        },
+        {
+          "name": "anonymous",
+          "line": 11,
+          "lines": 1
+        },
+        {
+          "name": "main",
+          "line": 14,
+          "lines": 6
+        },
+        {
+          "name": "anonymous",
+          "line": 20,
+          "lines": 1
+        }
+      ],
+      "imports": [
+        "./aws/lambda/catalogue.cjs",
+        "./pipeline",
+        "node:fs/promises",
+        "node:path"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "catalogueData",
+          "fs",
+          "main",
+          "path"
+        ]
+      }
+    },
+    {
+      "file": "counter.js",
+      "lines": 66,
+      "functionCount": 7,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 10,
+          "lines": 56
+        },
+        {
+          "name": "mount",
+          "line": 18,
+          "lines": 16
+        },
+        {
+          "name": "render",
+          "line": 35,
+          "lines": 13
+        },
+        {
+          "name": "load",
+          "line": 49,
+          "lines": 11
+        },
+        {
+          "name": "anonymous",
+          "line": 52,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 53,
+          "lines": 3
+        },
+        {
+          "name": "anonymous",
+          "line": 58,
+          "lines": 1
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [
+          "API_ENDPOINT"
+        ],
+        "writes": [
+          "Counter"
+        ],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "data.js",
+      "lines": 94,
+      "functionCount": 0,
+      "functions": [],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "TIER_META",
+          "VC_FIRMS"
+        ]
+      }
+    },
+    {
+      "file": "feature-pick.js",
+      "lines": 136,
+      "functionCount": 10,
+      "functions": [
+        {
+          "name": "loadFeatured",
+          "line": 42,
+          "lines": 7
+        },
+        {
+          "name": "main",
+          "line": 50,
+          "lines": 84
+        },
+        {
+          "name": "key",
+          "line": 62,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 64,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 102,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 103,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 104,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 105,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 109,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 119,
+          "lines": 10
+        }
+      ],
+      "imports": [
+        "fs",
+        "path"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "ALL_JOBS",
+          "DAY",
+          "DEFAULT_DAYS",
+          "FEATURED",
+          "MAX_STAFF",
+          "MIN_STAFF",
+          "ROOT",
+          "WINDOW_DAYS",
+          "args",
+          "asJson",
+          "daysArg",
+          "fs",
+          "loadFeatured",
+          "main",
+          "path"
+        ]
+      }
+    },
+    {
+      "file": "featured.js",
+      "lines": 88,
+      "functionCount": 10,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 9,
+          "lines": 79
+        },
+        {
+          "name": "esc",
+          "line": 15,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 16,
+          "lines": 3
+        },
+        {
+          "name": "stale",
+          "line": 28,
+          "lines": 7
+        },
+        {
+          "name": "rolesHref",
+          "line": 38,
+          "lines": 3
+        },
+        {
+          "name": "render",
+          "line": 42,
+          "lines": 29
+        },
+        {
+          "name": "load",
+          "line": 72,
+          "lines": 12
+        },
+        {
+          "name": "anonymous",
+          "line": 74,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 75,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 78,
+          "lines": 5
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "feedback.js",
+      "lines": 211,
+      "functionCount": 24,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 10,
+          "lines": 201
+        },
+        {
+          "name": "esc",
+          "line": 33,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 34,
+          "lines": 3
+        },
+        {
+          "name": "hasSent",
+          "line": 40,
+          "lines": 3
+        },
+        {
+          "name": "markSent",
+          "line": 43,
+          "lines": 3
+        },
+        {
+          "name": "mount",
+          "line": 50,
+          "lines": 10
+        },
+        {
+          "name": "formHtml",
+          "line": 66,
+          "lines": 26
+        },
+        {
+          "name": "anonymous",
+          "line": 76,
+          "lines": 5
+        },
+        {
+          "name": "render",
+          "line": 93,
+          "lines": 37
+        },
+        {
+          "name": "anonymous",
+          "line": 103,
+          "lines": 8
+        },
+        {
+          "name": "anonymous",
+          "line": 113,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 114,
+          "lines": 11
+        },
+        {
+          "name": "anonymous",
+          "line": 115,
+          "lines": 9
+        },
+        {
+          "name": "anonymous",
+          "line": 118,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 125,
+          "lines": 4
+        },
+        {
+          "name": "done",
+          "line": 131,
+          "lines": 8
+        },
+        {
+          "name": "anonymous",
+          "line": 137,
+          "lines": 1
+        },
+        {
+          "name": "submit",
+          "line": 140,
+          "lines": 37
+        },
+        {
+          "name": "anonymous",
+          "line": 166,
+          "lines": 6
+        },
+        {
+          "name": "anonymous",
+          "line": 172,
+          "lines": 4
+        },
+        {
+          "name": "init",
+          "line": 178,
+          "lines": 27
+        },
+        {
+          "name": "anonymous",
+          "line": 181,
+          "lines": 3
+        },
+        {
+          "name": "anonymous",
+          "line": 194,
+          "lines": 8
+        },
+        {
+          "name": "open",
+          "line": 209,
+          "lines": 1
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [
+          "API_ENDPOINT",
+          "Visitor"
+        ],
+        "writes": [
+          "Feedback"
+        ],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "filter-drawer.js",
+      "lines": 214,
+      "functionCount": 20,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 12,
+          "lines": 202
+        },
+        {
+          "name": "tabbable",
+          "line": 22,
+          "lines": 11
+        },
+        {
+          "name": "create",
+          "line": 34,
+          "lines": 177
+        },
+        {
+          "name": "lockScroll",
+          "line": 54,
+          "lines": 9
+        },
+        {
+          "name": "unlockScroll",
+          "line": 64,
+          "lines": 10
+        },
+        {
+          "name": "apply",
+          "line": 76,
+          "lines": 24
+        },
+        {
+          "name": "activeCount",
+          "line": 101,
+          "lines": 4
+        },
+        {
+          "name": "show",
+          "line": 106,
+          "lines": 10
+        },
+        {
+          "name": "anonymous",
+          "line": 114,
+          "lines": 1
+        },
+        {
+          "name": "hide",
+          "line": 117,
+          "lines": 6
+        },
+        {
+          "name": "syncCount",
+          "line": 129,
+          "lines": 12
+        },
+        {
+          "name": "anonymous",
+          "line": 143,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 149,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 150,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 151,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 153,
+          "lines": 29
+        },
+        {
+          "name": "anonymous",
+          "line": 185,
+          "lines": 7
+        },
+        {
+          "name": "reveal",
+          "line": 195,
+          "lines": 4
+        },
+        {
+          "name": "teardown",
+          "line": 200,
+          "lines": 6
+        },
+        {
+          "name": "isOpen",
+          "line": 208,
+          "lines": 1
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [
+          "matchMedia",
+          "pageYOffset",
+          "requestAnimationFrame",
+          "scrollTo",
+          "scrollY"
+        ],
+        "writes": [
+          "FilterDrawer"
+        ],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "firm.js",
+      "lines": 41,
+      "functionCount": 6,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 1,
+          "lines": 40
+        },
+        {
+          "name": "$",
+          "line": 3,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 5,
+          "lines": 1
+        },
+        {
+          "name": "onData",
+          "line": 24,
+          "lines": 9
+        },
+        {
+          "name": "onError",
+          "line": 33,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 36,
+          "lines": 1
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [
+          "JobView"
+        ],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "heart.js",
+      "lines": 89,
+      "functionCount": 7,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 9,
+          "lines": 80
+        },
+        {
+          "name": "liked",
+          "line": 16,
+          "lines": 7
+        },
+        {
+          "name": "remember",
+          "line": 24,
+          "lines": 7
+        },
+        {
+          "name": "report",
+          "line": 33,
+          "lines": 13
+        },
+        {
+          "name": "mount",
+          "line": 51,
+          "lines": 12
+        },
+        {
+          "name": "render",
+          "line": 64,
+          "lines": 19
+        },
+        {
+          "name": "anonymous",
+          "line": 75,
+          "lines": 7
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [
+          "API_ENDPOINT",
+          "Visitor"
+        ],
+        "writes": [
+          "Heart"
+        ],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "id.js",
+      "lines": 37,
+      "functionCount": 3,
+      "functions": [
+        {
+          "name": "slug",
+          "line": 16,
+          "lines": 5
+        },
+        {
+          "name": "hash8",
+          "line": 22,
+          "lines": 1
+        },
+        {
+          "name": "jobId",
+          "line": 30,
+          "lines": 5
+        }
+      ],
+      "imports": [
+        "crypto"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "crypto",
+          "hash8",
+          "jobId",
+          "slug"
+        ]
+      }
+    },
+    {
+      "file": "jobs-api.js",
+      "lines": 73,
+      "functionCount": 11,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 1,
+          "lines": 72
+        },
+        {
+          "name": "remember",
+          "line": 5,
+          "lines": 6
+        },
+        {
+          "name": "all",
+          "line": 11,
+          "lines": 1
+        },
+        {
+          "name": "request",
+          "line": 12,
+          "lines": 12
+        },
+        {
+          "name": "withHistory",
+          "line": 24,
+          "lines": 3
+        },
+        {
+          "name": "search",
+          "line": 27,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 29,
+          "lines": 1
+        },
+        {
+          "name": "history",
+          "line": 32,
+          "lines": 6
+        },
+        {
+          "name": "description",
+          "line": 39,
+          "lines": 26
+        },
+        {
+          "name": "anonymous",
+          "line": 45,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 65,
+          "lines": 4
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [
+          "API_ENDPOINT",
+          "JOBS_ENDPOINT",
+          "JobsUI",
+          "Seen",
+          "Viewed"
+        ],
+        "writes": [
+          "JobsAPI",
+          "JobsData"
+        ],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "jobs-ui.js",
+      "lines": 1456,
+      "functionCount": 186,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 5,
+          "lines": 1451
+        },
+        {
+          "name": "acquirerOf",
+          "line": 78,
+          "lines": 2
+        },
+        {
+          "name": "acquiredNote",
+          "line": 83,
+          "lines": 4
+        },
+        {
+          "name": "openedCountFor",
+          "line": 102,
+          "lines": 21
+        },
+        {
+          "name": "openedLabel",
+          "line": 133,
+          "lines": 3
+        },
+        {
+          "name": "refreshOpenedCounts",
+          "line": 147,
+          "lines": 9
+        },
+        {
+          "name": "$",
+          "line": 162,
+          "lines": 1
+        },
+        {
+          "name": "startOfDay",
+          "line": 163,
+          "lines": 1
+        },
+        {
+          "name": "ageInDays",
+          "line": 164,
+          "lines": 1
+        },
+        {
+          "name": "escapeHtml",
+          "line": 166,
+          "lines": 3
+        },
+        {
+          "name": "anonymous",
+          "line": 167,
+          "lines": 1
+        },
+        {
+          "name": "relativeDate",
+          "line": 171,
+          "lines": 9
+        },
+        {
+          "name": "createPicker",
+          "line": 186,
+          "lines": 122
+        },
+        {
+          "name": "updateSummary",
+          "line": 199,
+          "lines": 11
+        },
+        {
+          "name": "build",
+          "line": 211,
+          "lines": 73
+        },
+        {
+          "name": "anonymous",
+          "line": 215,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 225,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 227,
+          "lines": 5
+        },
+        {
+          "name": "sel",
+          "line": 229,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 239,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 243,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 257,
+          "lines": 9
+        },
+        {
+          "name": "anonymous",
+          "line": 258,
+          "lines": 7
+        },
+        {
+          "name": "anonymous",
+          "line": 270,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 276,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 285,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 286,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 288,
+          "lines": 6
+        },
+        {
+          "name": "anonymous",
+          "line": 289,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 295,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 296,
+          "lines": 1
+        },
+        {
+          "name": "markDirty",
+          "line": 299,
+          "lines": 7
+        },
+        {
+          "name": "companyShuffleOf",
+          "line": 327,
+          "lines": 8
+        },
+        {
+          "name": "dayOf",
+          "line": 336,
+          "lines": 1
+        },
+        {
+          "name": "dayOfTs",
+          "line": 339,
+          "lines": 1
+        },
+        {
+          "name": "createJobsView",
+          "line": 341,
+          "lines": 1110
+        },
+        {
+          "name": "firmLabel",
+          "line": 342,
+          "lines": 1
+        },
+        {
+          "name": "values",
+          "line": 358,
+          "lines": 1
+        },
+        {
+          "name": "values",
+          "line": 359,
+          "lines": 1
+        },
+        {
+          "name": "labelFor",
+          "line": 359,
+          "lines": 1
+        },
+        {
+          "name": "values",
+          "line": 360,
+          "lines": 1
+        },
+        {
+          "name": "labelFor",
+          "line": 360,
+          "lines": 1
+        },
+        {
+          "name": "values",
+          "line": 361,
+          "lines": 1
+        },
+        {
+          "name": "values",
+          "line": 368,
+          "lines": 1
+        },
+        {
+          "name": "values",
+          "line": 369,
+          "lines": 1
+        },
+        {
+          "name": "values",
+          "line": 370,
+          "lines": 1
+        },
+        {
+          "name": "labelFor",
+          "line": 370,
+          "lines": 1
+        },
+        {
+          "name": "values",
+          "line": 371,
+          "lines": 1
+        },
+        {
+          "name": "values",
+          "line": 372,
+          "lines": 1
+        },
+        {
+          "name": "labelFor",
+          "line": 372,
+          "lines": 1
+        },
+        {
+          "name": "values",
+          "line": 373,
+          "lines": 1
+        },
+        {
+          "name": "labelFor",
+          "line": 373,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 374,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 395,
+          "lines": 1
+        },
+        {
+          "name": "filtered",
+          "line": 428,
+          "lines": 34
+        },
+        {
+          "name": "anonymous",
+          "line": 430,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 431,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 433,
+          "lines": 28
+        },
+        {
+          "name": "anonymous",
+          "line": 438,
+          "lines": 1
+        },
+        {
+          "name": "sortJobs",
+          "line": 463,
+          "lines": 43
+        },
+        {
+          "name": "t",
+          "line": 465,
+          "lines": 1
+        },
+        {
+          "name": "pay",
+          "line": 466,
+          "lines": 1
+        },
+        {
+          "name": "byTitle",
+          "line": 467,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 482,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 486,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 487,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 493,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 494,
+          "lines": 4
+        },
+        {
+          "name": "anonymous",
+          "line": 500,
+          "lines": 1
+        },
+        {
+          "name": "pickerMarkup",
+          "line": 509,
+          "lines": 17
+        },
+        {
+          "name": "anonymous",
+          "line": 531,
+          "lines": 9
+        },
+        {
+          "name": "anonymous",
+          "line": 532,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 555,
+          "lines": 6
+        },
+        {
+          "name": "anonymous",
+          "line": 563,
+          "lines": 43
+        },
+        {
+          "name": "anonymous",
+          "line": 564,
+          "lines": 1
+        },
+        {
+          "name": "counts",
+          "line": 581,
+          "lines": 10
+        },
+        {
+          "name": "anonymous",
+          "line": 584,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 584,
+          "lines": 1
+        },
+        {
+          "name": "onChange",
+          "line": 591,
+          "lines": 11
+        },
+        {
+          "name": "anonymous",
+          "line": 600,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 605,
+          "lines": 1
+        },
+        {
+          "name": "refreshOtherPickers",
+          "line": 609,
+          "lines": 3
+        },
+        {
+          "name": "anonymous",
+          "line": 610,
+          "lines": 1
+        },
+        {
+          "name": "refreshAllPickers",
+          "line": 613,
+          "lines": 3
+        },
+        {
+          "name": "anonymous",
+          "line": 614,
+          "lines": 1
+        },
+        {
+          "name": "compactPay",
+          "line": 620,
+          "lines": 8
+        },
+        {
+          "name": "k",
+          "line": 623,
+          "lines": 1
+        },
+        {
+          "name": "jobHtml",
+          "line": 631,
+          "lines": 56
+        },
+        {
+          "name": "anonymous",
+          "line": 632,
+          "lines": 1
+        },
+        {
+          "name": "monogram",
+          "line": 692,
+          "lines": 12
+        },
+        {
+          "name": "anonymous",
+          "line": 700,
+          "lines": 1
+        },
+        {
+          "name": "buildGroups",
+          "line": 705,
+          "lines": 46
+        },
+        {
+          "name": "anonymous",
+          "line": 729,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 733,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 735,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 737,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 741,
+          "lines": 3
+        },
+        {
+          "name": "anonymous",
+          "line": 745,
+          "lines": 3
+        },
+        {
+          "name": "groupHtml",
+          "line": 752,
+          "lines": 75
+        },
+        {
+          "name": "anonymous",
+          "line": 758,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 759,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 767,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 769,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 783,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 784,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 785,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 793,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 795,
+          "lines": 1
+        },
+        {
+          "name": "renderPagination",
+          "line": 830,
+          "lines": 56
+        },
+        {
+          "name": "anonymous",
+          "line": 875,
+          "lines": 4
+        },
+        {
+          "name": "anonymous",
+          "line": 880,
+          "lines": 5
+        },
+        {
+          "name": "renderResults",
+          "line": 887,
+          "lines": 42
+        },
+        {
+          "name": "anonymous",
+          "line": 898,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 911,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 925,
+          "lines": 1
+        },
+        {
+          "name": "remoteFilters",
+          "line": 932,
+          "lines": 3
+        },
+        {
+          "name": "paintRemote",
+          "line": 935,
+          "lines": 22
+        },
+        {
+          "name": "anonymous",
+          "line": 938,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 948,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 949,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 955,
+          "lines": 1
+        },
+        {
+          "name": "scheduleRemote",
+          "line": 957,
+          "lines": 30
+        },
+        {
+          "name": "anonymous",
+          "line": 968,
+          "lines": 18
+        },
+        {
+          "name": "activeCount",
+          "line": 988,
+          "lines": 9
+        },
+        {
+          "name": "anonymous",
+          "line": 989,
+          "lines": 1
+        },
+        {
+          "name": "updateResetBtn",
+          "line": 998,
+          "lines": 20
+        },
+        {
+          "name": "sameFilters",
+          "line": 1039,
+          "lines": 1
+        },
+        {
+          "name": "onlyQueryChanged",
+          "line": 1043,
+          "lines": 4
+        },
+        {
+          "name": "recordHistory",
+          "line": 1048,
+          "lines": 20
+        },
+        {
+          "name": "updateUndoBtn",
+          "line": 1069,
+          "lines": 5
+        },
+        {
+          "name": "undo",
+          "line": 1075,
+          "lines": 10
+        },
+        {
+          "name": "anonymous",
+          "line": 1083,
+          "lines": 1
+        },
+        {
+          "name": "stateToUrl",
+          "line": 1104,
+          "lines": 19
+        },
+        {
+          "name": "anonymous",
+          "line": 1108,
+          "lines": 3
+        },
+        {
+          "name": "anonymous",
+          "line": 1109,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1111,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1111,
+          "lines": 1
+        },
+        {
+          "name": "urlToState",
+          "line": 1124,
+          "lines": 21
+        },
+        {
+          "name": "anonymous",
+          "line": 1127,
+          "lines": 4
+        },
+        {
+          "name": "urlHasState",
+          "line": 1148,
+          "lines": 4
+        },
+        {
+          "name": "anonymous",
+          "line": 1150,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1150,
+          "lines": 1
+        },
+        {
+          "name": "syncUrl",
+          "line": 1153,
+          "lines": 8
+        },
+        {
+          "name": "applyFilterState",
+          "line": 1164,
+          "lines": 26
+        },
+        {
+          "name": "anonymous",
+          "line": 1166,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 1169,
+          "lines": 1
+        },
+        {
+          "name": "applyUrl",
+          "line": 1199,
+          "lines": 3
+        },
+        {
+          "name": "applyUrlState",
+          "line": 1203,
+          "lines": 13
+        },
+        {
+          "name": "anonymous",
+          "line": 1213,
+          "lines": 1
+        },
+        {
+          "name": "render",
+          "line": 1217,
+          "lines": 9
+        },
+        {
+          "name": "anonymous",
+          "line": 1224,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1228,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1229,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1231,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1234,
+          "lines": 4
+        },
+        {
+          "name": "scrollToResults",
+          "line": 1240,
+          "lines": 6
+        },
+        {
+          "name": "goToPage",
+          "line": 1247,
+          "lines": 14
+        },
+        {
+          "name": "anonymous",
+          "line": 1262,
+          "lines": 11
+        },
+        {
+          "name": "anonymous",
+          "line": 1274,
+          "lines": 3
+        },
+        {
+          "name": "anonymous",
+          "line": 1280,
+          "lines": 15
+        },
+        {
+          "name": "anonymous",
+          "line": 1299,
+          "lines": 22
+        },
+        {
+          "name": "setView",
+          "line": 1324,
+          "lines": 13
+        },
+        {
+          "name": "anonymous",
+          "line": 1337,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1338,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1341,
+          "lines": 6
+        },
+        {
+          "name": "anonymous",
+          "line": 1344,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1349,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1353,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1354,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1357,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1358,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1361,
+          "lines": 11
+        },
+        {
+          "name": "anonymous",
+          "line": 1362,
+          "lines": 1
+        },
+        {
+          "name": "load",
+          "line": 1377,
+          "lines": 5
+        },
+        {
+          "name": "setJobs",
+          "line": 1382,
+          "lines": 11
+        },
+        {
+          "name": "getFilters",
+          "line": 1403,
+          "lines": 16
+        },
+        {
+          "name": "anonymous",
+          "line": 1405,
+          "lines": 3
+        },
+        {
+          "name": "labelFor",
+          "line": 1423,
+          "lines": 4
+        },
+        {
+          "name": "anonymous",
+          "line": 1424,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1428,
+          "lines": 1
+        },
+        {
+          "name": "salaryLabel",
+          "line": 1428,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1429,
+          "lines": 1
+        },
+        {
+          "name": "rangeLabel",
+          "line": 1429,
+          "lines": 1
+        },
+        {
+          "name": "onChange",
+          "line": 1433,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 1438,
+          "lines": 4
+        },
+        {
+          "name": "anonymous",
+          "line": 1442,
+          "lines": 3
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [
+          "JobsData",
+          "Presets",
+          "Seen",
+          "addEventListener",
+          "history"
+        ],
+        "writes": [
+          "JobsUI"
+        ],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "match.js",
+      "lines": 128,
+      "functionCount": 20,
+      "functions": [
+        {
+          "name": "nameKey",
+          "line": 8,
+          "lines": 1
+        },
+        {
+          "name": "hostKey",
+          "line": 9,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 11,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 12,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 13,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 13,
+          "lines": 1
+        },
+        {
+          "name": "isBlockedCompany",
+          "line": 20,
+          "lines": 10
+        },
+        {
+          "name": "anonymous",
+          "line": 26,
+          "lines": 1
+        },
+        {
+          "name": "matchCity",
+          "line": 45,
+          "lines": 17
+        },
+        {
+          "name": "anonymous",
+          "line": 55,
+          "lines": 1
+        },
+        {
+          "name": "matchRoles",
+          "line": 63,
+          "lines": 3
+        },
+        {
+          "name": "anonymous",
+          "line": 64,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 64,
+          "lines": 1
+        },
+        {
+          "name": "keep",
+          "line": 68,
+          "lines": 9
+        },
+        {
+          "name": "anonymous",
+          "line": 92,
+          "lines": 1
+        },
+        {
+          "name": "deriveSeniority",
+          "line": 94,
+          "lines": 5
+        },
+        {
+          "name": "sizeBucket",
+          "line": 108,
+          "lines": 4
+        },
+        {
+          "name": "anonymous",
+          "line": 110,
+          "lines": 1
+        },
+        {
+          "name": "dedupe",
+          "line": 113,
+          "lines": 9
+        },
+        {
+          "name": "anonymous",
+          "line": 115,
+          "lines": 6
+        }
+      ],
+      "imports": [
+        "./boards"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "BLOCKED_DOMAINS",
+          "BLOCKED_NAMES",
+          "BLOCKED_SLUGS",
+          "NON_US_RE",
+          "REMOTE_RE",
+          "SENIORITY_LABELS",
+          "SENIORITY_RULES",
+          "SIZE_BUCKETS",
+          "dedupe",
+          "deriveSeniority",
+          "hostKey",
+          "isBlockedCompany",
+          "keep",
+          "matchCity",
+          "matchRoles",
+          "nameKey",
+          "sizeBucket"
+        ]
+      }
+    },
+    {
+      "file": "pipeline.js",
+      "lines": 270,
+      "functionCount": 28,
+      "functions": [
+        {
+          "name": "runScrape",
+          "line": 18,
+          "lines": 110
+        },
+        {
+          "name": "anonymous",
+          "line": 18,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 20,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 46,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 54,
+          "lines": 10
+        },
+        {
+          "name": "anonymous",
+          "line": 68,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 101,
+          "lines": 4
+        },
+        {
+          "name": "anonymous",
+          "line": 121,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 122,
+          "lines": 1
+        },
+        {
+          "name": "summarize",
+          "line": 129,
+          "lines": 7
+        },
+        {
+          "name": "failedPlatforms",
+          "line": 138,
+          "lines": 7
+        },
+        {
+          "name": "anonymous",
+          "line": 139,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 140,
+          "lines": 4
+        },
+        {
+          "name": "anonymous",
+          "line": 141,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 142,
+          "lines": 1
+        },
+        {
+          "name": "failedBoards",
+          "line": 159,
+          "lines": 6
+        },
+        {
+          "name": "anonymous",
+          "line": 161,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 162,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 163,
+          "lines": 1
+        },
+        {
+          "name": "resultsPayload",
+          "line": 167,
+          "lines": 3
+        },
+        {
+          "name": "isEmpty",
+          "line": 182,
+          "lines": 1
+        },
+        {
+          "name": "packCompanies",
+          "line": 189,
+          "lines": 24
+        },
+        {
+          "name": "anonymous",
+          "line": 201,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 203,
+          "lines": 8
+        },
+        {
+          "name": "allJobsPayload",
+          "line": 218,
+          "lines": 28
+        },
+        {
+          "name": "anonymous",
+          "line": 239,
+          "lines": 5
+        },
+        {
+          "name": "firmPayload",
+          "line": 251,
+          "lines": 17
+        },
+        {
+          "name": "anonymous",
+          "line": 253,
+          "lines": 1
+        }
+      ],
+      "imports": [
+        "./ats",
+        "./boards",
+        "./match",
+        "./scraper"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "BOARD_DELAY_MS",
+          "COMPANY_FIELDS",
+          "allJobsPayload",
+          "failedBoards",
+          "failedPlatforms",
+          "firmPayload",
+          "isEmpty",
+          "packCompanies",
+          "resultsPayload",
+          "runScrape",
+          "summarize"
+        ]
+      }
+    },
+    {
+      "file": "presets.js",
+      "lines": 459,
+      "functionCount": 42,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 10,
+          "lines": 449
+        },
+        {
+          "name": "report",
+          "line": 25,
+          "lines": 19
+        },
+        {
+          "name": "read",
+          "line": 46,
+          "lines": 8
+        },
+        {
+          "name": "valid",
+          "line": 55,
+          "lines": 3
+        },
+        {
+          "name": "write",
+          "line": 59,
+          "lines": 8
+        },
+        {
+          "name": "uid",
+          "line": 68,
+          "lines": 3
+        },
+        {
+          "name": "encode",
+          "line": 75,
+          "lines": 6
+        },
+        {
+          "name": "decode",
+          "line": 82,
+          "lines": 12
+        },
+        {
+          "name": "describe",
+          "line": 107,
+          "lines": 36
+        },
+        {
+          "name": "clip",
+          "line": 144,
+          "lines": 4
+        },
+        {
+          "name": "same",
+          "line": 150,
+          "lines": 13
+        },
+        {
+          "name": "anonymous",
+          "line": 154,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 155,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 157,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 160,
+          "lines": 1
+        },
+        {
+          "name": "all",
+          "line": 166,
+          "lines": 1
+        },
+        {
+          "name": "count",
+          "line": 167,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 168,
+          "lines": 1
+        },
+        {
+          "name": "get",
+          "line": 168,
+          "lines": 1
+        },
+        {
+          "name": "save",
+          "line": 170,
+          "lines": 8
+        },
+        {
+          "name": "rename",
+          "line": 179,
+          "lines": 7
+        },
+        {
+          "name": "remove",
+          "line": 187,
+          "lines": 6
+        },
+        {
+          "name": "anonymous",
+          "line": 189,
+          "lines": 1
+        },
+        {
+          "name": "linkFor",
+          "line": 194,
+          "lines": 6
+        },
+        {
+          "name": "clear",
+          "line": 201,
+          "lines": 1
+        },
+        {
+          "name": "attach",
+          "line": 214,
+          "lines": 177
+        },
+        {
+          "name": "render",
+          "line": 242,
+          "lines": 23
+        },
+        {
+          "name": "anonymous",
+          "line": 245,
+          "lines": 1
+        },
+        {
+          "name": "saveBtn",
+          "line": 266,
+          "lines": 7
+        },
+        {
+          "name": "menu",
+          "line": 276,
+          "lines": 28
+        },
+        {
+          "name": "anonymous",
+          "line": 278,
+          "lines": 12
+        },
+        {
+          "name": "nameForm",
+          "line": 305,
+          "lines": 10
+        },
+        {
+          "name": "focusInput",
+          "line": 318,
+          "lines": 4
+        },
+        {
+          "name": "commit",
+          "line": 323,
+          "lines": 9
+        },
+        {
+          "name": "anonymous",
+          "line": 333,
+          "lines": 29
+        },
+        {
+          "name": "anonymous",
+          "line": 365,
+          "lines": 3
+        },
+        {
+          "name": "anonymous",
+          "line": 369,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 375,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 381,
+          "lines": 1
+        },
+        {
+          "name": "esc",
+          "line": 392,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 393,
+          "lines": 3
+        },
+        {
+          "name": "injectCss",
+          "line": 398,
+          "lines": 60
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [
+          "API_ENDPOINT",
+          "Visitor"
+        ],
+        "writes": [
+          "Presets"
+        ],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "refresh.js",
+      "lines": 254,
+      "functionCount": 26,
+      "functions": [
+        {
+          "name": "paint",
+          "line": 32,
+          "lines": 1
+        },
+        {
+          "name": "dim",
+          "line": 33,
+          "lines": 1
+        },
+        {
+          "name": "bold",
+          "line": 34,
+          "lines": 1
+        },
+        {
+          "name": "green",
+          "line": 35,
+          "lines": 1
+        },
+        {
+          "name": "red",
+          "line": 36,
+          "lines": 1
+        },
+        {
+          "name": "yellow",
+          "line": 37,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 39,
+          "lines": 1
+        },
+        {
+          "name": "sleep",
+          "line": 39,
+          "lines": 1
+        },
+        {
+          "name": "gh",
+          "line": 42,
+          "lines": 13
+        },
+        {
+          "name": "ghJson",
+          "line": 56,
+          "lines": 1
+        },
+        {
+          "name": "preflight",
+          "line": 62,
+          "lines": 9
+        },
+        {
+          "name": "runIds",
+          "line": 78,
+          "lines": 9
+        },
+        {
+          "name": "waitForNewRun",
+          "line": 88,
+          "lines": 14
+        },
+        {
+          "name": "anonymous",
+          "line": 89,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 94,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 97,
+          "lines": 1
+        },
+        {
+          "name": "secondsBetween",
+          "line": 105,
+          "lines": 5
+        },
+        {
+          "name": "fmtDuration",
+          "line": 111,
+          "lines": 5
+        },
+        {
+          "name": "watchRun",
+          "line": 124,
+          "lines": 47
+        },
+        {
+          "name": "reportLive",
+          "line": 177,
+          "lines": 23
+        },
+        {
+          "name": "anonymous",
+          "line": 185,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 186,
+          "lines": 1
+        },
+        {
+          "name": "showStatus",
+          "line": 201,
+          "lines": 11
+        },
+        {
+          "name": "main",
+          "line": 213,
+          "lines": 36
+        },
+        {
+          "name": "anonymous",
+          "line": 222,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 250,
+          "lines": 4
+        }
+      ],
+      "imports": [
+        "child_process"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "BRANCH",
+          "POLL_MS",
+          "RUN_APPEAR_TIMEOUT_MS",
+          "SITE",
+          "STEP_ICON",
+          "WORKFLOW",
+          "bold",
+          "dim",
+          "fmtDuration",
+          "gh",
+          "ghJson",
+          "green",
+          "main",
+          "paint",
+          "preflight",
+          "red",
+          "reportLive",
+          "runIds",
+          "secondsBetween",
+          "showStatus",
+          "sleep",
+          "useColor",
+          "waitForNewRun",
+          "watchRun",
+          "yellow"
+        ]
+      }
+    },
+    {
+      "file": "resume-match.js",
+      "lines": 103,
+      "functionCount": 13,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 1,
+          "lines": 102
+        },
+        {
+          "name": "$",
+          "line": 3,
+          "lines": 1
+        },
+        {
+          "name": "node",
+          "line": 9,
+          "lines": 4
+        },
+        {
+          "name": "invalidate",
+          "line": 13,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 18,
+          "lines": 5
+        },
+        {
+          "name": "card",
+          "line": 23,
+          "lines": 26
+        },
+        {
+          "name": "anonymous",
+          "line": 49,
+          "lines": 31
+        },
+        {
+          "name": "anonymous",
+          "line": 58,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 66,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 67,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 80,
+          "lines": 12
+        },
+        {
+          "name": "anonymous",
+          "line": 92,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 97,
+          "lines": 5
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [
+          "JobView",
+          "JobsAPI"
+        ],
+        "writes": [],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "scrape.js",
+      "lines": 57,
+      "functionCount": 3,
+      "functions": [
+        {
+          "name": "main",
+          "line": 14,
+          "lines": 38
+        },
+        {
+          "name": "anonymous",
+          "line": 17,
+          "lines": 17
+        },
+        {
+          "name": "anonymous",
+          "line": 53,
+          "lines": 4
+        }
+      ],
+      "imports": [
+        "./pipeline",
+        "fs/promises",
+        "path"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "RESULTS_FILE",
+          "fsp",
+          "main",
+          "path"
+        ]
+      }
+    },
+    {
+      "file": "scraper.js",
+      "lines": 523,
+      "functionCount": 26,
+      "functions": [
+        {
+          "name": "logoOf",
+          "line": 7,
+          "lines": 9
+        },
+        {
+          "name": "anonymous",
+          "line": 17,
+          "lines": 1
+        },
+        {
+          "name": "labels",
+          "line": 17,
+          "lines": 1
+        },
+        {
+          "name": "fmtSalary",
+          "line": 19,
+          "lines": 6
+        },
+        {
+          "name": "n",
+          "line": 21,
+          "lines": 1
+        },
+        {
+          "name": "boardJobId",
+          "line": 33,
+          "lines": 4
+        },
+        {
+          "name": "withTimeout",
+          "line": 55,
+          "lines": 3
+        },
+        {
+          "name": "postJson",
+          "line": 59,
+          "lines": 9
+        },
+        {
+          "name": "considerSession",
+          "line": 75,
+          "lines": 37
+        },
+        {
+          "name": "anonymous",
+          "line": 78,
+          "lines": 25
+        },
+        {
+          "name": "anonymous",
+          "line": 99,
+          "lines": 1
+        },
+        {
+          "name": "considerFetch",
+          "line": 116,
+          "lines": 28
+        },
+        {
+          "name": "scrapeConsider",
+          "line": 145,
+          "lines": 50
+        },
+        {
+          "name": "decodeFlight",
+          "line": 223,
+          "lines": 9
+        },
+        {
+          "name": "extractArray",
+          "line": 234,
+          "lines": 21
+        },
+        {
+          "name": "fetchFlightArray",
+          "line": 256,
+          "lines": 5
+        },
+        {
+          "name": "scrapeA16z",
+          "line": 262,
+          "lines": 86
+        },
+        {
+          "name": "anonymous",
+          "line": 271,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 272,
+          "lines": 1
+        },
+        {
+          "name": "worker",
+          "line": 280,
+          "lines": 56
+        },
+        {
+          "name": "anonymous",
+          "line": 346,
+          "lines": 1
+        },
+        {
+          "name": "scrapeGreylock",
+          "line": 363,
+          "lines": 53
+        },
+        {
+          "name": "scrapeGetro",
+          "line": 417,
+          "lines": 71
+        },
+        {
+          "name": "anonymous",
+          "line": 454,
+          "lines": 1
+        },
+        {
+          "name": "scrapeFirm",
+          "line": 489,
+          "lines": 32
+        },
+        {
+          "name": "anonymous",
+          "line": 516,
+          "lines": 1
+        }
+      ],
+      "imports": [
+        "./ats",
+        "./boards",
+        "./id",
+        "./match",
+        "./sponsorship"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "A16Z_COMPANY_CONCURRENCY",
+          "CONSIDER_PAGE_SIZE",
+          "GETRO_MAX_PAGES",
+          "GETRO_PAGE_SIZE",
+          "REQUEST_TIMEOUT_MS",
+          "SCRAPE_RETRIES",
+          "UA",
+          "boardJobId",
+          "considerFetch",
+          "considerSession",
+          "considerSessions",
+          "decodeFlight",
+          "extractArray",
+          "fetchFlightArray",
+          "fmtSalary",
+          "labels",
+          "logoOf",
+          "postJson",
+          "scrapeA16z",
+          "scrapeConsider",
+          "scrapeFirm",
+          "scrapeGetro",
+          "scrapeGreylock",
+          "withTimeout"
+        ]
+      }
+    },
+    {
+      "file": "server.js",
+      "lines": 145,
+      "functionCount": 11,
+      "functions": [
+        {
+          "name": "readResults",
+          "line": 30,
+          "lines": 7
+        },
+        {
+          "name": "sendJson",
+          "line": 38,
+          "lines": 5
+        },
+        {
+          "name": "serveStatic",
+          "line": 44,
+          "lines": 30
+        },
+        {
+          "name": "anonymous",
+          "line": 50,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 60,
+          "lines": 13
+        },
+        {
+          "name": "trimJson",
+          "line": 77,
+          "lines": 1
+        },
+        {
+          "name": "localCatalogue",
+          "line": 80,
+          "lines": 12
+        },
+        {
+          "name": "createServer",
+          "line": 92,
+          "lines": 47
+        },
+        {
+          "name": "anonymous",
+          "line": 93,
+          "lines": 45
+        },
+        {
+          "name": "anonymous",
+          "line": 140,
+          "lines": 4
+        },
+        {
+          "name": "anonymous",
+          "line": 142,
+          "lines": 1
+        }
+      ],
+      "imports": [
+        "./aws/lambda/catalogue-api.cjs",
+        "./aws/lambda/catalogue.cjs",
+        "./boards",
+        "./catalogue-export",
+        "./pipeline",
+        "fs",
+        "fs/promises",
+        "http",
+        "path"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "MIME",
+          "PORT",
+          "RESULTS_FILE",
+          "ROOT",
+          "catalogue",
+          "catalogueMtime",
+          "createServer",
+          "fs",
+          "fsp",
+          "http",
+          "localCatalogue",
+          "path",
+          "readResults",
+          "sendJson",
+          "serveStatic",
+          "trimJson"
+        ]
+      }
+    },
+    {
+      "file": "sponsorship.js",
+      "lines": 140,
+      "functionCount": 10,
+      "functions": [
+        {
+          "name": "decodeEntities",
+          "line": 5,
+          "lines": 9
+        },
+        {
+          "name": "anonymous",
+          "line": 6,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 7,
+          "lines": 1
+        },
+        {
+          "name": "toPlainText",
+          "line": 15,
+          "lines": 13
+        },
+        {
+          "name": "stripNoise",
+          "line": 35,
+          "lines": 6
+        },
+        {
+          "name": "anonymous",
+          "line": 38,
+          "lines": 1
+        },
+        {
+          "name": "excerpt",
+          "line": 103,
+          "lines": 11
+        },
+        {
+          "name": "classifySponsorship",
+          "line": 115,
+          "lines": 23
+        },
+        {
+          "name": "anonymous",
+          "line": 117,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 117,
+          "lines": 1
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "CITIZENSHIP",
+          "NEGATIVE",
+          "NOISE",
+          "POSITIVE",
+          "VISA_TYPES",
+          "classifySponsorship",
+          "decodeEntities",
+          "excerpt",
+          "stripNoise",
+          "toPlainText"
+        ]
+      }
+    },
+    {
+      "file": "stats.js",
+      "lines": 200,
+      "functionCount": 13,
+      "functions": [
+        {
+          "name": "query",
+          "line": 52,
+          "lines": 28
+        },
+        {
+          "name": "anonymous",
+          "line": 75,
+          "lines": 3
+        },
+        {
+          "name": "ts",
+          "line": 81,
+          "lines": 1
+        },
+        {
+          "name": "pad",
+          "line": 85,
+          "lines": 4
+        },
+        {
+          "name": "num",
+          "line": 89,
+          "lines": 1
+        },
+        {
+          "name": "overview",
+          "line": 91,
+          "lines": 15
+        },
+        {
+          "name": "users",
+          "line": 110,
+          "lines": 9
+        },
+        {
+          "name": "topJobs",
+          "line": 123,
+          "lines": 14
+        },
+        {
+          "name": "main",
+          "line": 138,
+          "lines": 52
+        },
+        {
+          "name": "anonymous",
+          "line": 166,
+          "lines": 7
+        },
+        {
+          "name": "anonymous",
+          "line": 173,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 174,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 181,
+          "lines": 6
+        }
+      ],
+      "imports": [
+        "child_process",
+        "path"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "DB",
+          "LIMIT",
+          "WORKER_DIR",
+          "args",
+          "asJson",
+          "limitArg",
+          "main",
+          "num",
+          "onlyJobs",
+          "onlyUsers",
+          "overview",
+          "pad",
+          "path",
+          "query",
+          "topJobs",
+          "ts",
+          "users"
+        ]
+      }
+    },
+    {
+      "file": "sync-jobs.js",
+      "lines": 127,
+      "functionCount": 9,
+      "functions": [
+        {
+          "name": "q",
+          "line": 24,
+          "lines": 1
+        },
+        {
+          "name": "n",
+          "line": 25,
+          "lines": 1
+        },
+        {
+          "name": "num",
+          "line": 30,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 44,
+          "lines": 1
+        },
+        {
+          "name": "row",
+          "line": 46,
+          "lines": 9
+        },
+        {
+          "name": "collect",
+          "line": 56,
+          "lines": 21
+        },
+        {
+          "name": "main",
+          "line": 78,
+          "lines": 47
+        },
+        {
+          "name": "anonymous",
+          "line": 98,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 102,
+          "lines": 1
+        }
+      ],
+      "imports": [
+        "fs",
+        "path"
+      ],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "COLUMNS",
+          "OUT",
+          "RESULTS",
+          "ROWS_PER_STATEMENT",
+          "UPDATED",
+          "collect",
+          "fs",
+          "main",
+          "n",
+          "num",
+          "path",
+          "q",
+          "row"
+        ]
+      }
+    },
+    {
+      "file": "theme.js",
+      "lines": 112,
+      "functionCount": 10,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 17,
+          "lines": 95
+        },
+        {
+          "name": "stored",
+          "line": 28,
+          "lines": 8
+        },
+        {
+          "name": "system",
+          "line": 37,
+          "lines": 3
+        },
+        {
+          "name": "effective",
+          "line": 42,
+          "lines": 3
+        },
+        {
+          "name": "apply",
+          "line": 46,
+          "lines": 11
+        },
+        {
+          "name": "paintToggle",
+          "line": 60,
+          "lines": 8
+        },
+        {
+          "name": "anonymous",
+          "line": 77,
+          "lines": 4
+        },
+        {
+          "name": "onSystemChange",
+          "line": 86,
+          "lines": 5
+        },
+        {
+          "name": "set",
+          "line": 100,
+          "lines": 5
+        },
+        {
+          "name": "follow",
+          "line": 105,
+          "lines": 5
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [
+          "matchMedia"
+        ],
+        "writes": [
+          "Theme"
+        ],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "track.js",
+      "lines": 201,
+      "functionCount": 19,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 10,
+          "lines": 191
+        },
+        {
+          "name": "read",
+          "line": 29,
+          "lines": 9
+        },
+        {
+          "name": "write",
+          "line": 39,
+          "lines": 8
+        },
+        {
+          "name": "prune",
+          "line": 50,
+          "lines": 8
+        },
+        {
+          "name": "anonymous",
+          "line": 53,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 55,
+          "lines": 1
+        },
+        {
+          "name": "mark",
+          "line": 59,
+          "lines": 10
+        },
+        {
+          "name": "paint",
+          "line": 74,
+          "lines": 15
+        },
+        {
+          "name": "repaint",
+          "line": 91,
+          "lines": 8
+        },
+        {
+          "name": "anonymous",
+          "line": 94,
+          "lines": 4
+        },
+        {
+          "name": "injectCss",
+          "line": 100,
+          "lines": 27
+        },
+        {
+          "name": "init",
+          "line": 129,
+          "lines": 50
+        },
+        {
+          "name": "anonymous",
+          "line": 138,
+          "lines": 38
+        },
+        {
+          "name": "has",
+          "line": 185,
+          "lines": 1
+        },
+        {
+          "name": "at",
+          "line": 186,
+          "lines": 1
+        },
+        {
+          "name": "count",
+          "line": 188,
+          "lines": 1
+        },
+        {
+          "name": "revision",
+          "line": 189,
+          "lines": 1
+        },
+        {
+          "name": "ids",
+          "line": 190,
+          "lines": 1
+        },
+        {
+          "name": "clear",
+          "line": 191,
+          "lines": 8
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [
+          "API_ENDPOINT",
+          "JobsUI",
+          "Viewed",
+          "Visitor",
+          "dispatchEvent"
+        ],
+        "writes": [
+          "Seen"
+        ],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "viewed.js",
+      "lines": 130,
+      "functionCount": 14,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 7,
+          "lines": 123
+        },
+        {
+          "name": "esc",
+          "line": 12,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 13,
+          "lines": 3
+        },
+        {
+          "name": "opened",
+          "line": 19,
+          "lines": 19
+        },
+        {
+          "name": "anonymous",
+          "line": 25,
+          "lines": 8
+        },
+        {
+          "name": "anonymous",
+          "line": 35,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 36,
+          "lines": 1
+        },
+        {
+          "name": "when",
+          "line": 39,
+          "lines": 9
+        },
+        {
+          "name": "role",
+          "line": 60,
+          "lines": 5
+        },
+        {
+          "name": "render",
+          "line": 68,
+          "lines": 50
+        },
+        {
+          "name": "anonymous",
+          "line": 73,
+          "lines": 1
+        },
+        {
+          "name": "anonymous",
+          "line": 93,
+          "lines": 12
+        },
+        {
+          "name": "anonymous",
+          "line": 109,
+          "lines": 8
+        },
+        {
+          "name": "schedule",
+          "line": 121,
+          "lines": 3
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [
+          "JobsData",
+          "Seen"
+        ],
+        "writes": [
+          "Viewed"
+        ],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "visitor.js",
+      "lines": 146,
+      "functionCount": 19,
+      "functions": [
+        {
+          "name": "anonymous",
+          "line": 10,
+          "lines": 136
+        },
+        {
+          "name": "read",
+          "line": 20,
+          "lines": 7
+        },
+        {
+          "name": "write",
+          "line": 28,
+          "lines": 7
+        },
+        {
+          "name": "uuid",
+          "line": 36,
+          "lines": 8
+        },
+        {
+          "name": "anonymous",
+          "line": 39,
+          "lines": 4
+        },
+        {
+          "name": "ensure",
+          "line": 45,
+          "lines": 7
+        },
+        {
+          "name": "clean",
+          "line": 53,
+          "lines": 3
+        },
+        {
+          "name": "esc",
+          "line": 58,
+          "lines": 5
+        },
+        {
+          "name": "anonymous",
+          "line": 59,
+          "lines": 3
+        },
+        {
+          "name": "slot",
+          "line": 64,
+          "lines": 11
+        },
+        {
+          "name": "renderGreeting",
+          "line": 76,
+          "lines": 14
+        },
+        {
+          "name": "anonymous",
+          "line": 86,
+          "lines": 3
+        },
+        {
+          "name": "renderPrompt",
+          "line": 91,
+          "lines": 32
+        },
+        {
+          "name": "anonymous",
+          "line": 109,
+          "lines": 8
+        },
+        {
+          "name": "anonymous",
+          "line": 117,
+          "lines": 5
+        },
+        {
+          "name": "init",
+          "line": 124,
+          "lines": 6
+        },
+        {
+          "name": "id",
+          "line": 136,
+          "lines": 1
+        },
+        {
+          "name": "name",
+          "line": 137,
+          "lines": 1
+        },
+        {
+          "name": "forget",
+          "line": 138,
+          "lines": 6
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [
+          "crypto"
+        ],
+        "writes": [
+          "Visitor"
+        ],
+        "topLevel": []
+      }
+    },
+    {
+      "file": "worker/index.js",
+      "lines": 342,
+      "functionCount": 12,
+      "functions": [
+        {
+          "name": "userIdOf",
+          "line": 22,
+          "lines": 4
+        },
+        {
+          "name": "touchUser",
+          "line": 30,
+          "lines": 10
+        },
+        {
+          "name": "clip",
+          "line": 44,
+          "lines": 1
+        },
+        {
+          "name": "escapeHtml",
+          "line": 57,
+          "lines": 3
+        },
+        {
+          "name": "anonymous",
+          "line": 58,
+          "lines": 2
+        },
+        {
+          "name": "sendFeedbackEmail",
+          "line": 68,
+          "lines": 44
+        },
+        {
+          "name": "anonymous",
+          "line": 88,
+          "lines": 3
+        },
+        {
+          "name": "anonymous",
+          "line": 102,
+          "lines": 1
+        },
+        {
+          "name": "corsFor",
+          "line": 113,
+          "lines": 15
+        },
+        {
+          "name": "anonymous",
+          "line": 116,
+          "lines": 1
+        },
+        {
+          "name": "fetch",
+          "line": 130,
+          "lines": 211
+        },
+        {
+          "name": "anonymous",
+          "line": 334,
+          "lines": 1
+        }
+      ],
+      "imports": [],
+      "browserGlobals": {
+        "reads": [],
+        "writes": [],
+        "topLevel": [
+          "JOB_ID_RE",
+          "MAX_TEXT",
+          "TOPICS",
+          "TOPIC_LABELS",
+          "USER_ID_RE",
+          "clip",
+          "corsFor",
+          "escapeHtml",
+          "sendFeedbackEmail",
+          "touchUser",
+          "userIdOf"
+        ]
+      }
+    }
+  ],
+  "pages": {
+    "index.html": [
+      "theme.js",
+      "data.js",
+      "jobs-ui.js",
+      "visitor.js",
+      "api-config.js",
+      "jobs-api.js",
+      "heart.js",
+      "presets.js",
+      "filter-drawer.js",
+      "all.js",
+      "resume-match.js",
+      "track.js",
+      "viewed.js",
+      "counter.js",
+      "featured.js",
+      "feedback.js"
+    ],
+    "firm.html": [
+      "theme.js",
+      "data.js",
+      "jobs-ui.js",
+      "visitor.js",
+      "api-config.js",
+      "jobs-api.js",
+      "heart.js",
+      "presets.js",
+      "filter-drawer.js",
+      "firm.js",
+      "track.js",
+      "viewed.js",
+      "counter.js",
+      "feedback.js"
+    ],
+    "firms.html": [
+      "theme.js",
+      "data.js",
+      "app.js",
+      "visitor.js",
+      "api-config.js",
+      "heart.js",
+      "counter.js",
+      "feedback.js"
+    ],
+    "about.html": [
+      "theme.js"
+    ]
+  },
+  "graph": {
+    "moduleEdges": [
+      [
+        "ats.js",
+        "id.js"
+      ],
+      [
+        "ats.js",
+        "match.js"
+      ],
+      [
+        "ats.js",
+        "sponsorship.js"
+      ],
+      [
+        "aws/lambda/catalogue-api.cjs",
+        "aws/lambda/catalogue.cjs"
+      ],
+      [
+        "aws/lambda/catalogue-api.cjs",
+        "aws/lambda/matching.cjs"
+      ],
+      [
+        "aws/lambda/catalogue-import.cjs",
+        "aws/lambda/catalogue.cjs"
+      ],
+      [
+        "aws/lambda/catalogue-postgres.cjs",
+        "aws/lambda/catalogue.cjs"
+      ],
+      [
+        "aws/lambda/index.mjs",
+        "aws/lambda/catalogue-api.cjs"
+      ],
+      [
+        "aws/lambda/index.mjs",
+        "aws/lambda/catalogue-import.cjs"
+      ],
+      [
+        "aws/lambda/index.mjs",
+        "aws/lambda/catalogue-postgres.cjs"
+      ],
+      [
+        "aws/lambda/jev.cjs",
+        "aws/lambda/catalogue.cjs"
+      ],
+      [
+        "aws/lambda/matching.cjs",
+        "aws/lambda/catalogue.cjs"
+      ],
+      [
+        "aws/lambda/matching.cjs",
+        "aws/lambda/jev.cjs"
+      ],
+      [
+        "build.js",
+        "boards.js"
+      ],
+      [
+        "build.js",
+        "pipeline.js"
+      ],
+      [
+        "catalogue-export.js",
+        "aws/lambda/catalogue.cjs"
+      ],
+      [
+        "catalogue-export.js",
+        "pipeline.js"
+      ],
+      [
+        "match.js",
+        "boards.js"
+      ],
+      [
+        "pipeline.js",
+        "ats.js"
+      ],
+      [
+        "pipeline.js",
+        "boards.js"
+      ],
+      [
+        "pipeline.js",
+        "match.js"
+      ],
+      [
+        "pipeline.js",
+        "scraper.js"
+      ],
+      [
+        "scrape.js",
+        "pipeline.js"
+      ],
+      [
+        "scraper.js",
+        "ats.js"
+      ],
+      [
+        "scraper.js",
+        "boards.js"
+      ],
+      [
+        "scraper.js",
+        "id.js"
+      ],
+      [
+        "scraper.js",
+        "match.js"
+      ],
+      [
+        "scraper.js",
+        "sponsorship.js"
+      ],
+      [
+        "server.js",
+        "aws/lambda/catalogue-api.cjs"
+      ],
+      [
+        "server.js",
+        "aws/lambda/catalogue.cjs"
+      ],
+      [
+        "server.js",
+        "boards.js"
+      ],
+      [
+        "server.js",
+        "catalogue-export.js"
+      ],
+      [
+        "server.js",
+        "pipeline.js"
+      ]
+    ],
+    "pageEdges": [
+      [
+        "index.html",
+        "theme.js"
+      ],
+      [
+        "index.html",
+        "data.js"
+      ],
+      [
+        "index.html",
+        "jobs-ui.js"
+      ],
+      [
+        "index.html",
+        "visitor.js"
+      ],
+      [
+        "index.html",
+        "api-config.js"
+      ],
+      [
+        "index.html",
+        "jobs-api.js"
+      ],
+      [
+        "index.html",
+        "heart.js"
+      ],
+      [
+        "index.html",
+        "presets.js"
+      ],
+      [
+        "index.html",
+        "filter-drawer.js"
+      ],
+      [
+        "index.html",
+        "all.js"
+      ],
+      [
+        "index.html",
+        "resume-match.js"
+      ],
+      [
+        "index.html",
+        "track.js"
+      ],
+      [
+        "index.html",
+        "viewed.js"
+      ],
+      [
+        "index.html",
+        "counter.js"
+      ],
+      [
+        "index.html",
+        "featured.js"
+      ],
+      [
+        "index.html",
+        "feedback.js"
+      ],
+      [
+        "firm.html",
+        "theme.js"
+      ],
+      [
+        "firm.html",
+        "data.js"
+      ],
+      [
+        "firm.html",
+        "jobs-ui.js"
+      ],
+      [
+        "firm.html",
+        "visitor.js"
+      ],
+      [
+        "firm.html",
+        "api-config.js"
+      ],
+      [
+        "firm.html",
+        "jobs-api.js"
+      ],
+      [
+        "firm.html",
+        "heart.js"
+      ],
+      [
+        "firm.html",
+        "presets.js"
+      ],
+      [
+        "firm.html",
+        "filter-drawer.js"
+      ],
+      [
+        "firm.html",
+        "firm.js"
+      ],
+      [
+        "firm.html",
+        "track.js"
+      ],
+      [
+        "firm.html",
+        "viewed.js"
+      ],
+      [
+        "firm.html",
+        "counter.js"
+      ],
+      [
+        "firm.html",
+        "feedback.js"
+      ],
+      [
+        "firms.html",
+        "theme.js"
+      ],
+      [
+        "firms.html",
+        "data.js"
+      ],
+      [
+        "firms.html",
+        "app.js"
+      ],
+      [
+        "firms.html",
+        "visitor.js"
+      ],
+      [
+        "firms.html",
+        "api-config.js"
+      ],
+      [
+        "firms.html",
+        "heart.js"
+      ],
+      [
+        "firms.html",
+        "counter.js"
+      ],
+      [
+        "firms.html",
+        "feedback.js"
+      ],
+      [
+        "about.html",
+        "theme.js"
+      ]
+    ],
+    "globalEdges": [
+      [
+        "counter.js",
+        "api-config.js",
+        "API_ENDPOINT"
+      ],
+      [
+        "feedback.js",
+        "api-config.js",
+        "API_ENDPOINT"
+      ],
+      [
+        "feedback.js",
+        "visitor.js",
+        "Visitor"
+      ],
+      [
+        "heart.js",
+        "api-config.js",
+        "API_ENDPOINT"
+      ],
+      [
+        "heart.js",
+        "visitor.js",
+        "Visitor"
+      ],
+      [
+        "jobs-api.js",
+        "api-config.js",
+        "API_ENDPOINT"
+      ],
+      [
+        "jobs-api.js",
+        "api-config.js",
+        "JOBS_ENDPOINT"
+      ],
+      [
+        "jobs-api.js",
+        "jobs-ui.js",
+        "JobsUI"
+      ],
+      [
+        "jobs-api.js",
+        "track.js",
+        "Seen"
+      ],
+      [
+        "jobs-api.js",
+        "viewed.js",
+        "Viewed"
+      ],
+      [
+        "jobs-ui.js",
+        "jobs-api.js",
+        "JobsData"
+      ],
+      [
+        "jobs-ui.js",
+        "presets.js",
+        "Presets"
+      ],
+      [
+        "jobs-ui.js",
+        "track.js",
+        "Seen"
+      ],
+      [
+        "presets.js",
+        "api-config.js",
+        "API_ENDPOINT"
+      ],
+      [
+        "presets.js",
+        "visitor.js",
+        "Visitor"
+      ],
+      [
+        "resume-match.js",
+        "all.js",
+        "JobView"
+      ],
+      [
+        "resume-match.js",
+        "jobs-api.js",
+        "JobsAPI"
+      ],
+      [
+        "track.js",
+        "api-config.js",
+        "API_ENDPOINT"
+      ],
+      [
+        "track.js",
+        "jobs-ui.js",
+        "JobsUI"
+      ],
+      [
+        "track.js",
+        "viewed.js",
+        "Viewed"
+      ],
+      [
+        "track.js",
+        "visitor.js",
+        "Visitor"
+      ],
+      [
+        "viewed.js",
+        "jobs-api.js",
+        "JobsData"
+      ],
+      [
+        "viewed.js",
+        "track.js",
+        "Seen"
+      ]
+    ],
+    "cycles": []
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "find-jobs",
+  "private": true,
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js",
+    "test": "node --test test/*.test.js",
+    "test:browser": "node test/browser.e2e.js",
+    "build": "node build.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

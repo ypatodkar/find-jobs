@@ -49,10 +49,8 @@
   /**
    * A role in the panel, linked straight back to the posting.
    *
-   * Deliberately not `a.job-title[data-job-id]`, which is what track.js listens for:
-   * every role in here has been opened already, so re-counting it would inflate the
-   * click total with a visit to your own history, and the "clicked" stamp styling is
-   * written for the job rows, not for this panel.
+   * History links do not carry the tracked card or application-link selector: every
+   * role here has been opened already, and visits to history are not new openings.
    *
    * A role with no url — a board listing that never carried one — stays plain text
    * rather than becoming a link to nowhere.

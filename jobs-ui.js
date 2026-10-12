@@ -345,32 +345,30 @@
     // job, and how to label them. Filters combine with AND across dimensions and OR
     // within one (ticking two cities means either city).
     //
-    // `group` splits them into the two labelled blocks the controls render as. It is
-    // presentation only: filtering, saved views, the counts and the reset button all
-    // still treat DIMENSIONS as one flat list, so moving a filter between groups
-    // changes where it sits on screen and nothing else.
+    // Grouping only changes presentation. Saved filters and the query still see every
+    // dimension, including those tucked into Advanced Search.
     const GROUPS = [
-      { id: "dev", title: "Developers choice" },
-      { id: "rest", title: "Everything else" },
+      { id: "core", title: "Role & location" },
+      { id: "advanced", title: "Advanced Search" },
     ];
 
     const DIMENSIONS = [
-      { key: "city", label: "City", group: "dev", values: (j) => [j.city] },
-      { key: "role", label: "Role", group: "rest", values: (j) => j.roles || [], labelFor: (v) => ROLE_LABELS[v] || v },
-      { key: "seniority", label: "Seniority", group: "dev", values: (j) => (j.seniority ? [j.seniority] : []), labelFor: (v) => SENIORITY_LABELS[v] || v, order: SENIORITY_ORDER },
-      { key: "company", label: "Company", group: "dev", values: (j) => [j.company] },
+      { key: "role", label: "Role", group: "core", values: (j) => j.roles || [], labelFor: (v) => ROLE_LABELS[v] || v },
+      { key: "city", label: "Location", group: "core", values: (j) => [j.city] },
+      { key: "seniority", label: "Experience", group: "core", values: (j) => (j.seniority ? [j.seniority] : []), labelFor: (v) => SENIORITY_LABELS[v] || v, order: SENIORITY_ORDER },
+      { key: "company", label: "Company", group: "advanced", values: (j) => [j.company] },
       // The only subtractive filter here. Everything else narrows to what you picked;
       // this one removes it, which is the difference between "show me these six
       // companies" and "show me everything except this one". Worth having because a
       // single employer that never closes a requisition can dominate a whole page —
       // one currently carries 665 roles, none posted in the last three months — and
       // the include filter cannot express "all of them but that".
-      { key: "notcompany", label: "Exclude company", group: "dev", values: (j) => [j.company], exclude: true },
-      { key: "industry", label: "Industry", group: "rest", values: (j) => j.markets || [] },
-      { key: "size", label: "Company size", group: "dev", values: (j) => (j.size ? [j.size] : []), labelFor: (v) => SIZE_LABELS[v] || v, order: SIZE_ORDER },
-      { key: "stage", label: "Funding", group: "rest", values: (j) => (j.stage ? [j.stage] : []) },
-      { key: "sponsorship", label: "Visa sponsorship", group: "rest", values: (j) => [j.sponsorship || "unknown"], labelFor: (v) => ({ yes: "Available", no: "Unavailable", unknown: "Not mentioned" }[v] || v), order: ["yes", "no", "unknown"] },
-      { key: "firm", label: "Investor", group: "rest", values: (j) => j.firms || [], labelFor: (v) => cfg.firmLabel(v), onlyWhenFirms: true },
+      { key: "notcompany", label: "Exclude company", group: "advanced", values: (j) => [j.company], exclude: true },
+      { key: "industry", label: "Industry", group: "advanced", values: (j) => j.markets || [] },
+      { key: "size", label: "Company size", group: "advanced", values: (j) => (j.size ? [j.size] : []), labelFor: (v) => SIZE_LABELS[v] || v, order: SIZE_ORDER },
+      { key: "stage", label: "Funding", group: "advanced", values: (j) => (j.stage ? [j.stage] : []) },
+      { key: "sponsorship", label: "Visa sponsorship", group: "advanced", values: (j) => [j.sponsorship || "unknown"], labelFor: (v) => ({ yes: "Available", no: "Unavailable", unknown: "Not mentioned" }[v] || v), order: ["yes", "no", "unknown"] },
+      { key: "firm", label: "Investor", group: "advanced", values: (j) => j.firms || [], labelFor: (v) => cfg.firmLabel(v), onlyWhenFirms: true },
     ].filter((d) => !d.onlyWhenFirms || cfg.showFirms);
 
     const state = {
@@ -393,9 +391,13 @@
       expanded: new Set(),        // company names currently open
     };
     DIMENSIONS.forEach((d) => (state.selected[d.key] = new Set()));
+    let booted = false;
+    let remoteData = null, remoteKey = '', remotePending = '', remoteController, remoteTimer;
+    let remoteSequence = 0;
 
     const el = {
       search: $("job-search"),
+      mobileSearch: $("mobile-job-search"),
       pickerRow: $("picker-row"),
       dateSelect: $("date-select"),
       salarySelect: $("salary-select"),
@@ -521,23 +523,23 @@
         </details>
       </div>`;
 
-    // A group with nothing in it is skipped rather than left as an empty heading —
-    // firm pages drop the Investor dimension, and a future one could empty a group.
-    // The title is a <p>, not a heading: these label a set of controls rather than
-    // opening a section, and the page's h1 → h3 outline should stay as it is.
+    // Keep the three common choices visible. The disclosure retains every other
+    // picker, including its selected values, when it is closed.
     el.pickerRow.innerHTML = GROUPS.map((g) => {
       const dims = DIMENSIONS.filter((d) => d.group === g.id);
       if (!dims.length) return "";
-      return `
+      const section = `
       <section class="filter-section">
-        <p class="filter-section-title" id="fg-${g.id}">${escapeHtml(g.title)}</p>
-        <div class="filter-grid" id="grid-${g.id}" role="group" aria-labelledby="fg-${g.id}">${dims.map(pickerMarkup).join("")}</div>
+        ${g.id === "core" ? `<p class="filter-section-title" id="fg-${g.id}">${escapeHtml(g.title)}</p>` : ""}
+        <div class="filter-grid" id="grid-${g.id}" role="group" ${g.id === "core" ? 'aria-labelledby="fg-core"' : 'aria-label="Advanced filters"'}>${dims.map(pickerMarkup).join("")}</div>
       </section>`;
+      return g.id === "advanced"
+        ? `<details class="advanced-filters" id="advanced-filters"><summary>Advanced Search <span id="advanced-filter-count"></span></summary>${section}</details>`
+        : section;
     }).join("");
 
-    // Posted and Salary are filters, so they belong with the filters rather than in the
-    // tail, which is left holding the two controls that are not filters at all: what to
-    // hide, and how to order what remains.
+    // Posted, Salary, and opened-company history are less common filters. Move their
+    // existing controls into Advanced Search without replacing their event targets.
     //
     // Moved rather than re-rendered here, because that keeps one copy of the markup in
     // the page: the ids, the options already populated into them and the listeners bound
@@ -547,7 +549,7 @@
     //
     // They are single-selects sitting in a grid of multi-select pickers, which is why the
     // grid gives them the picker's shape rather than the tail's.
-    const restGrid = $("grid-rest");
+    const restGrid = $("grid-advanced");
     if (restGrid) {
       [el.dateSelect, el.salarySelect, el.hideOpenedCompanies].forEach((ctrl) => {
         // Two shapes here: the selects arrive wrapped in .sort-wrap, the checkbox in
@@ -576,6 +578,7 @@
             // Counts come from everything *except* this dimension, so an option only
             // appears if it would still return rows under the other active filters.
             counts: () => {
+              if (cfg.loadPage) return remoteData ? remoteData.facets[d.key] || [] : [];
               const m = new Map();
               filtered(d.key).forEach((j) => d.values(j).forEach((v) => { if (v) m.set(v, (m.get(v) || 0) + 1); }));
               // Deliberately unsorted: the picker owns ordering, because it is the only
@@ -622,31 +625,28 @@
         : `${k(j.salaryMin)}+`;
     }
 
-    // `inGroup` drops the company and investor lines: inside a company card they are
-    // in the header already, repeated once per row.
+    // Grouped results already show the company and logo in their header.
     function jobHtml(j, inGroup) {
-      const roleTags = j.roles.map((r) => `<span class="role-tag${r === "ai" ? " ai" : ""}">${escapeHtml(ROLE_LABELS[r] || r)}</span>`).join("");
-      const src = j.source === "ats"
-        ? `<span class="src-tag ats" title="Fetched live from ${escapeHtml(j.ats || "the company")}'s job board">${escapeHtml(j.ats || "ats")}</span>`
-        : `<span class="src-tag" title="From the VC's portfolio board">vc board</span>`;
+      const m = monogram(j.company || "");
+      const logo = inGroup ? "" : `<span class="job-logo" aria-hidden="true">${j.logo
+        ? `<img src="${escapeHtml(j.logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.hidden=true;this.nextElementSibling.hidden=false" /><span class="job-logo-fallback" hidden>${escapeHtml(m.initials)}</span>`
+        : `<span class="job-logo-fallback">${escapeHtml(m.initials)}</span>`}</span>`;
+      const disciplines = [...new Set(j.roles || [])].slice(0, 2)
+        .map((r) => `<span class="job-tag job-discipline">${escapeHtml(ROLE_LABELS[r] || r)}</span>`).join("");
       const sponsorStatus = j.sponsorship || "unknown";
       const sponsorLabel = { yes: "Visa: Available", no: "Visa: Unavailable", unknown: "Visa: Not mentioned" }[sponsorStatus] || "Visa: Not mentioned";
       const sponsorEvidence = j.sponsorshipEvidence ? ` — ${j.sponsorshipEvidence}` : "";
-      const sponsor = `<span class="sponsor-tag ${escapeHtml(sponsorStatus)}" title="${escapeHtml(sponsorLabel + sponsorEvidence)}" aria-label="${escapeHtml(sponsorLabel + sponsorEvidence)}">${escapeHtml(sponsorLabel)}</span>`;
-      // Date is always the final item so its position never shifts between rows.
-      const meta = [j.city, j.remote ? "Remote OK" : null, relativeDate(j.posted)]
-        .filter(Boolean).map(escapeHtml).join(" &middot; ");
+      const sponsor = sponsorStatus === "unknown" ? "" : `<span class="job-tag sponsor-tag ${escapeHtml(sponsorStatus)}" title="${escapeHtml(sponsorLabel + sponsorEvidence)}">${escapeHtml(sponsorLabel)}</span>`;
+      const place = j.city === "Bay Area" ? "SF Bay Area" : j.city || (j.remote ? "Remote" : "");
+      const location = place ? `<span class="job-place">${escapeHtml(place)}</span>` : "";
+      const workMode = j.remote ? `<span class="job-tag job-work-mode">${place === "Remote" ? "Remote" : "Remote option"}</span>` : "";
+      const seniority = j.seniority ? `<span class="job-tag job-seniority">${escapeHtml(SENIORITY_LABELS[j.seniority] || j.seniority)}</span>` : "";
+      const posted = relativeDate(j.posted);
       const pay = compactPay(j);
       const payBit = pay
         ? `<span class="job-salary"${j.salary ? ` title="${escapeHtml(j.salary)}"` : ""}>${escapeHtml(pay)}</span>`
         : "";
-      // data-* here is read by track.js, which delegates off document — this row is
-      // replaced wholesale on every filter change, so per-row listeners wouldn't survive.
-      const title = j.url
-        ? `<a class="job-title" href="${escapeHtml(j.url)}" target="_blank" rel="noopener noreferrer"` +
-          ` data-job-id="${escapeHtml(j.job_id || "")}" data-company="${escapeHtml(j.company)}"` +
-          ` data-city="${escapeHtml(j.city || "")}">${escapeHtml(j.title)}</a>`
-        : `<span class="job-title">${escapeHtml(j.title)}</span>`;
+      const title = `<span class="job-title">${escapeHtml(j.title)}</span>`;
       // Investors are deliberately absent from the row: they repeat on every job at a
       // company and crowd the title. The company card's header still lists them, and
       // the Investor filter still works.
@@ -660,29 +660,30 @@
         ? ""
         : ` <span class="job-company-opened" data-opened-for="${escapeHtml(j.company)}">` +
           `${escapeHtml(openedLabel(openedN))}</span>`;
-      const companyBit = inGroup
-        ? ""
-        : `<span class="job-company">${escapeHtml(j.company)}${acquiredNote(j.company)}${openedBit}</span>`;
-      // Company and salary share one line. Inside a company card the company name is
-      // in the header, so the line carries the salary alone — and is dropped entirely
-      // when there is neither, rather than leaving an empty gap.
-      const subLine = companyBit || payBit ? `<p class="job-sub">${companyBit}${payBit}</p>` : "";
+      const companyBit = inGroup ? "" : `<span class="job-company">${escapeHtml(j.company)}${acquiredNote(j.company)}${openedBit}</span>`;
+      const cardTag = j.url ? "a" : "div";
+      const cardProps = j.url
+        ? `href="${escapeHtml(j.url)}" target="_blank" rel="noopener noreferrer" data-job-id="${escapeHtml(j.job_id || "")}" data-company="${escapeHtml(j.company)}" data-city="${escapeHtml(j.city || "")}" data-title="${escapeHtml(j.title)}" aria-label="Open posting for ${escapeHtml(j.title)} at ${escapeHtml(j.company)}"`
+        : "";
       return `
-        <article class="job">
-          <div class="job-main">
-            ${title}
-            ${subLine}
-          </div>
-          <div class="job-side">
-            <div class="job-tags">${roleTags}${sponsor}${src}</div>
-            <p class="job-meta">${meta}</p>
-          </div>
+        <article class="job${inGroup ? " in-group" : ""}${cfg.loadPage ? " has-description" : ""}" data-job-id="${escapeHtml(j.job_id || "")}">
+          <${cardTag} class="job-card-open" ${cardProps}>
+            ${logo}
+            <span class="job-main">
+              ${title}
+              ${companyBit || location ? `<span class="job-keyline">${companyBit}${companyBit && location ? `<span class="job-meta-sep" aria-hidden="true">·</span>` : ""}${location}</span>` : ""}
+              ${disciplines || workMode || seniority || sponsor ? `<span class="job-tags">${disciplines}${workMode}${seniority}${sponsor}</span>` : ""}
+            </span>
+            <span class="job-aside">${payBit}${posted ? `<span class="job-posted">Posted ${escapeHtml(posted)}</span>` : ""}</span>
+          </${cardTag}>
+          ${cfg.loadPage ? `<button type="button" class="job-description-open" data-description="${escapeHtml(j.job_id)}" aria-label="Read description for ${escapeHtml(j.title)} at ${escapeHtml(j.company)}" title="Read description"><span aria-hidden="true">+</span></button>` : ""}
+          ${cfg.enableMatching ? `<button type="button" class="job-match-link" data-match="${escapeHtml(j.job_id)}" aria-label="Check my résumé against ${escapeHtml(j.title)} at ${escapeHtml(j.company)}">Check résumé</button>` : ""}
+          <div class="job-match-result" data-match-result="${escapeHtml(j.job_id)}"></div>
         </article>`;
     }
 
     // ---- company grouping ----
-    // A monogram tint stands in for a company logo (we store none). Derived from the
-    // name so a company keeps the same colour across renders and pages.
+    // Keep fallback initials stable across renders and pages when a logo is missing.
     const MONOGRAM_TINTS = 6;
     function monogram(name) {
       let h = 0;
@@ -747,7 +748,7 @@
     function groupHtml(g, index) {
       const open = state.expanded.has(g.company);
       const m = monogram(g.company);
-      const n = g.jobs.length;
+      const n = g.count ?? g.jobs.length;
       const directoryNumber = String(index + 1).padStart(2, "0");
 
       const cities = [...g.cities.entries()].sort((a, b) => b[1] - a[1])
@@ -761,7 +762,8 @@
         relativeDate(new Date(g.newest).toISOString()),
       ].filter(Boolean).map((fact) => `<span class="cg-fact">${escapeHtml(fact)}</span>`).join("");
 
-      const rows = open ? g.jobs.map((j) => jobHtml(j, true)).join("") : "";
+      const rows = open ? g.jobs.map((j) => jobHtml(j, true)).join("") +
+        (n > g.jobs.length ? `<button type="button" class="group-more" data-company-more="${escapeHtml(g.company)}">See all ${n} roles at ${escapeHtml(g.company)}</button>` : "") : "";
 
       // No company descriptions exist in any scraped source, so the closest thing to
       // "what this company does" is the industry tags it already carries. Every source
@@ -784,7 +786,7 @@
       // Investors are a company fact, so they belong here rather than on every row.
       let backers = "";
       if (cfg.showFirms) {
-        const all = [...new Set(g.jobs.flatMap((j) => j.firms || []))];
+        const all = g.firms || [...new Set(g.jobs.flatMap((j) => j.firms || []))];
         if (all.length) {
           const names = all.slice(0, 3).map((f) => escapeHtml(cfg.firmLabel(f)));
           const extra = all.length > 3 ? ` +${all.length - 3}` : "";
@@ -878,7 +880,15 @@
       });
     }
 
+    function resultsLabel(total, companies, grouped) {
+      if (!total) return grouped ? "No companies match your filters." : "No jobs match your filters.";
+      return grouped
+        ? `${companies.toLocaleString()} companies with ${total.toLocaleString()} open roles`
+        : `${total.toLocaleString()} ${activeCount() ? "matching" : "open"} roles`;
+    }
+
     function renderResults() {
+      if (cfg.loadPage) { scheduleRemote(); return; }
       const results = sortJobs(filtered());
 
       const grouped = state.view === "grouped";
@@ -896,12 +906,10 @@
         state.page = Math.min(Math.max(1, state.page), pageCount);
         const start = (state.page - 1) * JOBS_PER_PAGE;
         const slice = results.slice(start, start + JOBS_PER_PAGE);
-        el.count.textContent = results.length
-          ? `Showing ${start + 1}–${start + slice.length} of ${results.length} matching roles`
-          : "0 matching roles";
+        el.count.textContent = resultsLabel(results.length, 0, false);
         // Must be an arrow, not `.map(jobHtml)`: map passes the index as the second
         // argument, which would read as `inGroup` for every row after the first.
-        el.list.innerHTML = slice.length ? slice.map((j) => jobHtml(j, false)).join("") : `<p class="empty">No roles match those filters.</p>`;
+        el.list.innerHTML = slice.length ? slice.map((j) => jobHtml(j, false)).join("") : `<p class="empty">No jobs match your search. Try a broader role, location, or date range.</p>`;
         renderPagination(pageCount);
         return;
       }
@@ -911,13 +919,67 @@
       state.page = Math.min(Math.max(1, state.page), pageCount);
       const start = (state.page - 1) * COMPANIES_PER_PAGE;
       const slice = groups.slice(start, start + COMPANIES_PER_PAGE);
-      el.count.textContent = groups.length
-        ? `Showing ${start + 1}–${start + slice.length} of ${groups.length} companies · ${results.length} roles`
-        : "0 companies · 0 roles";
+      el.count.textContent = resultsLabel(results.length, groups.length, true);
       el.list.innerHTML = slice.length
         ? slice.map((group, index) => groupHtml(group, start + index)).join("")
-        : `<p class="empty">No roles match those filters.</p>`;
+        : `<p class="empty">No jobs match your search. Try a broader role, location, or date range.</p>`;
       renderPagination(pageCount);
+    }
+
+    // Server pagination. Only the most recent response may update the view; a
+    // late response for an old query must never overwrite newer filters.
+    function remoteFilters() {
+      return { ...view.getFilters(), page: state.page, scopeFirm: cfg.scopeFirm || '' };
+    }
+    function paintRemote(data) {
+      const grouped = state.view === 'grouped';
+      state.page = data.page;
+      state.jobs = grouped ? data.groups.flatMap(g => g.jobs) : data.jobs;
+      if (el.groupActions) el.groupActions.hidden = !grouped;
+      if (el.countFlat) el.countFlat.textContent = data.total.toLocaleString();
+      if (el.countGrouped) el.countGrouped.textContent = data.companies.toLocaleString();
+      const start = (data.page - 1) * data.pageSize;
+      const count = grouped ? data.groups.length : data.jobs.length;
+      el.count.textContent = resultsLabel(data.total, data.companies, grouped);
+      el.list.innerHTML = count ? (grouped
+        ? data.groups.map((g, i) => groupHtml({ ...g, cities: new Map(g.cities) }, start + i)).join('')
+        : data.jobs.map(j => jobHtml(j, false)).join('')) : '<p class="empty">No jobs match your search. Try a broader role, location, or date range.</p>';
+      renderPagination(data.pageCount);
+      el.list.removeAttribute('aria-busy');
+      refreshAllPickers();
+      syncUrl();
+      if (cfg.onData) cfg.onData(data);
+      listeners.forEach(fn => fn());
+    }
+    function scheduleRemote() {
+      if (!booted) return;
+      const filters = remoteFilters();
+      const key = JSON.stringify([filters, global.Seen?.revision?.() || 0]);
+      if (remoteData && key === remoteKey) { paintRemote(remoteData); return; }
+      if (key === remotePending) return;
+      remotePending = key;
+      clearTimeout(remoteTimer); remoteController?.abort();
+      const sequence = ++remoteSequence;
+      el.list.setAttribute('aria-busy', 'true');
+      el.count.textContent = 'Loading jobs…';
+      remoteTimer = setTimeout(async () => {
+        remoteController = new AbortController();
+        try {
+          const data = await cfg.loadPage(filters, remoteController.signal);
+          if (sequence !== remoteSequence) return;
+          remotePending = ''; remoteData = data;
+          state.page = data.page;
+          remoteKey = JSON.stringify([remoteFilters(), global.Seen?.revision?.() || 0]);
+          paintRemote(data);
+        } catch (error) {
+          if (sequence !== remoteSequence || error.name === 'AbortError') return;
+          remotePending = ''; remoteKey = ''; remoteData = null;
+          el.list.removeAttribute('aria-busy'); el.pagination.hidden = true;
+          el.count.textContent = 'Listings unavailable';
+          el.list.innerHTML = `<p class="empty">${escapeHtml(error.message)}</p><button type="button" class="linkish" data-retry-jobs>Try again</button>`;
+          if (cfg.onError) cfg.onError(error);
+        }
+      }, 160);
     }
 
     function activeCount() {
@@ -932,6 +994,11 @@
 
     function updateResetBtn() {
       const n = activeCount();
+      const advancedCount = DIMENSIONS.filter((d) => d.group === "advanced" && state.selected[d.key].size).length +
+        (state.range !== "all" ? 1 : 0) + (state.salary !== "all" ? 1 : 0) +
+        (state.hideOpenedCompanies ? 1 : 0);
+      const advancedBadge = $("advanced-filter-count");
+      if (advancedBadge) advancedBadge.textContent = advancedCount ? `${advancedCount} active` : "";
       if (el.undoBtn) {
         el.undoBtn.addEventListener("click", undo);
         updateUndoBtn();
@@ -1114,11 +1181,16 @@
       state.hideOpened = !!f.hideOpened;
       state.hideOpenedCompanies = !!f.hideOpenedCompanies;
       if (el.search) el.search.value = state.query;
+      if (el.mobileSearch) el.mobileSearch.value = state.query;
       if (el.dateSelect) el.dateSelect.value = state.range;
       if (el.salarySelect) el.salarySelect.value = state.salary;
       if (el.sortSelect) el.sortSelect.value = state.sort;
       if (el.hideOpened) el.hideOpened.checked = state.hideOpened;
       if (el.hideOpenedCompanies) el.hideOpenedCompanies.checked = state.hideOpenedCompanies;
+
+      const advanced = $("advanced-filters");
+      if (advanced && (DIMENSIONS.some((d) => d.group === "advanced" && state.selected[d.key].size) ||
+        state.range !== "all" || state.salary !== "all" || state.hideOpenedCompanies)) advanced.open = true;
 
       setView(f.view === "grouped" ? "grouped" : "flat");
     }
@@ -1160,7 +1232,12 @@
     }
 
     // ---- events ----
-    if (el.search) el.search.addEventListener("input", (e) => { state.query = e.target.value; render(); });
+    [el.search, el.mobileSearch].filter(Boolean).forEach((input) => input.addEventListener("input", (e) => {
+      state.query = e.target.value;
+      if (el.search && el.search !== input) el.search.value = state.query;
+      if (el.mobileSearch && el.mobileSearch !== input) el.mobileSearch.value = state.query;
+      render();
+    }));
     if (el.sortSelect) el.sortSelect.addEventListener("change", (e) => { state.sort = e.target.value; render(); });
     if (el.hideOpened) {
       el.hideOpened.addEventListener("change", (e) => { state.hideOpened = e.target.checked; render(); });
@@ -1232,6 +1309,12 @@
     // Expanding one company re-renders only that section, so the rest of the list
     // (and the reader's scroll position) stays put.
     el.list.addEventListener("click", (e) => {
+      if (e.target.closest('[data-retry-jobs]')) { scheduleRemote(); return; }
+      const more = e.target.closest('[data-company-more]');
+      if (more) {
+        state.selected.company.clear(); state.selected.company.add(more.dataset.companyMore);
+        setView('flat', true); return;
+      }
       const head = e.target.closest(".cg-head");
       if (!head) return;
       const company = head.dataset.company;
@@ -1269,7 +1352,7 @@
     if (el.expandAll) {
       el.expandAll.addEventListener("click", () => {
         const start = (state.page - 1) * COMPANIES_PER_PAGE;
-        buildGroups(sortJobs(filtered())).slice(start, start + COMPANIES_PER_PAGE)
+        (cfg.loadPage ? (remoteData?.groups || []) : buildGroups(sortJobs(filtered())).slice(start, start + COMPANIES_PER_PAGE))
           .forEach((g) => state.expanded.add(g.company));
         renderResults();
       });
@@ -1292,6 +1375,7 @@
         state.range = "all"; state.salary = "all"; state.query = ""; state.hideOpened = false;
         state.hideOpenedCompanies = false;
         if (el.search) el.search.value = "";
+        if (el.mobileSearch) el.mobileSearch.value = "";
         if (el.dateSelect) el.dateSelect.value = "all";
         if (el.salarySelect) el.salarySelect.value = "all";
         if (el.hideOpened) el.hideOpened.checked = false;
@@ -1302,9 +1386,12 @@
 
     if (el.viewFlat) el.viewFlat.classList.add("active");
 
-    let booted = false;
-
     const view = {
+      load() {
+        booted = true;
+        if (openedWith) applyUrlState(openedWith);
+        else render();
+      },
       setJobs(jobs) {
         state.jobs = jobs || [];
         render();
@@ -1364,6 +1451,9 @@
     global.addEventListener("popstate", () => {
       if (!booted) return; // data hasn't landed yet; setJobs will read the URL instead
       applyUrl();
+    });
+    global.addEventListener('seenchange', () => {
+      if (cfg.loadPage && (state.hideOpened || state.hideOpenedCompanies)) render();
     });
 
     // Wired here rather than from the pages so both get it automatically. presets.js

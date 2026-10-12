@@ -5,6 +5,10 @@ results.json
 # Build outputs.
 dist/
 sync.sql
+.catalogue/
+.env
+.env.*
+!.env.example
 
 node_modules/
 .DS_Store
@@ -20,3 +24,6 @@ backups/
 # rebuilt from it, so neither belongs in the repo — the repo itself stays dependency-free.
 aws/lambda/node_modules/
 aws/function.zip
+
+# Local match traces written by the file-backed trace store during development.
+.traces/
