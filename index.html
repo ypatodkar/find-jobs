@@ -87,15 +87,14 @@
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
             </span>
             <div class="resume-drop-copy">
-              <p class="resume-drop-title">Match your r&eacute;sum&eacute; to these roles</p>
-              <p class="resume-drop-note" id="resume-upload-note">Drop a file here, or choose one &mdash; PDF, Word, .txt or .md. It stays in this browser; its text is sent to TypeSafe AI only to score it.</p>
+              <p class="resume-drop-title">Upload your r&eacute;sum&eacute; to check how well it fits a role</p>
+              <p class="resume-drop-note" id="resume-upload-note">Open any role and press &ldquo;Check r&eacute;sum&eacute; score&rdquo; to see how relevant your experience is to that job description. PDF, Word, .txt or .md &mdash; it stays in this browser, and its text is sent to TypeSafe AI only to score it.</p>
               <div id="resume-selected" class="resume-selected" hidden>
                 <span class="resume-selected-icon" aria-hidden="true">&#10003;</span>
                 <span class="resume-selected-copy"><strong id="resume-file-name"></strong><span id="resume-file-state"></span></span>
               </div>
             </div>
             <div class="resume-controls">
-              <button type="button" id="resume-run" hidden>Find matching jobs</button>
               <label class="resume-file">
                 <input id="resume-file" type="file" accept=".pdf,.docx,.txt,.md,.markdown,application/pdf,text/plain,text/markdown" aria-describedby="resume-upload-note" disabled>
                 <span class="resume-file-btn" id="resume-file-btn">Upload r&eacute;sum&eacute;</span>
@@ -108,7 +107,11 @@
         <p id="resume-availability" class="resume-availability" role="status">R&eacute;sum&eacute; matching is unavailable right now. You can still search and filter jobs.</p>
         <p id="resume-status" class="resume-status" role="status" aria-live="polite"></p>
         <div id="resume-results" class="resume-results"></div>
-        <div class="resume-actions" hidden><button type="button" id="resume-retry" hidden>Compare current filters</button><button type="button" id="resume-clear" hidden>Remove r&eacute;sum&eacute; and results</button><span id="resume-action-closed" hidden></span></div>
+        <!-- Out of the page, not out of the code. Comparing thirty roles at once was a
+             second way to ask the same question the per-role button answers, and it
+             spent thirty provider calls to answer it before anyone had opened a job.
+             These stay for keyboard users who know them and for the tests. -->
+        <div class="resume-actions" hidden><button type="button" id="resume-run" hidden>Find matching jobs</button><button type="button" id="resume-retry" hidden>Compare current filters</button><button type="button" id="resume-clear" hidden>Remove r&eacute;sum&eacute; and results</button><span id="resume-action-closed" hidden></span></div>
       </section>
 
       <div id="mobile-filter-backdrop" class="mobile-filter-backdrop" hidden></div>

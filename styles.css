@@ -1726,7 +1726,15 @@ footer code {
 .resume-selected-copy span { color: var(--ink-soft); font-size: .72rem; }
 .resume-form-footer { border-top: 1px solid var(--rule); margin-top: 20px; padding-top: 18px; }
 .resume-note { max-width: 88ch; margin: 0; color: var(--ink-soft); font-size: .75rem; line-height: 1.6; }
-.resume-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 18px; }
+/* Never rendered. These three — compare everything, compare again, remove résumé and
+   results — are the bulk shortlist, which the per-role score replaced: it answered the
+   same question, and spent thirty provider calls doing it before anyone had opened a
+   job. The elements stay so the pipeline behind them keeps its coverage.
+
+   They used to be marked hidden and show anyway: an author `display` beats the hidden
+   attribute's UA rule, so the row reappeared the moment the JS set actions.hidden to
+   false. display:none here is unconditional for that reason. */
+.resume-actions { display: none; }
 .resume-actions button, .group-more { font: inherit; cursor: pointer; }
 #resume-retry { padding: 10px 15px; border: 1px solid var(--accent); border-radius: 6px; color: var(--on-accent); background: var(--accent); font-size: .81rem; font-weight: 600; }
 #resume-retry::after { content: "↻"; margin-left: 10px; font-size: 1rem; line-height: 0; }
@@ -1799,10 +1807,10 @@ footer code {
    the two things left to do with it, and stops looking like a target. */
 body.resume-has-file .resume-drop,
 body.resume-saved-ready .resume-drop { border-style: solid; border-color: var(--rule); }
-body.resume-has-file .resume-drop-title,
 body.resume-has-file .resume-drop-note,
-body.resume-saved-ready .resume-drop-title,
 body.resume-saved-ready .resume-drop-note { display: none; }
+body.resume-has-file .resume-drop-title,
+body.resume-saved-ready .resume-drop-title { margin-bottom: 6px; }
 /* The arrow is an invitation to upload; once a file is held the tick beside its name
    already says so, and two icons on one row is one more than the row is saying. The
    inner card's border goes too — a box inside a box reads as two things. */

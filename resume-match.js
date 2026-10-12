@@ -255,7 +255,7 @@
       // for 30 provider calls, and a picker that spends money the moment it closes
       // gives no chance to set filters first — which is what the comparison is scoped
       // to. showSaved() has already revealed the match button; pressing it is the ask.
-      fileState.textContent = 'Ready \u00b7 press \u201cFind matching jobs\u201d to compare';
+      fileState.textContent = 'Ready \u00b7 open a role and press \u201cCheck r\u00e9sum\u00e9 score\u201d';
       status.textContent = '';
     } catch (err) {
       if (current !== version) return;

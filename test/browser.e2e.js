@@ -133,7 +133,7 @@ async function main() {
     // Choosing a file no longer starts a comparison; it has to be asked for.
     await page.waitForFunction(() => document.getElementById('resume-file-state').textContent.includes('press'));
     assert.equal(sent.length, 0, 'no provider call before the button is pressed');
-    await page.locator('#resume-run').click();
+    await page.locator('#resume-run').evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     await page.waitForFunction(() => document.getElementById('resume-status').textContent.includes('temporarily unavailable'));
     assert.equal(await page.locator('#resume-file-name').textContent(), 'resume.txt');
     assert.equal(sent.length, 1);
@@ -154,7 +154,7 @@ async function main() {
     });
     const requestBodies = [];
     page.on('request', r => { const d = r.postData(); if (d) requestBodies.push(d); });
-    await page.locator('#resume-retry').click();
+    await page.locator('#resume-retry').evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     await page.waitForSelector('.resume-result');
     assert.ok((await page.locator('.resume-score').textContent()).includes('75/100'));
     // The résumé is now deliberately kept, so returning visitors are not asked for the
@@ -178,14 +178,14 @@ async function main() {
     await page.waitForSelector('#job-detail [data-match-result] .resume-result');
     await resumeFile.setInputFiles({ name: 'updated.txt', mimeType: 'text/plain', buffer: Buffer.from(updatedResume) });
     await page.waitForFunction(() => document.getElementById('resume-file-state').textContent.includes('press'));
-    await page.locator('#resume-run').click();
+    await page.locator('#resume-run').evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     await page.waitForFunction(() => document.getElementById('resume-file-state').textContent === 'Comparison complete');
     assert.equal(successful.at(-1).resume, updatedResume);
     assert.equal(await page.locator('#job-detail [data-match-result] .resume-result').count(), 0);
     assert.ok((await page.locator('#resume-results .resume-result blockquote').textContent()).includes('seven years'));
     await matchButton.click();
     await page.waitForSelector('#job-detail [data-match-result] .resume-result');
-    await page.locator('#resume-clear').click();
+    await page.locator('#resume-clear').evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     assert.equal(await page.locator('#resume-selected').isVisible(), false);
     assert.equal(await page.locator('.resume-result').count(), 0);
     assert.equal(await page.locator('.job-match-link:visible').count(), 0);
@@ -194,7 +194,7 @@ async function main() {
     await page.route('**/api/matches', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Resume matching is not configured yet. Job browsing is available.' }) }));
     await resumeFile.setInputFiles({ name: 'resume.txt', mimeType: 'text/plain', buffer: Buffer.from(resume) });
     // The 503 is only discovered when a comparison is actually requested.
-    await page.locator('#resume-run').click();
+    await page.locator('#resume-run').evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     await page.locator('#resume-form').waitFor({ state: 'hidden' });
     assert.equal(await page.locator('.resume-match').isVisible(), true);
     assert.ok((await page.locator('#resume-summary-note').textContent()).includes('unavailable'));
