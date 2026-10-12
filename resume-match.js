@@ -193,6 +193,43 @@
     }
   }
   retry.addEventListener('click', compare);
+  // Dropping a file hands it to the same input and fires the same change event, so
+  // there is one read path rather than two that drift. A page-level dragover guard
+  // stops the browser from navigating away when a file lands outside the zone —
+  // which otherwise discards whatever the person was in the middle of.
+  const dropZone = $('resume-drop');
+  if (dropZone) {
+    let depth = 0;
+    const show = on => dropZone.classList.toggle('is-dragging', on);
+    const carriesFile = e => [...(e.dataTransfer?.types || [])].includes('Files');
+    for (const type of ['dragenter', 'dragover']) {
+      dropZone.addEventListener(type, event => {
+        if (!matchingReady || !carriesFile(event)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+        if (type === 'dragenter') depth++;
+        show(true);
+      });
+    }
+    dropZone.addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; show(false); } });
+    dropZone.addEventListener('drop', event => {
+      if (!matchingReady || !carriesFile(event)) return;
+      event.preventDefault();
+      depth = 0; show(false);
+      const file = event.dataTransfer.files[0];
+      if (!file) return;
+      const carrier = new DataTransfer();
+      carrier.items.add(file);
+      fileInput.files = carrier.files;
+      fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    for (const type of ['dragover', 'drop']) {
+      window.addEventListener(type, event => {
+        if (carriesFile(event) && !dropZone.contains(event.target)) event.preventDefault();
+      });
+    }
+  }
+
   fileInput.addEventListener('change', async event => {
     if (!matchingReady) { event.target.value = ''; return; }
     const file = event.target.files[0]; if (!file) return;
