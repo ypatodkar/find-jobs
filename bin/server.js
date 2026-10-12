@@ -44,8 +44,22 @@ function sendJson(res, code, body) {
   res.end(s);
 }
 
-function serveStatic(req, res) {
-  const urlPath = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
+/**
+ * The decoded path of a request, or null if the request line is not something a URL
+ * parser accepts. Both steps throw on input a client can send by hand: `GET //` parses
+ * as a protocol-relative URL with no host, and `GET /%E0%A4` is an incomplete escape.
+ * Unguarded, either one rejects inside the async handler and takes the whole server
+ * down — a dev server that dies on a stray request looks like a bug in the page.
+ */
+function requestPath(raw) {
+  try {
+    return decodeURIComponent(new URL(raw, "http://localhost").pathname);
+  } catch {
+    return null;
+  }
+}
+
+function serveStatic(res, urlPath) {
   const rel = urlPath === "/" ? "index.html" : urlPath.replace(/^\/+/, "");
   const full = path.join(PUBLIC, rel);
 
@@ -74,7 +88,11 @@ function serveStatic(req, res) {
 const trimJson = (p) => p.replace(/\.json$/, "");
 
 const server = http.createServer(async (req, res) => {
-  const { pathname } = new URL(req.url, "http://localhost");
+  const pathname = requestPath(req.url);
+  if (pathname === null) {
+    res.writeHead(400, { "content-type": "text/plain" }).end("Bad request");
+    return;
+  }
   const route = trimJson(pathname);
 
   if (route === "/api/results") {
@@ -95,7 +113,7 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, payload);
   }
 
-  return serveStatic(req, res);
+  return serveStatic(res, pathname);
 });
 
 server.listen(PORT, () => {
