@@ -864,22 +864,25 @@ footer code {
   cursor: pointer;
 }
 .job-card-open:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
-.job.has-description .job-card-open { padding-right: 66px; }
+.job.has-description .job-card-open { padding-right: 152px; }
+/* Labelled rather than a bare "+". The glyph was the same width as the padding it
+   reserved, so it cost nothing and said nothing: people read it as "add". Keeping it
+   top-right rather than moving it into the flow keeps card height unchanged, which
+   matters when 45 of them are on screen. */
 .job-description-open {
   position: absolute;
   z-index: 1;
-  top: 16px;
+  top: 14px;
   right: 16px;
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 11px;
   border: 1px solid var(--rule-strong);
   border-radius: 7px;
   background: var(--bg);
   color: var(--ink-soft);
-  font: 400 1.35rem/1 var(--sans);
+  font: 500 .7rem/1.2 var(--sans);
+  white-space: nowrap;
   cursor: pointer;
 }
 .job-description-open:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-fill); }
@@ -887,7 +890,7 @@ footer code {
 .job-card-open:not(button):not(a) { cursor: default; }
 .job.in-group { background: var(--bg); border-radius: 7px; box-shadow: none; }
 .job.in-group .job-card-open { grid-template-columns: minmax(0, 1fr) minmax(125px, auto); padding: 12px 16px; }
-.job.in-group.has-description .job-card-open { padding-right: 66px; }
+.job.in-group.has-description .job-card-open { padding-right: 152px; }
 .job-logo { display: grid; place-items: center; width: 46px; height: 46px; overflow: hidden; border: 1px solid var(--rule); border-radius: 9px; background: var(--bg); color: var(--ink-soft); }
 .job-logo img { display: block; width: 100%; height: 100%; padding: 5px; box-sizing: border-box; object-fit: contain; }
 .job-logo img[hidden] { display: none; }
@@ -1486,12 +1489,24 @@ footer code {
   .view-tabs { margin-top: 0; }
   .results-bar { align-items: flex-start; }
   .job-card-open { grid-template-columns: 40px minmax(0, 1fr); gap: 10px 12px; padding: 14px; }
-  .job.has-description .job-card-open { padding-right: 54px; }
-  .job-description-open { top: 13px; right: 12px; width: 30px; height: 30px; }
+  .job.has-description .job-card-open { padding-right: 20px; }
+  /* Narrow cards have no room for a pill beside the title, so on phones it sits under
+     the card as a text action instead of overlapping the pay column. */
+  .job-description-open {
+    position: static;
+    margin: 0 0 12px 16px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink-faint);
+    font-size: .68rem;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
   .job-logo { width: 40px; height: 40px; }
   .job-aside { grid-column: 2; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 8px; padding-top: 0; text-align: left; }
   .job.in-group .job-card-open { grid-template-columns: minmax(0, 1fr); padding: 12px; }
-  .job.in-group.has-description .job-card-open { padding-right: 54px; }
+  .job.in-group.has-description .job-card-open { padding-right: 20px; }
   .job.in-group .job-aside { grid-column: 1; }
   .job-title { font-size: 1rem; }
   .job-company-opened { display: none; }

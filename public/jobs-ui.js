@@ -666,7 +666,7 @@
         ? `href="${escapeHtml(j.url)}" target="_blank" rel="noopener noreferrer" data-job-id="${escapeHtml(j.job_id || "")}" data-company="${escapeHtml(j.company)}" data-city="${escapeHtml(j.city || "")}" data-title="${escapeHtml(j.title)}" aria-label="Open posting for ${escapeHtml(j.title)} at ${escapeHtml(j.company)}"`
         : "";
       return `
-        <article class="job${inGroup ? " in-group" : ""}${cfg.loadPage ? " has-description" : ""}" data-job-id="${escapeHtml(j.job_id || "")}">
+        <article class="job${inGroup ? " in-group" : ""}${cfg.loadPage && j.hasDescription ? " has-description" : ""}" data-job-id="${escapeHtml(j.job_id || "")}">
           <${cardTag} class="job-card-open" ${cardProps}>
             ${logo}
             <span class="job-main">
@@ -676,7 +676,11 @@
             </span>
             <span class="job-aside">${payBit}${posted ? `<span class="job-posted">Posted ${escapeHtml(posted)}</span>` : ""}</span>
           </${cardTag}>
-          ${cfg.loadPage ? `<button type="button" class="job-description-open" data-description="${escapeHtml(j.job_id)}" aria-label="Read description for ${escapeHtml(j.title)} at ${escapeHtml(j.company)}" title="Read description"><span aria-hidden="true">+</span></button>` : ""}
+          ${/* Only offered when there is something behind it. The list says which jobs
+               carry a description — hasDescription rather than the text itself, which
+               is the whole reason a page of 45 is 162 KB — so a button that opens
+               "not available" never gets drawn. */
+            cfg.loadPage && j.hasDescription ? `<button type="button" class="job-description-open" data-description="${escapeHtml(j.job_id)}" aria-label="Read description for ${escapeHtml(j.title)} at ${escapeHtml(j.company)}">See description</button>` : ""}
           ${cfg.enableMatching ? `<button type="button" class="job-match-link" data-match="${escapeHtml(j.job_id)}" aria-label="Check my résumé against ${escapeHtml(j.title)} at ${escapeHtml(j.company)}">Check résumé</button>` : ""}
           <div class="job-match-result" data-match-result="${escapeHtml(j.job_id)}"></div>
         </article>`;
