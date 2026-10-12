@@ -42,10 +42,10 @@ jobs:
           node-version: "22"
 
       - name: Scrape all boards
-        run: node scrape.js
+        run: node bin/scrape.js
 
       - name: Build static site
-        run: node build.js
+        run: node bin/build.js
 
       # The D1 sync is gone rather than ported. It existed so a click could be joined
       # back to a job title, but the /click handler already writes company, title and

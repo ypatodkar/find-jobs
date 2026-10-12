@@ -1,4 +1,4 @@
-// Local dev server. Read payload builders live in `pipeline.js`, shared with the
+// Local dev server. Read payload builders live in `src/pipeline.js`, shared with the
 // static CI build, so this file is only transport.
 //
 // It answers the same `api/*.json` URLs that `build.js` writes as real files, which is
@@ -9,12 +9,18 @@ const http = require("http");
 const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
-const { BOARDS } = require("./boards");
-const { resultsPayload, allJobsPayload, firmPayload } = require("./pipeline");
+const { BOARDS } = require("../src/boards");
+const { resultsPayload, allJobsPayload, firmPayload } = require("../src/pipeline");
 
 const PORT = process.env.PORT || 4173;
-const ROOT = __dirname;
-const RESULTS_FILE = path.join(ROOT, "results.json");
+const REPO = path.join(__dirname, "..");
+const RESULTS_FILE = path.join(REPO, "results.json");
+
+// Static files are served from public/ and nowhere else, which is the same set
+// build.js ships. Rooting the server at the repo instead — as it used to — meant a
+// request for /.env or /src/scraper.js was answered, on a server bound to localhost
+// but still a wider door than the deployed site has.
+const PUBLIC = path.join(REPO, "public");
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -41,10 +47,10 @@ function sendJson(res, code, body) {
 function serveStatic(req, res) {
   const urlPath = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
   const rel = urlPath === "/" ? "index.html" : urlPath.replace(/^\/+/, "");
-  const full = path.join(ROOT, rel);
+  const full = path.join(PUBLIC, rel);
 
-  // Keep traversal inside the project directory.
-  if (!full.startsWith(ROOT + path.sep)) {
+  // Keep traversal inside the published directory.
+  if (!full.startsWith(PUBLIC + path.sep)) {
     res.writeHead(403).end("Forbidden");
     return;
   }

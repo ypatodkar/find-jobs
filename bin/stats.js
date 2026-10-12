@@ -2,11 +2,11 @@
 //
 // Click and visitor stats from the D1 analytics database.
 //
-//   node stats.js                overview, every user, top 20 jobs
-//   node stats.js --users        just the per-user table
-//   node stats.js --jobs         just the job table
-//   node stats.js --limit 50     how many jobs to list (default 20)
-//   node stats.js --json         the same numbers as JSON
+//   node bin/stats.js                overview, every user, top 20 jobs
+//   node bin/stats.js --users        just the per-user table
+//   node bin/stats.js --jobs         just the job table
+//   node bin/stats.js --limit 50     how many jobs to list (default 20)
+//   node bin/stats.js --json         the same numbers as JSON
 //
 // Reads the live database through wrangler, so it needs the same Cloudflare auth the
 // deploy uses. Every statement in this file is a SELECT; nothing here writes.
@@ -29,7 +29,7 @@
 const { execFileSync } = require("child_process");
 const path = require("path");
 
-const WORKER_DIR = path.join(__dirname, "worker");
+const WORKER_DIR = path.join(__dirname, "..", "worker");
 const DB = "vcjobs";
 
 const args = process.argv.slice(2);

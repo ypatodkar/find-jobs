@@ -2,9 +2,9 @@
 //
 // Candidate startups for the featured slot.
 //
-//   node feature-pick.js            eligible companies, best first
-//   node feature-pick.js --json     same, as JSON
-//   node feature-pick.js --days 14  widen the posting window
+//   node bin/feature-pick.js            eligible companies, best first
+//   node bin/feature-pick.js --json     same, as JSON
+//   node bin/feature-pick.js --days 14  widen the posting window
 //
 // The deterministic half of the daily feature: who is *eligible*. Which one is
 // actually interesting, and what to say about it, needs reading about the company —
@@ -22,7 +22,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const ROOT = __dirname;
+const ROOT = path.join(__dirname, "..");
 const ALL_JOBS = path.join(ROOT, "dist", "api", "all-jobs.json");
 const FEATURED = path.join(ROOT, "featured.json");
 
@@ -49,7 +49,7 @@ function loadFeatured() {
 
 function main() {
   if (!fs.existsSync(ALL_JOBS)) {
-    console.error("No dist/api/all-jobs.json — run `node build.js` first.");
+    console.error("No dist/api/all-jobs.json — run `node bin/build.js` first.");
     process.exit(1);
   }
 

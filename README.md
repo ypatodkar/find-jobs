@@ -6,8 +6,8 @@ roles across **19 US metros**.
 ## Run it
 
 ```bash
-node scrape.js     # populate results.json
-node server.js
+node bin/scrape.js     # populate results.json
+node bin/server.js
 ```
 
 Then open <http://localhost:4173>. No dependencies — Node 18+ only.
@@ -22,7 +22,7 @@ Between the twice-daily crons, to scrape and redeploy on demand:
 ./refresh.js --status     # last few runs, dispatch nothing
 ```
 
-The scrape runs on GitHub's runners and lands on Cloudflare Pages — `refresh.js`
+The scrape runs on GitHub's runners and lands on Cloudflare Pages — `bin/refresh.js`
 duplicates none of the pipeline, it just fires the `workflow_dispatch` on
 `deploy.yml` and reports each step back. Needs `gh auth login` once.
 
@@ -41,7 +41,7 @@ publish Pages from a private repo on a free plan. Cloudflare Pages will, and its
 bandwidth is unmetered.
 
 ```bash
-node build.js                                   # -> dist/
+node bin/build.js                                   # -> dist/
 npx wrangler pages deploy dist --project-name=find-jobs
 ```
 
@@ -60,8 +60,8 @@ private, and the twice-daily cron stays in one place. It needs two repository se
 | `CLOUDFLARE_API_TOKEN` | token with **Cloudflare Pages: Edit** |
 | `CLOUDFLARE_ACCOUNT_ID` | `3fcdcde298fb0fbf4c9ba274e19bb40f` |
 
-`build.js` writes the three read endpoints as real files at the *same relative paths*
-`server.js` answers dynamically:
+`bin/build.js` writes the three read endpoints as real files at the *same relative paths*
+`bin/server.js` answers dynamically:
 
 | | |
 |---|---|
@@ -72,8 +72,9 @@ private, and the twice-daily cron stays in one place. It needs two repository se
 That symmetry is the whole trick — the pages fetch one set of relative URLs and work
 unchanged in both places.
 
-`dist/` ships only browser files — `pipeline.js`, `scraper.js` and `ats.js` stay
-out of it.
+`dist/` is `public/` plus those generated files. Because the browser half lives in its
+own directory, the scrape internals in `src/` cannot reach the public site by accident —
+the build copies one directory rather than a list someone has to keep correct.
 
 Two things to know. GitHub disables cron workflows after 60 days of repository
 inactivity — it emails you, and re-enabling is one click. And scheduled runs on shared
@@ -101,7 +102,7 @@ Both job pages share one filter bar: eight multi-select dropdowns — **City, Ro
 Seniority, Company, Industry, Company size, Funding, Investor** (Investor only on
 `index.html`) — plus **Posted**, **Salary**, and **Sort**.
 
-Cities come from `METROS` in `boards.js` — 19 metros, each with the query values the
+Cities come from `METROS` in `src/boards.js` — 19 metros, each with the query values the
 two board platforms accept plus a pattern that buckets raw location strings (so
 `Bellevue, WA` lands under Seattle and `Palo Alto` under Bay Area). No city is
 pre-selected: an empty City filter means all tracked metros. Add or retire a metro by
@@ -133,7 +134,7 @@ Founders Fund and the AI-native specialists publish no job listings; Y Combinato
 
 **2. Enrichment — each company's own job board.** VC boards lag and drop roles, so
 every apply URL from phase 1 is parsed to work out which ATS that company uses
-(`ats.js`), then its openings are fetched straight from the source:
+(`src/ats.js`), then its openings are fetched straight from the source:
 
 | ATS | Coverage | Endpoint |
 |---|---|---|
@@ -155,7 +156,7 @@ timeouts; a 404 is treated as permanent. Failures are recorded in
 Records which roles get opened. **Nothing is rendered on the site** — the numbers are
 for you, via SQL.
 
-Every job carries a `job_id` (`id.js`), built from the ATS's own posting id where one
+Every job carries a `job_id` (`src/id.js`), built from the ATS's own posting id where one
 exists and a hash of company/title/city otherwise:
 
 ```
@@ -178,7 +179,7 @@ Storage is Cloudflare D1 (`schema.sql`) behind a Worker (`worker/`):
 | `POST /click` | one click → a row in `clicks` + `jobs.clicks + 1` | origin-allowlisted |
 | `GET /counts` | `{ job_id: clicks }` | `ADMIN_TOKEN` — the site never calls it |
 
-`track.js` is the browser half — a single delegated listener, `sendBeacon`, and a
+`public/track.js` is the browser half — a single delegated listener, `sendBeacon`, and a
 hard rule that it can never interfere with the link. It is **inert until you set
 `ENDPOINT`** to your deployed Worker.
 
@@ -186,7 +187,7 @@ Setup:
 
 ```bash
 npx wrangler d1 create vcjobs                             # id → worker/wrangler.toml
-npx wrangler d1 execute vcjobs --remote --file=schema.sql
+npx wrangler d1 execute vcjobs --remote --file=worker/schema.sql
 cd worker
 npx wrangler secret put ADMIN_TOKEN                       # guards GET /counts
 npx wrangler deploy                                       # URL → ENDPOINT in track.js
@@ -206,11 +207,11 @@ the `job_id` pattern and `STRICT` bound that, and a Cloudflare rate-limiting rul
 Then after each scrape, push job metadata into D1:
 
 ```bash
-node sync-jobs.js
+node bin/sync-jobs.js
 npx wrangler d1 execute vcjobs --remote --file=sync.sql
 ```
 
-`sync-jobs.js` never writes `clicks` or `first_seen`, and never deletes: a role that
+`bin/sync-jobs.js` never writes `clicks` or `first_seen`, and never deletes: a role that
 comes off the boards is marked `active = 0` so a click recorded last week still
 resolves to a company and a title. `results.json` is overwritten every scrape, so this
 table is the only place posting history survives.
@@ -228,9 +229,9 @@ Counts are raw — your own clicks and reloads inflate them.
 
 ## Accounts
 
-Sign in with GitHub or Google to carry your "opened" history (`track.js`'s Seen store)
+Sign in with GitHub or Google to carry your "opened" history (`public/track.js`'s Seen store)
 across devices. Same Worker and D1 database as click tracking above — no second
-backend. `auth.js` is the browser half; like `track.js` it is **inert until you set
+backend. `auth.js` is the browser half; like `public/track.js` it is **inert until you set
 `ENDPOINT`**.
 
 | Route | Purpose | Access |
@@ -271,29 +272,46 @@ Setup, once `vcjobs-clicks` from the click-tracking section above is deployed:
    both OAuth apps' callback URLs to the new domain.
 4. **Apply the schema and deploy**:
    ```bash
-   npx wrangler d1 execute vcjobs --remote --file=schema.sql
+   npx wrangler d1 execute vcjobs --remote --file=worker/schema.sql
    npx wrangler deploy
    ```
-5. Set `ENDPOINT` in `auth.js` to the same URL you set in `track.js`.
+5. Set `ENDPOINT` in `auth.js` to the same URL you set in `public/track.js`.
+
+## Layout
+
+Four directories, split by who runs the code — which is also the split that matters for
+safety, since only one of them is ever published.
+
+| Directory | What it holds | Who runs it |
+|---|---|---|
+| `public/` | the site: pages, stylesheet, fonts, and every browser script | the visitor's browser |
+| `src/` | scraping and payload building — no HTTP server, no CLI, no filesystem writes | imported, never run directly |
+| `bin/` | one file per command: `scrape`, `build`, `server`, `sync-jobs`, `stats`, `feature-pick`, `refresh` | you, or CI |
+| `test/` | `node --test test/` | you, or CI |
+
+Plus `aws/` (the Lambda and Postgres schema that serve the live API), `worker/` (the
+Cloudflare Worker and D1 schema it replaced), `migrations/`, and `docs/`.
+
+`src/` holding nothing that touches the network or the disk is the rule worth keeping:
+it is why `bin/server.js` (live, SSE progress) and `bin/scrape.js` / `bin/build.js`
+(headless, for CI) can be thin wrappers over one implementation instead of three.
 
 ## Editing
 
-- `data.js` — firm metadata (name, tier, AI signal, links). Shared by both pages.
-- `boards.js` — board IDs, target cities, and the role-matching / exclusion patterns.
-- `match.js` — the shared keep/skip decision, so a role is judged the same whether it
-  came from a VC board or a company's ATS.
-- `jobs-ui.js` — the browser-side job browser (all filters, the multi-select pickers,
-  the activity chart, the result list). Both `firm.html` and `all.html` use it, so a
-  fix to filtering lands on both pages at once.
-- `scraper.js` — the two VC-board platform adapters.
-- `ats.js` — ATS detection, the three company-board adapters, and the company registry.
-- `pipeline.js` — the three-phase scrape and the three read payloads, with no HTTP or
-  filesystem in them. `server.js` (live, SSE progress) and `scrape.js`/`build.js`
-  (headless, for CI) are both thin wrappers, so there is one implementation to fix.
-- `id.js` — stable job ids. See [Click tracking](#click-tracking).
+- `public/data.js` — firm metadata (name, tier, AI signal, links). Shared by both pages.
+- `src/boards.js` — board IDs, target cities, and the role-matching / exclusion patterns.
+- `src/match.js` — the shared keep/skip decision, so a role is judged the same whether
+  it came from a VC board or a company's ATS.
+- `public/jobs-ui.js` — the browser-side job browser (all filters, the multi-select
+  pickers, the activity chart, the result list). Both `firm.html` and `index.html` use
+  it, so a fix to filtering lands on both pages at once.
+- `src/scraper.js` — the two VC-board platform adapters.
+- `src/ats.js` — ATS detection, the three company-board adapters, and the company registry.
+- `src/pipeline.js` — the three-phase scrape and the three read payloads.
+- `src/id.js` — stable job ids. See [Click tracking](#click-tracking).
 
-To widen or narrow which roles match, edit `ROLE_PATTERNS` and `EXCLUDE_TITLE` in `boards.js`.
-To change cities, edit `LOCATIONS` and `CITY_MATCHERS` in the same file.
+To widen or narrow which roles match, edit `ROLE_PATTERNS` and `EXCLUDE_TITLE` in
+`src/boards.js`. To change cities, edit `LOCATIONS` and `CITY_MATCHERS` in the same file.
 
 ## Note
 

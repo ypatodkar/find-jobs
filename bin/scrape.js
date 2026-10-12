@@ -1,15 +1,15 @@
 // Headless scrape, for CI and for populating a fresh clone.
 //
-//   node scrape.js
+//   node bin/scrape.js
 //
 // Runs the shared pipeline and writes results.json as a one-shot process suitable
 // for local use and scheduled automation.
 
 const fsp = require("fs/promises");
 const path = require("path");
-const { runScrape, failedPlatforms, failedBoards } = require("./pipeline");
+const { runScrape, failedPlatforms, failedBoards } = require("../src/pipeline");
 
-const RESULTS_FILE = path.join(__dirname, "results.json");
+const RESULTS_FILE = path.join(__dirname, "..", "results.json");
 
 async function main() {
   const started = Date.now();

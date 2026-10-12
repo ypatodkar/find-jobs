@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { BOARDS } = require("../boards");
-const { failedPlatforms, failedBoards } = require("../pipeline");
+const { BOARDS } = require("../src/boards");
+const { failedPlatforms, failedBoards } = require("../src/pipeline");
 
 function resultWith(statusFor) {
   const firms = {};

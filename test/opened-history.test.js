@@ -31,7 +31,7 @@ function browser(history = {}, jobs = [], failWrites = false) {
     requestAnimationFrame() {},
   });
   for (const file of ["track.js", "jobs-ui.js"]) {
-    vm.runInContext(fs.readFileSync(path.join(__dirname, "..", file), "utf8"), context);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "public", file), "utf8"), context);
   }
   return {
     context, window,

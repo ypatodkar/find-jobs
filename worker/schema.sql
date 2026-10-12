@@ -1,5 +1,5 @@
 -- D1 schema for job metadata, click tracking, and accounts.
---   npx wrangler d1 execute vcjobs --remote --file=schema.sql
+--   npx wrangler d1 execute vcjobs --remote --file=worker/schema.sql
 
 CREATE TABLE IF NOT EXISTS jobs (
   job_id     TEXT PRIMARY KEY,

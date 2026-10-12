@@ -1,6 +1,6 @@
 // Builds the deployable static site into dist/.
 //
-//   node build.js
+//   node bin/build.js
 //
 // Turns the three read endpoints server.js answers dynamically into real files at the
 // same relative paths, so the pages need no code change between local and hosted:
@@ -12,25 +12,24 @@
 const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
-const { BOARDS } = require("./boards");
-const { resultsPayload, allJobsPayload, firmPayload } = require("./pipeline");
+const { BOARDS } = require("../src/boards");
+const { resultsPayload, allJobsPayload, firmPayload } = require("../src/pipeline");
 
-const ROOT = __dirname;
-const DIST = path.join(ROOT, "dist");
-const RESULTS_FILE = path.join(ROOT, "results.json");
+const REPO = path.join(__dirname, "..");
+const DIST = path.join(REPO, "dist");
+const RESULTS_FILE = path.join(REPO, "results.json");
 
-// Everything the browser needs. Server-side files (pipeline, scraper, ats, …) are
-// deliberately absent — shipping them would put the scrape internals on the public site.
-const ASSETS = [
-  "index.html", "firms.html", "firm.html", "about.html",
-  "styles.css", "og.png", "robots.txt", "sitemap.xml", "404.html",
-  "fonts/geist-sans-400.woff2", "fonts/geist-sans-500.woff2",
-  "fonts/geist-sans-600.woff2", "fonts/geist-sans-700.woff2",
-  "api-config.js", "data.js", "jobs-ui.js", "presets.js", "filter-drawer.js", "all.js", "app.js", "firm.js", "track.js", "theme.js", "visitor.js", "viewed.js", "counter.js", "heart.js", "feedback.js",
-  // Content, not code: rewritten by the /feature command between scrapes, and shipped
-  // as-is so the browser can fetch it at the same relative path server.js serves.
-  "featured.js", "featured.json",
-];
+// public/ is the site, copied wholesale and at the same relative paths the dev server
+// answers. It used to be a hand-maintained list here, which existed to keep server-side
+// files (pipeline, scraper, ats, …) off the public site — the directory now guarantees
+// that by construction, so adding a page no longer means remembering to edit this file.
+const PUBLIC = path.join(REPO, "public");
+
+// What the list did still earn: refusing to publish a site with a hole in it. A copy of
+// a directory cannot notice a file someone deleted, so the pages and the stylesheet are
+// named and checked. Anything else going missing degrades one feature; these four
+// missing means there is no site.
+const REQUIRED = ["index.html", "firms.html", "firm.html", "styles.css"];
 
 async function writeJson(rel, body) {
   const full = path.join(DIST, rel);
@@ -41,7 +40,7 @@ async function writeJson(rel, body) {
 
 async function main() {
   if (!fs.existsSync(RESULTS_FILE)) {
-    console.error("No results.json — run `node scrape.js` first.");
+    console.error("No results.json — run `node bin/scrape.js` first.");
     process.exit(1);
   }
   const data = JSON.parse(await fsp.readFile(RESULTS_FILE, "utf8"));
@@ -50,21 +49,14 @@ async function main() {
   await fsp.mkdir(DIST, { recursive: true });
 
   // --- static assets ---
-  const missing = [];
-  for (const rel of ASSETS) {
-    const src = path.join(ROOT, rel);
-    if (!fs.existsSync(src)) {
-      missing.push(rel);
-      continue;
-    }
-    const destination = path.join(DIST, rel);
-    await fsp.mkdir(path.dirname(destination), { recursive: true });
-    await fsp.copyFile(src, destination);
-  }
+  const missing = REQUIRED.filter((rel) => !fs.existsSync(path.join(PUBLIC, rel)));
   if (missing.length) {
-    console.error(`Missing asset(s), refusing to build a broken site: ${missing.join(", ")}`);
+    console.error(`Missing from public/, refusing to build a broken site: ${missing.join(", ")}`);
     process.exit(1);
   }
+  await fsp.cp(PUBLIC, DIST, { recursive: true });
+  const assetCount = (await fsp.readdir(PUBLIC, { recursive: true, withFileTypes: true }))
+    .filter((e) => e.isFile()).length;
 
   // Tells GitHub Pages not to run the output through Jekyll, which would drop any
   // file or directory beginning with an underscore.
@@ -84,7 +76,7 @@ async function main() {
   }
 
   const jobs = allJobsPayload(data).jobs.length;
-  console.log(`dist/ built — ${ASSETS.length} assets, ${firmCount} firm files, ${jobs} roles`);
+  console.log(`dist/ built — ${assetCount} assets, ${firmCount} firm files, ${jobs} roles`);
   console.log(`data: ${(bytes / 1048576).toFixed(2)} MB uncompressed (hosts serve it gzipped)`);
   console.log(`scrapedAt: ${data.scrapedAt}`);
 }

@@ -1,6 +1,6 @@
 // Turns the latest results.json into an idempotent SQL upsert for D1.
 //
-//   node sync-jobs.js
+//   node bin/sync-jobs.js
 //   npx wrangler d1 execute vcjobs --remote --file=sync.sql
 //
 // Deliberately never touches `clicks` or `first_seen` — those are the two columns
@@ -10,8 +10,8 @@
 const fs = require("fs");
 const path = require("path");
 
-const RESULTS = process.argv[2] || path.join(__dirname, "results.json");
-const OUT = process.argv[3] || path.join(__dirname, "sync.sql");
+const RESULTS = process.argv[2] || path.join(__dirname, "..", "results.json");
+const OUT = process.argv[3] || path.join(__dirname, "..", "sync.sql");
 // D1 rejects an over-long statement with SQLITE_TOOBIG. At ~800 bytes a row, 200
 // rows produced ~160 KB statements and failed; 50 keeps each one near 40 KB with
 // plenty of headroom for longer titles and market lists.
