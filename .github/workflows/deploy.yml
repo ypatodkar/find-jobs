@@ -41,6 +41,13 @@ jobs:
         with:
           node-version: "22"
 
+      # Ahead of the scrape, not after it. The tests cover the keep/skip rules and the
+      # payload builders the scrape depends on, and they take under a second — paying
+      # that before spending ~600 outbound requests is free, and a rule broken by the
+      # last commit should stop the run rather than get published.
+      - name: Test
+        run: node --test test/
+
       - name: Scrape all boards
         run: node bin/scrape.js
 

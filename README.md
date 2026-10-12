@@ -1,25 +1,27 @@
 # Find Jobs
 
-Tracks 37 US venture firms and scrapes their portfolio job boards for engineering
-roles across **19 US metros**.
+Tracks 70 US venture firms — 55 with a scrapeable board — and pulls engineering roles
+from their portfolio companies across **19 US metros**.
 
 ## Run it
 
 ```bash
 node bin/scrape.js     # populate results.json
-node bin/server.js
+node bin/server.js     # serves public/ plus the api/* routes
+node --test test/      # the suite CI runs before every scrape
 ```
 
-Then open <http://localhost:4173>. No dependencies — Node 18+ only.
+Then open <http://localhost:4173>. No dependencies — Node 20+ only (the build reads
+`public/` with a recursive `readdir`, which landed in 20.1).
 
 ## Refresh the live feed
 
 Between the twice-daily crons, to scrape and redeploy on demand:
 
 ```bash
-./refresh.js              # dispatch, then watch it to completion
-./refresh.js --no-watch   # dispatch and get your prompt back
-./refresh.js --status     # last few runs, dispatch nothing
+./bin/refresh.js              # dispatch, then watch it to completion
+./bin/refresh.js --no-watch   # dispatch and get your prompt back
+./bin/refresh.js --status     # last few runs, dispatch nothing
 ```
 
 The scrape runs on GitHub's runners and lands on Cloudflare Pages — `bin/refresh.js`
@@ -67,7 +69,7 @@ private, and the twice-daily cron stays in one place. It needs two repository se
 |---|---|
 | `api/results.json` | firm index + role counts |
 | `api/all-jobs.json` | every role, deduped |
-| `api/firm/<id>.json` | one per firm, all 37 |
+| `api/firm/<id>.json` | one per firm, all 70 |
 
 That symmetry is the whole trick — the pages fetch one set of relative URLs and work
 unchanged in both places.
