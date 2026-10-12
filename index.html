@@ -71,46 +71,36 @@
         <div class="stats" id="all-stats"></div>
       </header>
 
+      <!-- One button, not a panel. Everything that used to sit here — a kicker, a
+           heading, a status line, an expander — was explaining a feature instead of
+           offering it. The only thing to do before a résumé exists is upload one, and
+           the only thing to do after is match it, so those are the controls. -->
       <section class="resume-match is-unavailable" aria-labelledby="resume-heading">
-        <details id="resume-panel">
-          <summary>
-            <span class="resume-summary-copy">
-              <span class="resume-kicker">A more personal search</span>
-              <span id="resume-heading">Find jobs that fit your experience</span>
-              <span class="resume-summary-note" id="resume-summary-note">Résumé matching is unavailable right now.</span>
-            </span>
-            <span class="resume-summary-action"><span class="resume-action-closed" id="resume-action-closed">View status</span><span class="resume-action-open">Close</span><span class="resume-action-arrow" aria-hidden="true">↗</span></span>
-          </summary>
-          <div class="resume-panel-body">
-            <p id="resume-availability" class="resume-availability" role="status">Résumé matching is unavailable right now. You can still search and filter jobs.</p>
-            <div id="resume-form" hidden>
-              <!-- Two controls, and only one of them is ever the obvious thing to press.
-                   With a résumé saved, matching is one click and uploading is the quiet
-                   alternative; with none, uploading is the only thing to do. Everything
-                   that used to be a separate button here said the same as one of these
-                   two: "Compare current filters" is this match, "Remove résumé and
-                   results" is this forget. -->
-              <div class="resume-controls">
-                <button type="button" id="resume-run" hidden>Find matching jobs for r&eacute;sum&eacute;</button>
-                <label class="resume-file">
-                  <input id="resume-file" type="file" accept=".pdf,.docx,.txt,.md,.markdown,application/pdf,text/plain,text/markdown" aria-describedby="resume-upload-note" disabled>
-                  <span class="resume-file-btn" id="resume-file-btn">Upload r&eacute;sum&eacute;</span>
-                </label>
-                <button type="button" id="resume-forget" class="resume-forget" hidden>Forget it</button>
-              </div>
-              <p id="resume-upload-note" class="resume-upload-note">PDF, Word, .txt or .md. Compares up to 30 jobs from your current filters. Your r&eacute;sum&eacute; stays in this browser; its text is sent to TypeSafe AI only to score it.</p>
-              <div id="resume-selected" class="resume-selected" hidden>
-                <span class="resume-selected-icon" aria-hidden="true">&#10003;</span>
-                <span class="resume-selected-copy"><strong id="resume-file-name"></strong><span id="resume-file-state"></span></span>
-              </div>
-              <!-- Kept for the tests and for keyboard users who know them; the controls
-                   above now cover both actions, so these are not shown. -->
-              <div class="resume-actions" hidden><button type="button" id="resume-retry" hidden>Compare current filters</button><button type="button" id="resume-clear" hidden>Remove r&eacute;sum&eacute; and results</button></div>
+        <h2 id="resume-heading" class="resume-heading">Résumé matching</h2>
+        <div class="resume-bar">
+          <div id="resume-form" hidden>
+            <div class="resume-controls">
+              <label class="resume-file">
+                <input id="resume-file" type="file" accept=".pdf,.docx,.txt,.md,.markdown,application/pdf,text/plain,text/markdown" aria-describedby="resume-upload-note" disabled>
+                <span class="resume-file-btn" id="resume-file-btn">Upload r&eacute;sum&eacute;</span>
+              </label>
+              <button type="button" id="resume-run" hidden>Find matching jobs</button>
+              <button type="button" id="resume-forget" class="resume-forget" hidden>Forget it</button>
             </div>
-            <p id="resume-status" class="resume-status" role="status" aria-live="polite"></p>
-            <div id="resume-results" class="resume-results"></div>
+            <div id="resume-selected" class="resume-selected" hidden>
+              <span class="resume-selected-icon" aria-hidden="true">&#10003;</span>
+              <span class="resume-selected-copy"><strong id="resume-file-name"></strong><span id="resume-file-state"></span></span>
+            </div>
           </div>
-        </details>
+          <span class="resume-summary-note" id="resume-summary-note">R&eacute;sum&eacute; matching is unavailable right now.</span>
+        </div>
+        <p id="resume-upload-note" class="resume-upload-note">PDF, Word, .txt or .md. Your r&eacute;sum&eacute; stays in this browser; its text is sent to TypeSafe AI only to score it.</p>
+        <p id="resume-availability" class="resume-availability" role="status">R&eacute;sum&eacute; matching is unavailable right now. You can still search and filter jobs.</p>
+        <p id="resume-status" class="resume-status" role="status" aria-live="polite"></p>
+        <div id="resume-results" class="resume-results"></div>
+        <!-- Kept for keyboard users who know them and for the tests; the controls above
+             cover both actions, so these stay out of the way. -->
+        <div class="resume-actions" hidden><button type="button" id="resume-retry" hidden>Compare current filters</button><button type="button" id="resume-clear" hidden>Remove r&eacute;sum&eacute; and results</button><span id="resume-action-closed" hidden></span></div>
       </section>
 
       <div id="mobile-filter-backdrop" class="mobile-filter-backdrop" hidden></div>

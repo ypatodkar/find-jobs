@@ -688,8 +688,9 @@
             ${cfg.loadPage && j.hasDescription ? `<button type="button" class="job-description-open" data-description="${escapeHtml(j.job_id)}" aria-label="Read description for ${escapeHtml(j.title)} at ${escapeHtml(j.company)}">See description</button>` : ""}
             ${j.url ? `<a class="job-open-role" href="${escapeHtml(j.url)}" target="_blank" rel="noopener noreferrer" data-job-id="${escapeHtml(j.job_id || "")}" data-company="${escapeHtml(j.company)}" data-city="${escapeHtml(j.city || "")}" data-title="${escapeHtml(j.title)}" aria-label="Open the posting for ${escapeHtml(j.title)} at ${escapeHtml(j.company)}">Open role <span aria-hidden="true">↗</span></a>` : ""}
           </div>
-          ${cfg.enableMatching ? `<button type="button" class="job-match-link" data-match="${escapeHtml(j.job_id)}" aria-label="Check my résumé against ${escapeHtml(j.title)} at ${escapeHtml(j.company)}">Check résumé</button>` : ""}
-          <div class="job-match-result" data-match-result="${escapeHtml(j.job_id)}"></div>
+          ${/* The score lives with the description now, not on the row. A number is
+               only worth reading next to what produced it, and a card has no room to
+               show why. Opening a role puts the button and its answer in the pane. */ ""}
         </article>`;
     }
 

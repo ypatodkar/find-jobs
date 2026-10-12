@@ -30,7 +30,7 @@ async function main() {
     assert.equal(await page.locator('.resume-match').isVisible(), true);
     assert.ok((await page.locator('#resume-summary-note').textContent()).includes('unavailable'));
     assert.equal(await page.locator('#resume-form').isVisible(), false);
-    assert.equal(await page.locator('#job-list .job-match-link:visible').count(), 0);
+    assert.equal(await page.locator('.job-match-link:visible').count(), 0);
     await page.unroute('**/api/jobs/config', unavailableConfig);
     const oldApiConfig = route => route.fulfill({ status: 404, contentType: 'text/plain', body: 'Not found' });
     await page.route('**/api/jobs/config', oldApiConfig);
@@ -73,7 +73,7 @@ async function main() {
     assert.equal(await posting.title(), 'Original posting');
     assert.equal(await page.evaluate(() => window.Seen.has('job_0')), true);
     await posting.close();
-    assert.equal(await page.locator('#job-list .job-match-link:visible').count(), 0);
+    assert.equal(await page.locator('.job-match-link:visible').count(), 0);
     assert.equal(await page.locator('#job-list .job').first().locator('.job-work-mode').textContent(), 'Remote option');
     const remoteRow = page.locator('#job-list .job').filter({ hasText: 'Frontend Engineer 001' });
     assert.equal(await remoteRow.locator('.job-place').textContent(), 'Remote');
@@ -114,10 +114,9 @@ async function main() {
     await page.locator('#advanced-filters > summary').click();
     assert.ok(await page.locator('#sum-company').isVisible());
     await page.locator('#advanced-filters > summary').click();
-    // The compact invitation keeps the job filters visible until matching is requested.
-    assert.equal(await page.locator('#resume-panel').evaluate(el => el.open), false);
-    await page.locator('#resume-panel summary').click();
-    assert.equal(await page.locator('#resume-text, #resume-consent').count(), 0);
+    // One button, always on the page: there is no expander to open any more.
+    assert.equal(await page.locator('#resume-file-btn').isVisible(), true);
+    assert.equal(await page.locator('#resume-panel, #resume-text, #resume-consent').count(), 0);
     const resumeFile = page.locator('#resume-file');
     const resume = 'Built Python services on AWS and PostgreSQL for six years. Owned distributed systems and mentored four engineers. Delivered production deployments and monitoring.';
     const updatedResume = 'Built Python services on AWS and PostgreSQL for seven years. Owned distributed systems and mentored four engineers. Delivered production deployments and monitoring.';
@@ -170,22 +169,26 @@ async function main() {
     const sentBodies = requestBodies.filter(b => b.includes('Built Python'));
     assert.ok(sentBodies.every(b => !/\bstore\b|\bpersist\b|\bsave\b/.test(b)),
       'résumé is sent for comparison only, never with a store instruction');
-    const matchButton = page.locator('#job-list [data-match]').first();
+    // The score is asked for and answered in the description pane, not on the row.
+    assert.equal(await page.locator('#job-list [data-match]').count(), 0);
+    await page.locator('#job-list .job-card-open').first().click();
+    await page.waitForFunction(() => document.querySelector('#job-detail .description-body')?.textContent.includes('Five years'));
+    const matchButton = page.locator('#job-detail .job-score-check');
     await matchButton.click();
-    await page.waitForSelector('#job-list [data-match-result] .resume-result');
+    await page.waitForSelector('#job-detail [data-match-result] .resume-result');
     await resumeFile.setInputFiles({ name: 'updated.txt', mimeType: 'text/plain', buffer: Buffer.from(updatedResume) });
     await page.waitForFunction(() => document.getElementById('resume-file-state').textContent.includes('press'));
     await page.locator('#resume-run').click();
     await page.waitForFunction(() => document.getElementById('resume-file-state').textContent === 'Comparison complete');
     assert.equal(successful.at(-1).resume, updatedResume);
-    assert.equal(await page.locator('#job-list [data-match-result] .resume-result').count(), 0);
+    assert.equal(await page.locator('#job-detail [data-match-result] .resume-result').count(), 0);
     assert.ok((await page.locator('#resume-results .resume-result blockquote').textContent()).includes('seven years'));
     await matchButton.click();
-    await page.waitForSelector('#job-list [data-match-result] .resume-result');
+    await page.waitForSelector('#job-detail [data-match-result] .resume-result');
     await page.locator('#resume-clear').click();
     assert.equal(await page.locator('#resume-selected').isVisible(), false);
     assert.equal(await page.locator('.resume-result').count(), 0);
-    assert.equal(await page.locator('#job-list .job-match-link:visible').count(), 0);
+    assert.equal(await page.locator('.job-match-link:visible').count(), 0);
     fs.mkdirSync('.catalogue', { recursive: true });
     await page.screenshot({ path: '.catalogue/desktop.png', fullPage: false });
     await page.route('**/api/matches', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Resume matching is not configured yet. Job browsing is available.' }) }));
@@ -195,7 +198,7 @@ async function main() {
     await page.locator('#resume-form').waitFor({ state: 'hidden' });
     assert.equal(await page.locator('.resume-match').isVisible(), true);
     assert.ok((await page.locator('#resume-summary-note').textContent()).includes('unavailable'));
-    assert.equal(await page.locator('#job-list .job-match-link:visible').count(), 0);
+    assert.equal(await page.locator('.job-match-link:visible').count(), 0);
     assert.equal(await page.locator('#resume-selected').isVisible(), false);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(base);

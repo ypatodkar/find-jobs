@@ -48,6 +48,11 @@
   const wide = () => global.matchMedia && global.matchMedia(SPLIT).matches;
   let controller, lastOpener, openId = null;
 
+  // The id interpolated below can arrive from ?job= in the URL, so it is escaped
+  // before it reaches innerHTML. Everything else in that template is static.
+  const attr = v => String(v).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
   const pane = () => document.getElementById('job-detail');
   const paneInner = () => document.getElementById('job-detail-inner');
 
@@ -105,6 +110,10 @@
         <h2></h2>
         <p class="job-detail-meta"></p>
         <p class="job-detail-actions" hidden><a class="description-original" target="_blank" rel="noopener noreferrer">Open role ↗</a></p>
+      </div>
+      <div class="job-score" data-score-for="${attr(id)}">
+        <button type="button" class="job-score-check" data-match="${attr(id)}">Check résumé score</button>
+        <div class="job-match-result" data-match-result="${attr(id)}"></div>
       </div>
       <div class="description-body" aria-busy="true"></div>`;
     const body = inner.querySelector('.description-body');

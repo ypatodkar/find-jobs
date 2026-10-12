@@ -70,7 +70,6 @@
     runSaved.hidden = true; forget.hidden = true;
     actions.hidden = true;
     form.hidden = true;
-    $('resume-panel').open = false;
     section.classList.add('is-unavailable');
     availability.hidden = false;
     availability.textContent = 'Résumé matching is unavailable right now. You can still search and filter jobs.';
@@ -246,10 +245,11 @@
     const resume = resumeText;
     if (!resume) {
       slot.replaceChildren(node('p', 'Choose a r\u00e9sum\u00e9 file above to start matching jobs.', 'job-match-msg'));
-      const panel = $('resume-panel');
-      if (panel && !panel.open) panel.open = true;
+      // Nothing to expand any more — the upload button is always on the page — so
+      // take them to it and put the focus there. Scrolling the label rather than the
+      // input, because the input itself is visually hidden behind it.
+      ($('resume-file-btn') || fileInput).scrollIntoView({ behavior: 'smooth', block: 'center' });
       fileInput.focus({ preventScroll: true });
-      fileInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
