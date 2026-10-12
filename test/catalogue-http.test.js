@@ -1,0 +1,22 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { createServer } = require('../bin/server');
+const { MemoryCatalogue } = require('../aws/lambda/catalogue.cjs');
+const { fixture } = require('./fixtures/catalogue');
+test('local HTTP API pages, returns descriptions on demand, and blocks private files', async t => {
+  const catalogue = new MemoryCatalogue(fixture());
+  const server = createServer(async () => catalogue);
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  t.after(() => new Promise(resolve => { server.close(resolve); server.closeAllConnections(); }));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const r = await fetch(base + '/api/jobs/search', { method: 'POST', body: JSON.stringify({ page: 2 }), headers: { 'content-type': 'application/json' } });
+  assert.equal(r.status, 200); assert.equal(r.headers.get('cache-control'), 'no-store');
+  const page = await r.json(); assert.equal(page.jobs.length, 45); assert.equal(page.page, 2);
+  assert.ok(!JSON.stringify(page).includes('Five years'));
+  const detail = await (await fetch(base + '/api/jobs/' + page.jobs[0].job_id)).json();
+  assert.ok(detail.job.description.includes('Five years'));
+  assert.equal((await fetch(base + '/.env')).status, 404);
+  assert.equal((await fetch(base + '/results.json')).status, 404);
+  assert.equal((await fetch(base + '/api/jobs/search', { method: 'POST', body: '{broken' })).status, 400);
+  assert.equal((await fetch(base + '/api/matches', { method: 'POST', body: '{}', headers: { origin: 'https://unrelated.example' } })).status, 403);
+});

@@ -5,6 +5,10 @@ results.json
 # Build outputs.
 dist/
 sync.sql
+.catalogue/
+.env
+.env.*
+!.env.example
 
 node_modules/
 .DS_Store
@@ -27,8 +31,8 @@ aws/function.zip
 .env.*
 !.env.example
 
-# Local run artefacts: the catalogue cache and its screenshots, and the match trace
-# log. Both are regenerated on demand, and the traces carry résumé hashes and the
-# queries people ran.
+# Local run artefacts: the catalogue cache and its screenshots, and the match traces
+# the file-backed store writes in development. Both are regenerated on demand, and the
+# traces carry résumé hashes and the queries people ran.
 .catalogue/
 .traces/

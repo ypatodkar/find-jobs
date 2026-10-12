@@ -11,8 +11,28 @@ node bin/server.js     # serves public/ plus the api/* routes
 node --test test/      # the suite CI runs before every scrape
 ```
 
-Then open <http://localhost:4173>. No dependencies — Node 20+ only (the build reads
-`public/` with a recursive `readdir`, which landed in 20.1).
+Then open <http://localhost:4173>. No dependencies for browsing — Node 20+ only (the
+build reads `public/` with a recursive `readdir`, which landed in 20.1). The résumé
+tests need `npm ci`.
+
+## How jobs are served
+
+The pages no longer download the catalogue. They request a page at a time — 45 roles
+flat, 40 companies grouped — and the API does the filtering, sorting and faceting. That
+is what makes keeping descriptions affordable: a description is several kilobytes, and
+25,000 of them in one response is tens of megabytes nobody reads. The list carries
+summaries, and a description is fetched only when a posting is opened.
+
+Production serves this from the AWS Postgres catalogue; local development builds the
+same thing in memory from `results.json`, so both run the same query code.
+
+Choosing a résumé file reads it in the browser and stops there — pressing the match
+button is what starts a comparison, which shortlists likely roles and scores them with
+Jev using a server-only `TYPESAFE_API_KEY`. See [AWS catalogue and matching
+setup](aws/CATALOGUE.md) for the migration, deployment configuration, and tests.
+
+Sections below that describe static JSON feeds predate this and cover the original
+Cloudflare design; the catalogue guide above is the current path.
 
 ## Refresh the live feed
 

@@ -27,6 +27,9 @@
 //      run inside an explicit transaction, which is what batch() was providing.
 
 import pg from "pg";
+import { PostgresCatalogue } from './catalogue-postgres.cjs';
+import { route as catalogueRoute, parseBody } from './catalogue-api.cjs';
+import { importCatalogue } from './catalogue-import.cjs';
 
 const USER_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const JOB_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}_(ashby|greenhouse|lever|vc)_[a-z0-9-]{1,64}$/;
@@ -150,6 +153,23 @@ async function sendFeedbackEmail(payload) {
 }
 
 export const handler = async (event) => {
+  // Direct IAM-authenticated Lambda invocations only. Public Function URL bodies
+  // cannot enter this branch: AWS always wraps them in a requestContext.
+  if (!event.requestContext && event.action === 'import-catalogue') {
+    if (!process.env.CATALOGUE_BUCKET) throw new Error('CATALOGUE_BUCKET is required');
+    const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3');
+    const { readFile } = await import('node:fs/promises');
+    const object = await new S3Client({}).send(new GetObjectCommand({
+      Bucket: process.env.CATALOGUE_BUCKET, Key: 'catalogue/current.json',
+    }));
+    if (object.ContentLength > 200 * 1024 * 1024) throw new Error('Catalogue exceeds the import size limit');
+    const raw = await object.Body.transformToString();
+    const { createHash } = await import('node:crypto');
+    if (!event.sha256 || createHash('sha256').update(raw).digest('hex') !== event.sha256) throw new Error('Catalogue checksum mismatch');
+    const { data, metadata } = JSON.parse(raw);
+    await db().query(await readFile(new URL('./catalogue-schema.sql', import.meta.url), 'utf8'));
+    return importCatalogue(db(), data, metadata);
+  }
   const method = event.requestContext?.http?.method || "GET";
   const path = event.rawPath || "/";
   const headers = event.headers || {};
@@ -174,6 +194,22 @@ export const handler = async (event) => {
       "access-control-allow-methods": "GET, POST",
       "access-control-allow-headers": "content-type",
     });
+  }
+
+  if (path.startsWith('/jobs/') || path === '/matches' || path.startsWith('/traces')) {
+    const jsonHeaders = { ...(cors || {}), 'content-type': 'application/json', 'cache-control': 'private, no-store' };
+    if (!cors) return reply(403, jsonHeaders, JSON.stringify({ error: 'Origin not allowed.' }));
+    try {
+      const raw = event.isBase64Encoded ? Buffer.from(event.body || '', 'base64').toString('utf8') : event.body;
+      const auth = headers.authorization || headers.Authorization || '';
+      const result = await catalogueRoute(new PostgresCatalogue(db()), method, path, parseBody(raw), event.requestContext?.http?.sourceIp,
+        { token: auth.startsWith('Bearer ') ? auth.slice(7) : (event.queryStringParameters || {}).token,
+          query: event.queryStringParameters || {} });
+      return reply(200, jsonHeaders, JSON.stringify(result));
+    } catch (error) {
+      // Never log a resume, provider request, request body, or provider error body.
+      return reply(error.status || 503, jsonHeaders, JSON.stringify({ error: error.status ? error.message : 'The job service is temporarily unavailable.' }));
+    }
   }
 
   if (method === "POST" && path === "/click") {

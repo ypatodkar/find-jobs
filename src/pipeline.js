@@ -215,7 +215,7 @@ function packCompanies(jobs) {
  * Every role across every firm, deduped. The same company can sit in several
  * portfolios, so a job carries the list of investors that back it.
  */
-function allJobsPayload(data) {
+function allJobsPayload(data, { descriptions = false } = {}) {
   const merged = new Map();
   for (const [firmId, r] of Object.entries(data.firms || {})) {
     if (r.status !== "ok") continue;
@@ -236,7 +236,11 @@ function allJobsPayload(data) {
   return {
     scrapedAt: data.scrapedAt,
     enrichment: data.enrichment || null,
-    ...packCompanies([...merged.values()]),
+    ...packCompanies([...merged.values()].map((job) => {
+      if (descriptions) return job;
+      const { description, ...rest } = job;
+      return { ...rest, hasDescription: Boolean(description) };
+    })),
   };
 }
 
@@ -246,7 +250,7 @@ function allJobsPayload(data) {
  */
 function firmPayload(data, id) {
   const firm = (data.firms || {})[id];
-  if (firm) return { scrapedAt: data.scrapedAt, ...firm };
+  if (firm) return { scrapedAt: data.scrapedAt, ...firm, jobs: (firm.jobs || []).map(({ description, ...job }) => ({ ...job, hasDescription: Boolean(description) })) };
 
   const cfg = BOARDS[id];
   if (cfg && !cfg.platform) {

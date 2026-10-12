@@ -23,6 +23,9 @@ const RESULTS_FILE = path.join(REPO, "results.json");
 // answers. It used to be a hand-maintained list here, which existed to keep server-side
 // files (pipeline, scraper, ats, …) off the public site — the directory now guarantees
 // that by construction, so adding a page no longer means remembering to edit this file.
+//
+// This merge is the argument for it: the résumé-matching work added five browser files
+// and a page, and had to edit the list to ship them. Under public/ it needs no edit.
 const PUBLIC = path.join(REPO, "public");
 
 // What the list did still earn: refusing to publish a site with a hole in it. A copy of
