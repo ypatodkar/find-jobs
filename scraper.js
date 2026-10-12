@@ -40,6 +40,39 @@ const UA =
 
 const CONSIDER_PAGE_SIZE = 1000; // hard ceiling: 2000 returns an empty body
 // The param is snake_case; `hitsPerPage` is silently ignored and capped at 20.
+// Getro publishes a funding stage per company; the Consider boards publish one too, in
+// different words. Mapping Getro's onto Consider's vocabulary is what keeps the Funding
+// filter one list instead of two — "series_a" and "Series A" as separate options would
+// be a bug a reader would read as duplicated data.
+//
+// Unmapped values resolve to null rather than to a guess. "other" and "series_unknown"
+// are Getro saying it does not know, and inventing a stage for a company nobody has
+// classified would put a wrong fact on a public page about a real business.
+//
+// Deliberately absent: organization.head_count. It is a bucket index, not a count —
+// Snap Inc. reports 5 and Canva 6 — and checked against companies where Consider gives
+// a real number its buckets overlap far too much to be useful (a 2 spans 36 to 285
+// people). Writing it into staffCount would make the company-size filter lie.
+const GETRO_STAGE = {
+  pre_seed: "Pre-seed",
+  seed: "Seed",
+  series_a: "Series A",
+  series_b: "Series B",
+  series_c: "Series C",
+  series_d: "Series D",
+  series_e: "Series E",
+  series_f: "Series F",
+  series_g: "Series G",
+  series_h: "Series H",
+  series_i: "Series I",
+  series_c_plus: "Growth",
+  private_equity: "Growth",
+  acquisition: "M&A",
+  ipo: "IPO",
+  public: "Public",
+};
+const getroStage = (value) => GETRO_STAGE[String(value || "").toLowerCase()] || null;
+
 const GETRO_PAGE_SIZE = 500;
 const GETRO_MAX_PAGES = 12;
 const SCRAPE_RETRIES = 2; // backs off 2s then 4s
@@ -466,11 +499,10 @@ async function scrapeGetro(cfg) {
         sponsorship: sponsorship.status,
         sponsorshipEvidence: sponsorship.evidence,
         sponsorshipTypes: sponsorship.types,
-        // Getro's head_count is a bucket index, not a headcount, so size is left to
-        // the Consider boards which publish a real number.
+        // See GETRO_STAGE above for why stage crosses over and head_count does not.
         staffCount: null,
         size: null,
-        stage: null,
+        stage: getroStage(j.organization?.stage),
         markets: j.organization?.industry_tags || [],
         domain: null,
         logo: j.organization?.logo_url || null,
