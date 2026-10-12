@@ -138,8 +138,17 @@
             <button type="button" class="linkish" id="collapse-all">Collapse all</button>
           </div>
         </div>
-        <div id="job-list" class="job-list" hidden></div>
-        <nav id="job-pagination" class="pagination" aria-label="Job result pages" hidden></nav>
+        <div class="results-split" id="results-split">
+          <div class="results-main">
+            <div id="job-list" class="job-list" hidden></div>
+            <nav id="job-pagination" class="pagination" aria-label="Job result pages" hidden></nav>
+          </div>
+          <aside class="job-detail" id="job-detail" aria-label="Job description">
+            <div class="job-detail-inner" id="job-detail-inner">
+              <p class="job-detail-empty">Choose a role to read its description here.</p>
+            </div>
+          </aside>
+        </div>
         <div id="firm-message" class="firm-message" hidden></div>
       </section>
 

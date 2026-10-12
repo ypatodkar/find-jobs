@@ -112,6 +112,12 @@
     document.addEventListener(
       "click",
       function (e) {
+        // A card click that something already handled is a preview, not an open.
+        // The description pane cancels the navigation to show the posting beside
+        // the list; counting that as an open would inflate every figure on the
+        // site with people who only glanced at a role. jobs-api.js registers its
+        // listener before this one, so the flag is set by the time we see it.
+        if (e.defaultPrevented) return;
         var a = e.target && e.target.closest && e.target.closest(SELECTOR);
         if (!a) return;
         var id = a.getAttribute("data-job-id");

@@ -1735,27 +1735,90 @@ footer code {
 .resume-result blockquote { margin: 0 0 10px; border-left: 2px solid var(--rule-strong); padding-left: 11px; color: var(--ink-soft); font-size: .78rem; line-height: 1.6; }
 .job-description-link { display: inline-block; margin-top: 6px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: .72rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .group-more { margin: 12px 0; padding: 8px 12px; border: 1px solid var(--rule-strong); border-radius: 4px; color: var(--ink); background: var(--bg); font-size: .78rem; }
-.job-description-dialog {
-  width: min(820px, calc(100% - 32px));
-  max-height: min(88dvh, 880px);
-  padding: 0;
-  overflow: hidden;
-  color: var(--ink);
-  background: var(--bg);
-  border: 1px solid var(--rule-strong);
-  border-radius: 12px;
-  box-shadow: 0 22px 70px rgba(20, 12, 30, .24);
+
+/* ---- Two-pane results (list + description) ----------------------------------
+   Replaces a modal. A dialog could not be linked to, shared or opened in a tab,
+   and put a 6,000-character posting inside a scroll within a scroll. The pane is
+   part of the page: it keeps the list on screen, scrolls on its own, and the URL
+   carries the open job so a role can be sent to someone.
+
+   Below the breakpoint there is no room for two columns, so the same markup
+   becomes a full-screen panel over the list with a back control. */
+.results-split { display: block; }
+/* While the pane covers the list, the list must not scroll underneath it. */
+body.detail-open { overflow: hidden; }
+.job-detail { display: none; }
+.job-detail-empty { margin: 0; color: var(--ink-faint); font-size: .84rem; line-height: 1.6; }
+.job-detail-back { display: none; }
+
+@media (min-width: 1280px) {
+  .wrap { max-width: 1400px; }
+  .results-shell { max-width: none; }
+  .results-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(390px, 470px);
+    gap: 22px;
+    align-items: start;
+  }
+  .results-main { min-width: 0; }
+  .job-detail {
+    display: block;
+    position: sticky;
+    /* Clears the sticky masthead so the pane never hides under it. */
+    top: 18px;
+    max-height: calc(100vh - 36px);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .job-detail-inner {
+    max-height: calc(100vh - 36px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 22px 24px 24px;
+  }
 }
-.job-description-dialog::backdrop { background: rgba(17, 12, 25, .58); }
-.description-shell { display: flex; flex-direction: column; max-height: min(88dvh, 880px); }
-.description-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 25px 30px 20px; background: var(--surface); border-bottom: 1px solid var(--rule); }
-.description-heading { min-width: 0; }
-.description-kicker { margin: 0 0 6px; color: var(--accent); font-size: .66rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-.job-description-dialog h2 { margin: 0; font-size: clamp(1.22rem, 2.4vw, 1.65rem); font-weight: 600; letter-spacing: -.025em; line-height: 1.3; text-wrap: balance; }
-.description-company { margin: 8px 0 0; color: var(--ink-soft); font-size: .8rem; line-height: 1.5; }
-.description-close { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; flex: none; color: var(--ink-soft); background: var(--bg); border: 1px solid var(--rule); border-radius: 7px; font: inherit; font-size: 1.35rem; line-height: 1; cursor: pointer; }
-.description-close:hover { color: var(--ink); border-color: var(--rule-strong); }
-.description-scroll { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 26px 30px 30px; }
+
+/* Phones and narrow tablets: the pane covers the list instead of sitting beside it. */
+@media (max-width: 1279px) {
+  .job-detail.is-open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    background: var(--bg);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .job-detail.is-open .job-detail-inner { padding: 16px 18px 40px; }
+  .job-detail.is-open .job-detail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 14px;
+    padding: 8px 12px 8px 9px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 7px;
+    background: var(--bg);
+    color: var(--ink);
+    font: 600 .76rem/1 var(--sans);
+    cursor: pointer;
+  }
+  .job-detail.is-open .job-detail-empty { display: none; }
+}
+
+.job-detail-head { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--rule); }
+.job-detail-eyebrow { margin: 0 0 7px; color: var(--ink-faint); font-size: .62rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+.job-detail-head h2 { margin: 0; font-size: 1.22rem; font-weight: 600; letter-spacing: -.022em; line-height: 1.3; text-wrap: balance; }
+.job-detail-meta { margin: 8px 0 0; color: var(--ink-soft); font-size: .78rem; line-height: 1.55; }
+.job-detail-actions { margin-top: 14px; }
+.job-detail-actions .description-original { display: inline-block; }
+
+/* The selected row, so the pane and the list agree on what is being read. */
+.job.is-selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.job.is-selected .job-description-open { border-color: var(--accent); color: var(--accent); background: var(--accent-fill); }
+
 .description-body { max-width: 72ch; color: var(--ink); font-size: .9rem; line-height: 1.75; overflow-wrap: anywhere; }
 .description-body p { margin: 0 0 16px; }
 .description-body p:last-child, .description-body ul:last-child { margin-bottom: 0; }
@@ -1764,20 +1827,13 @@ footer code {
 .description-body ul { margin: 0 0 20px; padding-left: 22px; }
 .description-body li { padding-left: 3px; margin-bottom: 8px; }
 .description-body li::marker { color: var(--accent); }
-.description-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 30px; border-top: 1px solid var(--rule); background: var(--surface); }
-.description-footer p { margin: 0; color: var(--ink-soft); font-size: .73rem; }
 .description-original { flex: none; padding: 9px 12px; color: var(--accent); background: var(--bg); border: 1px solid var(--rule-strong); border-radius: 6px; font-size: .78rem; font-weight: 600; text-decoration: none; white-space: nowrap; }
 .description-original:hover { border-color: var(--accent); background: var(--accent-fill); }
 @media (max-width: 650px) {
-  .job-description-dialog { width: calc(100% - 20px); max-height: calc(100dvh - 20px); }
-  .description-shell { max-height: calc(100dvh - 20px); }
-  .description-header { padding: 18px; }
-  .description-scroll { padding: 20px 18px 24px; }
   .description-body { font-size: .88rem; }
-  .description-footer { align-items: stretch; flex-direction: column; gap: 10px; padding: 13px 18px 18px; }
   .description-original { text-align: center; }
 }
-.resume-match :focus-visible, .job-description-dialog :focus-visible, .job-description-link:focus-visible, .group-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.resume-match :focus-visible, .job-detail :focus-visible, .job-description-link:focus-visible, .group-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .job-list[aria-busy="true"] { opacity: .55; }
 @media (max-width: 650px) {
   .resume-match > details > summary { align-items: flex-start; flex-direction: column; gap: 17px; padding: 21px 20px 21px 23px; }
@@ -2188,10 +2244,10 @@ html[data-theme="dark"] .fb-done.is-error { color: #ff8f8f; }
 }
 
 /* The drop-zone file picker was replaced by the two-button control further down;
-   its icon and copy elements no longer exist in the markup. */
-
-  .resume-file-btn { margin-left: 54px; }
-}
+   its icon and copy elements no longer exist in the markup. That removal took the
+   @media opener and left one rule behind with its closing brace, so a 54px indent
+   meant for a narrow breakpoint was applying to the Upload résumé button at every
+   width, and the stray brace closed a block early. Both gone. */
 
 /* Per-job matching stays available as a quiet text action in the metadata line. */
 .job-match-link {
