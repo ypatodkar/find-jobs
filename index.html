@@ -87,19 +87,30 @@
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
             </span>
             <div class="resume-drop-copy">
-              <p class="resume-drop-title">Upload your r&eacute;sum&eacute; to check how well it fits a role</p>
-              <p class="resume-drop-note" id="resume-upload-note">Open any role and press &ldquo;Check r&eacute;sum&eacute; score&rdquo; to see how relevant your experience is to that job description. PDF, Word, .txt or .md &mdash; it stays in this browser, and its text is sent to TypeSafe AI only to score it.</p>
-              <div id="resume-selected" class="resume-selected" hidden>
+              <!-- Two headings, one shown at a time. Saying "upload your résumé" beside
+                   a "Replace" button asks for something already done; the card has to
+                   change when its state does. -->
+              <p class="resume-drop-title for-empty">See how your r&eacute;sum&eacute; fits each job</p>
+              <p class="resume-drop-note for-empty" id="resume-upload-note">Drop a file here or choose one, then open any role and press &ldquo;Check r&eacute;sum&eacute; score&rdquo; to see how your experience lines up with that description.</p>
+
+              <p class="resume-drop-title for-ready">R&eacute;sum&eacute; ready</p>
+              <!-- The filename and the status live together and are announced, because a
+                   status that only appears visually leaves a screen reader at "Reading
+                   file…" with no way to learn it finished. -->
+              <div id="resume-selected" class="resume-selected" role="status" aria-live="polite" hidden>
                 <span class="resume-selected-icon" aria-hidden="true">&#10003;</span>
                 <span class="resume-selected-copy"><strong id="resume-file-name"></strong><span id="resume-file-state"></span></span>
               </div>
-            </div>
-            <div class="resume-controls">
-              <label class="resume-file">
-                <input id="resume-file" type="file" accept=".pdf,.docx,.txt,.md,.markdown,application/pdf,text/plain,text/markdown" aria-describedby="resume-upload-note" disabled>
-                <span class="resume-file-btn" id="resume-file-btn">Upload r&eacute;sum&eacute;</span>
-              </label>
-              <button type="button" id="resume-forget" class="resume-forget" hidden>Remove</button>
+
+              <div class="resume-controls">
+                <label class="resume-file">
+                  <input id="resume-file" type="file" accept=".pdf,.docx,.txt,.md,.markdown,application/pdf,text/plain,text/markdown" aria-describedby="resume-drop-limits" disabled>
+                  <span class="resume-file-btn" id="resume-file-btn">Upload r&eacute;sum&eacute;</span>
+                </label>
+                <button type="button" id="resume-forget" class="resume-forget" hidden>Remove</button>
+              </div>
+
+              <p class="resume-drop-limits" id="resume-drop-limits">PDF, Word, .txt or .md &middot; up to 16&nbsp;KB of text &middot; stays in this browser, and its text is sent to TypeSafe AI only to score it.</p>
             </div>
           </div>
         </div>

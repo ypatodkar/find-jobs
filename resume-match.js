@@ -84,7 +84,7 @@
     const kept = matchingReady ? store.read() : null;
     runSaved.hidden = !kept;
     forget.hidden = !kept;
-    if (fileBtn) fileBtn.textContent = kept ? 'Upload a different r\u00e9sum\u00e9' : 'Upload r\u00e9sum\u00e9';
+    if (fileBtn) fileBtn.textContent = kept ? 'Replace r\u00e9sum\u00e9' : 'Upload r\u00e9sum\u00e9';
     document.body.classList.toggle('resume-saved-ready', !!kept);
   }
 
@@ -259,9 +259,14 @@
       status.textContent = '';
     } catch (err) {
       if (current !== version) return;
+      // The specific reason goes in the zone, beside the control that caused it,
+      // rather than on a line underneath where it reads as unrelated. Every failure
+      // reachable here is a problem with the file — too short, too long, unreadable —
+      // so the way out is choosing another one. A retry would fail identically, which
+      // is why the guidance reserves retry for network and server errors.
       selected.dataset.state = 'error'; selectedIcon.textContent = '!';
-      fileState.textContent = 'File could not be used';
-      status.textContent = (err && err.message) || 'This file could not be read. Choose another résumé file.';
+      fileState.textContent = (err && err.message) || 'This file could not be read. Choose another résumé file.';
+      status.textContent = '';
     } finally {
       event.target.value = '';
     }

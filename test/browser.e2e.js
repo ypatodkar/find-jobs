@@ -127,7 +127,7 @@ async function main() {
       return route.fulfill({ status: 502, contentType: 'application/json', body: JSON.stringify({ error: 'Comparison service is temporarily unavailable.' }) });
     });
     await resumeFile.setInputFiles({ name: 'short.txt', mimeType: 'text/plain', buffer: Buffer.from('Too short') });
-    await page.waitForFunction(() => document.getElementById('resume-status').textContent.includes('at least 100 characters'));
+    await page.waitForFunction(() => document.getElementById('resume-file-state').textContent.includes('at least 100 characters'));
     assert.equal(sent.length, 0);
     await resumeFile.setInputFiles({ name: 'resume.txt', mimeType: 'text/plain', buffer: Buffer.from(resume) });
     // Choosing a file no longer starts a comparison; it has to be asked for.
