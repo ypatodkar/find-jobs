@@ -108,7 +108,7 @@
       "</label>" +
       '<input id="visitor-name" class="visitor-input" type="text" maxlength="' + MAX_NAME +
       '" autocomplete="given-name" placeholder="Your name" value="' + esc((me && me.name) || "") + '" />' +
-      '<button type="submit" class="visitor-save">Save</button>' +
+      '<button type="submit" class="visitor-save">Save name</button>' +
       '<button type="button" class="visitor-skip">' + (isEdit ? "Cancel" : "Skip") + "</button>" +
       "</form>";
 

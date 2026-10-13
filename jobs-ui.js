@@ -202,7 +202,7 @@
       // than "All (12)" under a separate heading that said "Role". Once something is
       // chosen the name gives way to the choice, which is the more useful word.
       const value =
-        n === 0 ? opts.label
+        n === 0 ? (opts.emptyLabel || opts.label)
         : n === 1 ? opts.labelFor([...selected][0])
         : `${opts.label} · ${n}${opts.exclude ? " excluded" : ""}`;
       summary.textContent = value;
@@ -423,6 +423,9 @@
     };
 
     if (el.expandAll) el.expandAll.textContent = "Expand visible";
+    el.list?.addEventListener("error", (event) => {
+      if (event.target.matches?.("img[data-job-logo]")) event.target.remove();
+    }, true);
 
     // ---- filtering ----
     // `skip` omits one dimension so that dimension's own dropdown can be populated
@@ -510,6 +513,7 @@
     // One picker per dimension, built into the markup up front so ids stay stable.
     const pickerMarkup = (d) => `
       <div class="picker-wrap">
+        ${d.group === "advanced" ? `<span class="picker-label" id="label-${d.key}">${escapeHtml(d.label)}</span>` : ""}
         <details class="company-picker" id="pick-${d.key}">
           <summary id="sum-${d.key}">All</summary>
           <div class="company-panel">
@@ -538,16 +542,29 @@
         <div class="filter-grid" id="grid-${g.id}" role="group" aria-label="${escapeHtml(g.id === "core" ? g.title : "Advanced filters")}">${dims.map(pickerMarkup).join("")}</div>
       </section>`;
       return g.id === "advanced"
-        ? `<details class="advanced-filters" id="advanced-filters"><summary><svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4H14M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3"/></svg>Advanced <span id="advanced-filter-count"></span></summary><div class="advanced-panel"><div class="advanced-panel-head"><strong>Advanced filters</strong><button type="button" id="advanced-clear">Reset all</button></div>${section}</div></details>`
+        ? `<details class="advanced-filters" id="advanced-filters"><summary aria-label="More filters"><svg class="i" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4H14M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3"/></svg><span class="advanced-text">More filters</span><span id="advanced-filter-count"></span></summary><div class="advanced-panel"><div class="advanced-panel-head"><strong>Advanced filters</strong><div class="advanced-panel-actions">${cfg.enableMatching ? "" : `<button type="button" id="advanced-clear">Reset all</button>`}<button type="button" id="advanced-done">Close</button></div></div>${section}</div></details>`
         : section;
     }).join("");
 
     const advancedPanel = $("advanced-filters");
+    if (cfg.enableMatching && el.resetBtn) {
+      advancedPanel.querySelector(".advanced-panel-actions")?.prepend(el.resetBtn);
+    }
+    function closeAdvanced() {
+      advancedPanel.querySelectorAll(".company-picker[open]").forEach((picker) => { picker.open = false; });
+      advancedPanel.open = false;
+      advancedPanel.querySelector("summary").focus();
+    }
+    $("advanced-done")?.addEventListener("click", closeAdvanced);
     advancedPanel?.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && advancedPanel.open) {
         event.preventDefault();
-        advancedPanel.open = false;
-        advancedPanel.querySelector("summary").focus();
+        event.stopPropagation();
+        const picker = event.target.closest(".company-picker[open]");
+        if (picker) {
+          picker.open = false;
+          picker.querySelector("summary").focus();
+        } else closeAdvanced();
       }
     });
     document.addEventListener("pointerdown", (event) => {
@@ -571,12 +588,12 @@
     const restGrid = $("grid-advanced");
     if (restGrid) {
       [el.dateSelect, el.salarySelect, el.hideOpenedCompanies].forEach((ctrl) => {
-        // Two shapes here: the selects arrive wrapped in .sort-wrap, the checkbox in
-        // .filter-toggle, and the grid takes whichever wrapper it finds.
-        const wrap = ctrl && ctrl.closest(".sort-wrap, .filter-toggle");
+        // Keep the company-history caption with its checkbox when moving the field.
+        const wrap = ctrl && (ctrl.closest(".advanced-check-field") || ctrl.closest(".sort-wrap, .filter-toggle"));
         if (wrap) restGrid.appendChild(wrap);
       });
     }
+    if (cfg.enableMatching) el.search?.closest(".controls")?.querySelector(".filter-tail")?.remove();
 
     const pickers = DIMENSIONS.map((d) => {
       const labelFor = d.labelFor || ((v) => v);
@@ -592,7 +609,7 @@
             exclude: !!d.exclude,
             // "All (1617)" would be a lie on a filter that removes things: with nothing
             // ticked it excludes nothing at all.
-            emptyLabel: d.exclude ? "None" : null,
+            emptyLabel: d.exclude ? "None" : d.group === "advanced" ? "Any" : null,
             maxOptions: 60,
             // Counts come from everything *except* this dimension, so an option only
             // appears if it would still return rows under the other active filters.
@@ -646,10 +663,7 @@
 
     // Grouped results already show the company and logo in their header.
     function jobHtml(j, inGroup) {
-      const m = monogram(j.company || "");
-      const logo = inGroup ? "" : `<span class="job-logo" aria-hidden="true">${j.logo
-        ? `<img src="${escapeHtml(j.logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.hidden=true;this.nextElementSibling.hidden=false" /><span class="job-logo-fallback" hidden>${escapeHtml(m.initials)}</span>`
-        : `<span class="job-logo-fallback">${escapeHtml(m.initials)}</span>`}</span>`;
+      const logo = inGroup ? "" : `<span class="job-logo" aria-hidden="true"><span class="job-logo-fallback">${escapeHtml((j.company || "?").trim().charAt(0).toUpperCase())}</span>${j.logo ? `<img data-job-logo src="${escapeHtml(j.logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : ""}</span>`;
       const sponsorStatus = j.sponsorship || "unknown";
       const sponsorLabel = { yes: "Visa: Available", no: "Visa: Unavailable", unknown: "Visa: Not mentioned" }[sponsorStatus] || "Visa: Not mentioned";
       const sponsorEvidence = j.sponsorshipEvidence ? ` — ${j.sponsorshipEvidence}` : "";
@@ -690,12 +704,12 @@
             ${logo}
             <span class="job-main">
               ${title}
-              ${companyBit || location ? `<span class="job-keyline">${companyBit}${companyBit && location ? `<span class="job-meta-sep" aria-hidden="true">·</span>` : ""}${location}</span>` : ""}
+              ${companyBit ? `<span class="job-keyline">${companyBit}</span>` : ""}
+              ${location || rowMeta || sponsor ? `<span class="job-location-line">${location}${location && (rowMeta || sponsor) ? `<span class="job-meta-sep" aria-hidden="true">·</span>` : ""}${rowMeta}${sponsor}</span>` : ""}
               ${/* Seniority and work mode read as plain text beside the location. They
                    were four pills competing with the title for the eye, which is a lot
                    of decoration for facts a sentence states more quietly. Visa status
                    keeps its pill: it is the one that changes whether you can apply. */ ""}
-              ${rowMeta || sponsor ? `<span class="job-tags">${rowMeta}${sponsor}</span>` : ""}
             </span>
             ${/* The score sits where the eye ends up after the title, and is filled in
                  by the matcher for roles it has already judged — the list carries no
@@ -922,6 +936,8 @@
       const results = sortJobs(filtered());
 
       const grouped = state.view === "grouped";
+      const resultsTitle = $("results-title");
+      if (resultsTitle) resultsTitle.textContent = grouped ? "Companies" : "All jobs";
       if (el.groupActions) el.groupActions.hidden = !grouped;
 
       // Each tab advertises what it would show, so the choice is informed before the
@@ -971,6 +987,8 @@
       const start = (data.page - 1) * data.pageSize;
       const count = grouped ? data.groups.length : data.jobs.length;
       el.count.textContent = resultsLabel(data.total, data.companies, grouped);
+      const resultsTitle = $("results-title");
+      if (resultsTitle) resultsTitle.textContent = grouped ? "Companies" : "All jobs";
       el.list.innerHTML = count ? (grouped
         ? data.groups.map((g, i) => groupHtml({ ...g, cities: new Map(g.cities) }, start + i)).join('')
         : data.jobs.map(j => jobHtml(j, false)).join('')) : '<p class="empty">No jobs match your search. Try a broader role, location, or date range.</p>';
@@ -1028,15 +1046,18 @@
         (state.range !== "all" ? 1 : 0) + (state.salary !== "all" ? 1 : 0) +
         (state.hideOpenedCompanies ? 1 : 0);
       const advancedBadge = $("advanced-filter-count");
-      if (advancedBadge) advancedBadge.textContent = advancedCount ? `${advancedCount} active` : "";
+      if (advancedBadge) advancedBadge.textContent = advancedCount ? String(advancedCount) : "";
+      const advancedSummary = $("advanced-filters")?.querySelector("summary");
+      if (advancedSummary) advancedSummary.setAttribute("aria-label", advancedCount ? `More filters, ${advancedCount} active` : "More filters");
       if (el.undoBtn) {
         el.undoBtn.addEventListener("click", undo);
         updateUndoBtn();
       }
 
       if (el.resetBtn) {
-        el.resetBtn.hidden = n === 0;
-        el.resetBtn.textContent = `Reset ${n} filter${n === 1 ? "" : "s"}`;
+        el.resetBtn.hidden = cfg.enableMatching ? false : n === 0;
+        el.resetBtn.disabled = cfg.enableMatching && n === 0;
+        el.resetBtn.textContent = cfg.enableMatching ? "Reset all" : `Reset ${n} filter${n === 1 ? "" : "s"}`;
       }
       if (el.mobileFilterToggle) {
         el.mobileFilterToggle.textContent = n ? `Filters · ${n} active` : "Filters";
@@ -1362,6 +1383,8 @@
     function setView(view, isNav) {
       if (isNav && view !== state.view) pushNext = true;
       state.view = view;
+      const resultsTitle = $("results-title");
+      if (resultsTitle) resultsTitle.textContent = view === "grouped" ? "Companies" : "All jobs";
       if (el.viewGrouped) {
         el.viewGrouped.classList.toggle("active", view === "grouped");
         el.viewGrouped.setAttribute("aria-pressed", String(view === "grouped"));

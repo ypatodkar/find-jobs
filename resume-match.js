@@ -108,6 +108,7 @@
 
   let resumeText = '', controller, version = 0, comparedFilters = null;
   let matchingReady = false;
+  const rowScores = new Map();
   const singleJobControllers = new Set();
   const node = (tag, text, cls) => {
     const el = document.createElement(tag); if (text != null) el.textContent = text;
@@ -119,6 +120,10 @@
     singleJobControllers.clear();
     results.replaceChildren(); results.removeAttribute('aria-busy');
     document.querySelectorAll('[data-match-result]').forEach(slot => slot.replaceChildren());
+    rowScores.clear();
+    document.querySelectorAll('[data-fit-for]').forEach(slot => {
+      slot.replaceChildren(); slot.hidden = true; delete slot.dataset.fitValue;
+    });
     retry.disabled = false; retry.textContent = 'Compare current filters';
     retry.hidden = !resumeText; comparedFilters = null;
   }
@@ -160,15 +165,20 @@
   const trigger = $('resume-manage');
   const popover = $('resume-popover');
   const chipText = $('resume-chip-text');
+  const readyState = $('resume-ready-state');
+  const readyText = $('resume-ready-text');
 
   function paintChip() {
     if (!trigger) return;
     const { items } = matchingReady ? store.read() : { items: [] };
+    const active = matchingReady ? store.activeItem() : null;
     trigger.hidden = !matchingReady;
     if (!chipText) return;
-    chipText.textContent = items.length === 0 ? 'Add résumé'
-      : items.length === 1 ? '1 résumé'
-      : items.length + ' résumés';
+    chipText.textContent = active ? (active.label || active.name || 'Résumé') : 'Add résumé';
+    trigger.setAttribute('aria-label', active ? `Active résumé: ${active.label || active.name || 'Résumé'}. Manage résumés` : 'Add résumé');
+    trigger.title = active ? `Active résumé: ${active.label || active.name || 'Résumé'}` : 'Add résumé';
+    if (readyState) readyState.hidden = !matchingReady || items.length === 0;
+    if (readyText) readyText.textContent = 'Résumé ready';
   }
 
   function openMenu(open) {
@@ -316,6 +326,7 @@
   // and uploading becomes the alternative; with none, uploading is the only thing to do.
   function showSaved() {
     const kept = matchingReady ? store.activeItem() : null;
+    resumeText = kept?.text || '';
     runSaved.hidden = !kept;
     forget.hidden = !kept;
     const count = matchingReady ? store.read().items.length : 0;
@@ -408,7 +419,6 @@
   // A score the user has already paid for is worth showing where they scan, not only
   // where they asked for it. Rows are re-rendered on paging and filtering, so this is
   // also replayed from the session's scores whenever the list changes.
-  const rowScores = new Map();
   function paintRowFit(jobId, score) {
     if (typeof score === 'number') rowScores.set(jobId, score);
     const slot = document.querySelector(`[data-fit-for="${CSS.escape(jobId)}"]`);
@@ -481,15 +491,15 @@
     // among them, and writing it from the score alone would be invention dressed as
     // analysis. Adding it means adding a question to the rubric, which is a model
     // change, not a layout one.
+    if (a.gap?.text) {
+      const gap = node('div', null, 'fit-finding fit-finding-gap');
+      gap.append(node('span', options.inPane ? 'Key requirement' : 'Potential gap', 'fit-finding-label'), node('p', a.gap.text));
+      article.append(gap);
+    }
     if (a.evidence?.text) {
       const why = node('div', null, 'fit-finding');
       why.append(node('span', 'Why you match', 'fit-finding-label'), node('blockquote', a.evidence.text));
       article.append(why);
-    }
-    if (a.gap?.text) {
-      const gap = node('div', null, 'fit-finding fit-finding-gap');
-      gap.append(node('span', 'Potential gap', 'fit-finding-label'), node('p', a.gap.text));
-      article.append(gap);
     }
     if (a.uncertain) article.append(node('p', 'The model is uncertain about part of this assessment. Read the description before relying on the score.', 'resume-note'));
     if (a.truncated) article.append(node('p', 'This long description was shortened for comparison; read the full posting.', 'resume-note'));

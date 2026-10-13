@@ -220,9 +220,12 @@
     var bar = document.createElement("div");
     bar.className = "preset-bar";
     bar.id = "preset-bar";
-    // Saving belongs with the quiet sort and reset actions, after the search fields.
+    // The Find Jobs workspace keeps saved views beside its results controls. Firm
+    // pages retain their existing filter-tail placement.
+    var resultsSlot = document.getElementById('results-toolbar-saved');
     var tail = host.querySelector('.filter-tail');
-    if (tail) tail.insertBefore(bar, host.querySelector('.undo-btn'));
+    if (resultsSlot) resultsSlot.appendChild(bar);
+    else if (tail) tail.insertBefore(bar, host.querySelector('.undo-btn'));
     else host.appendChild(bar);
 
     // null = not editing. { id: null } = naming a new one, { id: "f…" } = renaming.
@@ -294,7 +297,7 @@
       return (
         '<details class="preset-picker' + (active ? " has-selection" : "") + '"' +
         (menuOpen ? " open" : "") + ' id="preset-picker">' +
-        "<summary>" +
+        '<summary aria-label="Saved filters: ' + esc(active ? active.name : 'Choose one') + '">' +
         "<span class=\"preset-current\">" + (active ? esc(active.name) : "Choose one") + "</span>" +
         '<span class="preset-n">' + items.length + "</span>" +
         "</summary>" +

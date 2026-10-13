@@ -8,7 +8,10 @@
   function setOpen(open, returnFocus) {
     panel.hidden = !open;
     trigger.setAttribute('aria-expanded', String(open));
-    if (open) panel.querySelector('button, a, input')?.focus({ preventScroll: true });
+    if (open) {
+      if (!window.Visitor?.name()) panel.querySelector('.visitor-edit')?.click();
+      panel.querySelector('input, button, a')?.focus({ preventScroll: true });
+    }
     else if (returnFocus) trigger.focus({ preventScroll: true });
   }
 

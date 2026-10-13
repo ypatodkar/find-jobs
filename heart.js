@@ -51,8 +51,8 @@
   function mount() {
     var el = document.getElementById(MOUNT_ID);
     if (el) return el;
-    // Sits immediately before the name prompt, so the two small personal touches in
-    // the header read as one group. Anchor must be a real child of its parent.
+    // Find Jobs mounts this in the footer; older pages can still create the slot
+    // beside the name prompt if they have not adopted the same footer yet.
     var slot = document.getElementById("visitor-slot");
     if (!slot || !slot.parentNode) return null;
     el = document.createElement("div");

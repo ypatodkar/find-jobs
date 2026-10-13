@@ -1,0 +1,86 @@
+{
+  "source": "results.json via catalogueData",
+  "jobs": [
+    {
+      "id": "re-build-manufacturing_greenhouse_4739091005",
+      "company": "Re:Build Manufacturing",
+      "title": "Sr. Data Engineer",
+      "city": "Remote",
+      "remote": true,
+      "seniority": "senior",
+      "posted": "2026-10-01T00:11:07-04:00",
+      "salary": null,
+      "description": "About Re:Build. At Re:Build, our mission is to ensure the next generation of important products are made, at scale, in America. We are laying the foundation for a better future for our customers, employees, and communities by revitalizing America's manufacturing base and creating meaningful jobs across the country, including in historically deindustrialized regions.. We operate an advanced, end-to-end manufacturing platform that partners with industrial companies and innovators to take products from first concept to full-scale production in critical verticals including aerospace and defense, electrification, medical, energy and environment, and robotics and automation.. The way we operate is",
+      "url": "https://job-boards.greenhouse.io/rebuildmanufacturing/jobs/4739091005"
+    },
+    {
+      "id": "tenstorrent_greenhouse_5227720007",
+      "company": "Tenstorrent",
+      "title": "Test Engineer, System-Level Test (SLT)",
+      "city": "Bay Area",
+      "remote": false,
+      "seniority": "mid",
+      "posted": "2026-09-30T23:33:20-04:00",
+      "salary": null,
+      "description": "Tenstorrent is leading the industry on cutting-edge AI technology, revolutionizing performance expectations, ease of use, and cost efficiency. With AI redefining the computing paradigm, solutions must evolve to unify innovations in software models, compilers, platforms, networking, and semiconductors. Our diverse team of technologists have developed a high performance RISC-V CPU from scratch, and share a passion for AI and a deep desire to build the best AI platform possible. We value collaboration, curiosity, and a commitment to solving hard problems. We are growing our team and looking for contributors of all seniorities.. Tenstorrent is hiring a System-Level Test (SLT) Engineer to ensure ",
+      "url": "https://job-boards.greenhouse.io/tenstorrent/jobs/5227720007"
+    },
+    {
+      "id": "muon-space_greenhouse_5253860007",
+      "company": "Muon Space",
+      "title": "Quality Engineer, Electrical",
+      "city": "Bay Area",
+      "remote": false,
+      "seniority": "mid",
+      "posted": "2026-09-30T22:56:26-04:00",
+      "salary": null,
+      "description": "About the role. Muon seeks an Electrical Quality Engineer to join our team. The ideal candidate is a hands-on, seasoned professional passionate about aerospace manufacturing, with a strong commitment to production and quality assurance for high-reliability spaceflight electronics. You will play a key role in developing, implementing, and maintaining our quality programs, ensuring our satellites meet the highest standards of accuracy, reliability, quality, and safety. This position is fully onsite and requires working in our San Jose, CA office five days a week. Responsibilities. Inspection and Testing: Plan, execute, and oversee the inspection and testing of satellites, sub-assemblies, and c",
+      "url": "https://job-boards.greenhouse.io/muonspace/jobs/5253860007"
+    },
+    {
+      "id": "muon-space_greenhouse_5253858007",
+      "company": "Muon Space",
+      "title": "Quality Engineer, Mechanical",
+      "city": "Bay Area",
+      "remote": false,
+      "seniority": "mid",
+      "posted": "2026-09-30T22:53:06-04:00",
+      "salary": null,
+      "description": "About the role. Muon seeks a Mechanical Quality Engineer to join our team. The ideal candidate is a hands-on, seasoned professional passionate about aerospace manufacturing, with a strong commitment to production and quality assurance for high-reliability spaceflight hardware. You will play a key role in developing, implementing, and maintaining our quality programs, ensuring our satellites meet the highest standards of accuracy, reliability, quality, and safety. This is a mechanical-based role: you will own quality across machined parts and mechanical assemblies from incoming inspection through integration and test. This position is fully onsite and requires working in our San Jose, CA offi",
+      "url": "https://job-boards.greenhouse.io/muonspace/jobs/5253858007"
+    },
+    {
+      "id": "strava_ashby_e8c0730d-6a6f-451f-83e0-309c12bf405e",
+      "company": "Strava",
+      "title": "Senior Data Engineer",
+      "city": "San Francisco",
+      "remote": true,
+      "seniority": "senior",
+      "posted": "2026-10-01T02:21:57.089+00:00",
+      "salary": null,
+      "description": "ABOUT STRAVA Strava is the app for active people. With over 200 million athletes in more than 185 countries, it’s more than tracking workouts—it’s where people make progress together, from new habits to new personal bests. No matter your sport or how you track it, Strava’s got you covered. Find your crew, crush your goals, and make every effort count. Start your journey https://www.strava.com/subscription with Strava today. Our mission is simple: to motivate people to live their best active lives. We believe in the power of movement to connect and drive people forward. ABOUT THIS ROLE We are looking for a Senior Data Engineer to join our Data Team and help build reliable, scalable data syste",
+      "url": "https://jobs.ashbyhq.com/strava/e8c0730d-6a6f-451f-83e0-309c12bf405e"
+    },
+    {
+      "id": "suno_ashby_e94b6a03-6315-45c2-a439-51630af15f05",
+      "company": "Suno",
+      "title": "Machine Learning Engineer - Content Discovery",
+      "city": "San Francisco",
+      "remote": false,
+      "seniority": "mid",
+      "posted": "2026-10-01T02:01:25.853+00:00",
+      "salary": null,
+      "description": "ABOUT SUNO We're building the world's first creative entertainment platform, where the entire world can feel the joy and fulfillment of making music. Music is for everyone: Our users include everyone from grandmothers creating songs for their loved ones, to Grammy winners using Suno Studio, our power tool, to make the most popular hits in the world. Building the future of entertainment requires ambition. The pace is fast, the problems are hard, and the work demands ownership and intensity. For the right people, it’s incredibly rewarding: a chance to shape a new medium, work with a small team that cares deeply about quality, make music, drink too much coffee, and build something that millions",
+      "url": "https://jobs.ashbyhq.com/suno/e94b6a03-6315-45c2-a439-51630af15f05"
+    }
+  ],
+  "assessment": {
+    "source": "user supplied screenshot, Sr. Data Engineer",
+    "score": 59,
+    "skills": 60,
+    "experience": 57,
+    "domain": 57,
+    "uncertain": true,
+    "gap": "Write and maintain automated tests to support reliable, repeatable releases."
+  }
+}

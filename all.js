@@ -13,7 +13,7 @@
     loadPage: JobsAPI.search,
     onData(data) {
       const s = data.metadata.summary || { total: data.total, companies: data.companies };
-      $('all-stats').textContent = `${s.total.toLocaleString()} roles · ${s.companies.toLocaleString()} companies`;
+      $('all-stats').textContent = `${s.total.toLocaleString()} opportunities`;
       $('all-message').hidden = true;
     },
     onError() { $('all-stats').textContent = 'Listings temporarily unavailable'; },

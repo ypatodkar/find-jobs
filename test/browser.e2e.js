@@ -9,6 +9,7 @@ const { fixture } = require('./fixtures/catalogue');
 async function main() {
   const data = fixture();
   data.jobs[0].remote = true;
+  data.jobs[0].logo = 'https://example.com/company-logo.svg';
   data.jobs[1].city = 'Remote'; data.jobs[1].remote = true;
   const store = new MemoryCatalogue(data, { firms: { accel: { status: 'ok', host: 'example.com' } } });
   const server = createServer(async () => store);
@@ -23,9 +24,32 @@ async function main() {
     page.on('request', r => requests.push(r.url()));
     // Keep the test entirely local, including analytics and image requests.
     await page.route('**/*', route => route.request().url().startsWith(base) ? route.continue() : route.abort());
+    await page.route('https://example.com/company-logo.svg', route => route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#7050cc"/></svg>' }));
     const unavailableConfig = route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"matching":false}' });
     await page.route('**/api/jobs/config', unavailableConfig);
     await page.goto(base);
+    await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('110 open roles'));
+    // The desktop divider changes both pane widths, supports the keyboard, and
+    // restores the chosen split after a reload.
+    const divider = page.locator('#pane-resizer');
+    const listWidthBefore = await page.locator('#results-main').evaluate(el => el.getBoundingClientRect().width);
+    const dividerBox = await divider.boundingBox();
+    await page.mouse.move(dividerBox.x + dividerBox.width / 2, dividerBox.y + dividerBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(dividerBox.x - 80, dividerBox.y + dividerBox.height / 2, { steps: 5 });
+    await page.mouse.up();
+    const listWidthAfter = await page.locator('#results-main').evaluate(el => el.getBoundingClientRect().width);
+    assert.ok(listWidthAfter < listWidthBefore - 50, 'dragging the divider narrows the job list');
+    await divider.focus();
+    await page.keyboard.press('ArrowRight');
+    const keyboardWidth = await page.locator('#results-main').evaluate(el => el.getBoundingClientRect().width);
+    assert.ok(keyboardWidth > listWidthAfter, 'arrow keys adjust the divider');
+    await page.reload();
+    await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('110 open roles'));
+    const restoredWidth = await page.locator('#results-main').evaluate(el => el.getBoundingClientRect().width);
+    assert.ok(Math.abs(restoredWidth - keyboardWidth) < 2, 'the split is restored after reload');
+    await page.evaluate(() => localStorage.removeItem('find-jobs-list-width-v2'));
+    await page.reload();
     await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('110 open roles'));
     // With matching unavailable there is no chip to manage and no form behind it.
     assert.equal(await page.locator('#resume-manage').isVisible(), false);
@@ -47,9 +71,8 @@ async function main() {
     assert.equal(await page.locator('#onboard-slot').count(), 0);
     await page.locator('#settings-trigger').click();
     assert.equal(await page.locator('#settings-popover').isVisible(), true);
-    assert.equal(await page.locator('#settings-popover .visitor-edit').isVisible(), true);
+    assert.equal(await page.locator('#visitor-name').isVisible(), true);
     await page.screenshot({ path: '.catalogue/settings-desktop.png', fullPage: false });
-    await page.locator('#settings-popover .visitor-edit').click();
     await page.locator('#visitor-name').fill('Alex');
     await page.locator('.visitor-save').click();
     assert.ok((await page.locator('#settings-popover .visitor-greet').textContent()).includes('Hello, Alex'));
@@ -57,7 +80,7 @@ async function main() {
     assert.equal(await page.locator('#settings-popover').isVisible(), false);
     await page.locator('#theme-toggle').click();
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
-    assert.equal(await page.locator('#job-list > .job.is-selected').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(31, 35, 42)');
+    assert.equal(await page.locator('#job-list > .job.is-selected').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(38, 40, 50)');
     await page.screenshot({ path: '.catalogue/dark-desktop.png', fullPage: false });
     await page.locator('#theme-toggle').click();
     fs.mkdirSync('.catalogue', { recursive: true });
@@ -66,6 +89,7 @@ async function main() {
     assert.equal(await page.locator('#job-list .job-description-open, #job-list .job-open-role').count(), 0,
       'rows carry no buttons; selecting one opens the description');
     const firstCard = page.locator('#job-list .job').first();
+    assert.equal(await firstCard.locator('.job-logo img').getAttribute('src'), data.jobs[0].logo);
     assert.equal(await firstCard.locator('a.job-card-open').getAttribute('href'), data.jobs[0].url);
     assert.equal(await firstCard.locator('a.job-card-open').getAttribute('target'), '_blank');
     let popups = 0; page.on('popup', () => popups++);
@@ -74,6 +98,7 @@ async function main() {
     assert.equal(popups, 0, 'a plain card click previews rather than opening the posting');
     assert.ok(new URL(page.url()).searchParams.get('job'), 'the open job is in the URL so it can be shared');
     assert.equal(await page.locator('.job.is-selected').count(), 1);
+    assert.match(await page.locator('.job.is-selected').evaluate(el => getComputedStyle(el).boxShadow), /rgb\(112, 80, 204\).*inset/, 'selected role has a visible violet left indicator');
     // track.js captures clicks, so the preview must cancel before it is counted.
     assert.equal(await page.evaluate(() => window.Seen.has('job_0')), false, 'previewing is not opening');
     await firstCard.locator('a.job-card-open').click();
@@ -131,13 +156,38 @@ async function main() {
     assert.equal(await page.locator(`.job[data-job-id="${openedId}"]`).first().evaluate(row => row.classList.contains('row-seen')), true);
     assert.equal(await page.locator('#advanced-filters').evaluate(el => el.open), false);
     const workspaceTop = await page.locator('#results-split').evaluate(el => el.getBoundingClientRect().top);
+    assert.equal(await page.locator('#job-view-tabs').evaluate(el => !!el.closest('#advanced-filters')), false);
+    assert.equal(await page.locator('#hide-opened').evaluate(el => !!el.closest('#advanced-filters')), false);
+    assert.equal(await page.locator('#preset-bar').evaluate(el => !!el.closest('#advanced-filters')), false);
+    await page.locator('#preset-save').click();
+    await page.locator('#preset-name').fill('Backend in Seattle');
+    await page.locator('#preset-confirm').click();
+    assert.equal(await page.locator('#preset-picker').isVisible(), true);
+    await page.locator('#preset-picker > summary').click();
+    assert.ok((await page.locator('.preset-menu').textContent()).includes('Backend in Seattle'));
+    await page.locator('#preset-picker > summary').click();
+    await page.screenshot({ path: '.catalogue/saved-toolbar-desktop.png', fullPage: false });
     await page.locator('#advanced-filters > summary').click();
     assert.ok(await page.locator('#sum-company').isVisible());
-    assert.equal(await page.locator('#results-split').evaluate(el => el.getBoundingClientRect().top), workspaceTop);
+    assert.ok(Math.abs((await page.locator('#results-split').evaluate(el => el.getBoundingClientRect().top)) - workspaceTop) < 2,
+      'opening Advanced Filters does not push the results down');
+    assert.equal(await page.locator('#grid-advanced').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length), 2);
+    assert.equal(await page.locator('#reset-filters').isVisible(), true);
+    assert.equal(await page.locator('#advanced-done').isVisible(), true);
     await page.screenshot({ path: '.catalogue/advanced-desktop.png', fullPage: false });
+    await page.locator('#sum-company').click();
+    await page.locator('#q-company').fill('Alpha');
+    assert.equal(await page.locator('#list-company input[type="checkbox"]').count(), 1);
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#pick-company').evaluate(el => el.open), false);
+    assert.equal(await page.locator('#advanced-filters').evaluate(el => el.open), true);
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#advanced-filters').evaluate(el => el.open), false);
-    // The panel is behind the masthead chip; Manage is how it opens.
+    await page.locator('#advanced-filters > summary').click();
+    await page.locator('#advanced-done').click();
+    assert.equal(await page.locator('#advanced-filters').evaluate(el => el.open), false);
+    assert.equal(await page.locator('#advanced-filters > summary').evaluate(el => document.activeElement === el), true);
+    // The résumé manager opens from the navbar without moving the job list.
     assert.equal(await page.locator('#resume-popover').evaluate(el => el.hidden), true,
       'the résumé manager is a popover, closed until its trigger is pressed');
     await page.locator('#resume-manage').click();
@@ -159,6 +209,9 @@ async function main() {
     await resumeFile.setInputFiles({ name: 'resume.txt', mimeType: 'text/plain', buffer: Buffer.from(resume) });
     // Choosing a file no longer starts a comparison; it has to be asked for.
     await page.waitForFunction(() => document.getElementById('resume-file-state').textContent.includes('press'));
+    assert.equal(await page.locator('#resume-ready-state').isVisible(), true);
+    assert.equal(await page.locator('#resume-chip-text').textContent(), 'resume.txt');
+    assert.ok((await page.locator('#job-detail .job-score-active').textContent()).includes('resume.txt'));
     assert.equal(await page.locator('#resume-list .resume-row').count(), 1, 'a single saved résumé remains visible and removable');
     assert.equal(await page.locator('#resume-list .resume-row-remove').count(), 1);
     assert.equal(await page.locator('#resume-file-btn svg').count(), 1, 'upload icon remains after the button label updates');
@@ -210,6 +263,8 @@ async function main() {
     await page.screenshot({ path: '.catalogue/match-desktop.png', fullPage: false });
     await resumeFile.setInputFiles({ name: 'updated.txt', mimeType: 'text/plain', buffer: Buffer.from(updatedResume) });
     await page.waitForFunction(() => document.getElementById('resume-file-state').textContent.includes('press'));
+    assert.equal(await page.locator('#job-list .job-fit:visible').count(), 0,
+      'scores from the previous résumé must disappear when the active résumé changes');
     assert.equal(await page.locator('#resume-list .resume-row').count(), 2);
     await page.locator('#resume-manage').click();
     await page.screenshot({ path: '.catalogue/resumes-desktop.png', fullPage: false });
@@ -237,6 +292,7 @@ async function main() {
     assert.equal(await page.locator('.job-match-link:visible').count(), 0);
     assert.equal(await page.locator('#resume-selected').isVisible(), false);
     await page.setViewportSize({ width: 390, height: 844 });
+    assert.equal(await page.locator('#pane-resizer').isVisible(), false);
     await page.goto(base);
     await page.waitForFunction(() => /open roles/.test(document.getElementById('job-count').textContent));
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
@@ -247,6 +303,11 @@ async function main() {
     await page.locator('#mobile-filter-toggle').click();
     assert.equal(await page.locator('#job-controls').getAttribute('role'), 'dialog');
     await page.screenshot({ path: '.catalogue/mobile-filters.png', fullPage: false });
+    await page.locator('#advanced-filters > summary').click();
+    await page.screenshot({ path: '.catalogue/advanced-mobile.png', fullPage: false });
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#advanced-filters').evaluate(el => el.open), false);
+    assert.equal(await page.locator('#mobile-filter-toggle').getAttribute('aria-expanded'), 'true');
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#mobile-filter-toggle').getAttribute('aria-expanded'), 'false');
     await page.locator('#job-list .job-card-open').first().click();
@@ -259,7 +320,14 @@ async function main() {
     await page.goto(base + '/?company=Alpha');
     await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('matching roles'));
     assert.equal(await page.locator('#advanced-filters').evaluate(el => el.open), false);
-    assert.ok((await page.locator('#advanced-filter-count').textContent()).includes('1 active'));
+    assert.equal(await page.locator('#advanced-filter-count').textContent(), '1');
+    assert.equal(await page.locator('#advanced-filters > summary').getAttribute('aria-label'), 'More filters, 1 active');
+    await page.locator('#mobile-filter-toggle').click();
+    await page.locator('#advanced-filters > summary').click();
+    await page.locator('#reset-filters').click();
+    await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('110 open roles'));
+    assert.equal(await page.locator('#advanced-filter-count').textContent(), '');
+    await page.locator('#filter-drawer-close').click();
     await page.goto(base + '/firm.html?id=accel');
     await page.waitForFunction(() => document.getElementById('firm-stats').textContent.includes('55 matching roles'));
     assert.equal(await page.locator('#job-list .job').count(), 45);

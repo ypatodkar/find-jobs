@@ -73,17 +73,23 @@
     global.history[replace ? 'replaceState' : 'pushState']({ job: id || null }, '', url);
   }
 
-  // The picker lists the résumés and is hidden when there is only one, because a
-  // select with a single option is a control that cannot be used. It redraws on the
-  // same event the zone does, so adding or renaming in one place shows in the other.
+  // Show the active résumé in the inspector. With multiple files, the label becomes
+  // a selector so it can be changed without leaving the role being inspected.
   function paintPicker(root) {
     const scope = root || document;
     const api = global.Resumes;
     for (const pick of scope.querySelectorAll('.job-score-pick')) {
       const select = pick.querySelector('.job-score-select');
-      if (!api || !select) { pick.hidden = true; continue; }
+      const source = pick.closest('.job-score-source');
+      const activeNote = source?.querySelector('.job-score-active');
+      if (!api || !select) { if (source) source.hidden = true; continue; }
       const { items, active } = api.list();
+      if (source) source.hidden = items.length === 0;
       pick.hidden = items.length < 2;
+      if (activeNote) {
+        activeNote.hidden = items.length !== 1;
+        activeNote.textContent = items.length === 1 ? `Using ${items[0].label || items[0].name || 'résumé'}` : '';
+      }
       if (items.length < 2) continue;
       select.replaceChildren();
       for (const item of items) {
@@ -142,14 +148,18 @@
         <p class="job-detail-actions" hidden><a class="description-original" target="_blank" rel="noopener noreferrer">View job <svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a></p>
       </div>
       <div class="job-score" data-score-for="${attr(id)}">
+        <h3 class="job-score-title">Résumé match</h3>
+        <div class="job-score-source" hidden>
+          <span class="job-score-active" hidden></span>
+          <label class="job-score-pick" hidden><span class="visually-hidden">Résumé to score against</span><select class="job-score-select" aria-label="Résumé to score against"></select></label>
+        </div>
         <div class="job-score-controls">
-          <label class="job-score-pick" hidden><span class="visually-hidden">Résumé to score against</span><select class="job-score-select"></select></label>
           <label class="job-score-add" title="Add another résumé"><input type="file" accept=".pdf,.docx,.txt,.md,.markdown,application/pdf,text/plain,text/markdown"><svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span class="visually-hidden">Add another résumé</span></label>
-          <button type="button" class="job-score-check" data-match="${attr(id)}">Check résumé score</button>
+          <button type="button" class="job-score-check" data-match="${attr(id)}">Check résumé match</button>
         </div>
         <div class="job-match-result" data-match-result="${attr(id)}"></div>
       </div>
-      <section class="description-section" aria-label="Job description">
+      <section class="description-section" id="job-description" aria-label="Job description">
         <h3 class="description-section-title">Job description</h3>
         <div class="description-body" aria-busy="true"></div>
       </section>`;
@@ -167,7 +177,7 @@
       inner.querySelector('.job-detail-eyebrow').textContent = job.company || '';
       inner.querySelector('.job-detail-head h2').textContent = job.title;
       inner.querySelector('.job-detail-meta').textContent =
-        [job.company, job.city, job.remote && job.city !== 'Remote' ? 'Remote option' : null, job.salary].filter(Boolean).join(' · ');
+        [job.city, job.remote && job.city !== 'Remote' ? 'Remote option' : null, job.salary].filter(Boolean).join(' · ');
       render(job.description || 'A full description is not available. Check the original posting.');
       body.removeAttribute('aria-busy');
       if (/^https?:\/\//i.test(job.url || '')) {

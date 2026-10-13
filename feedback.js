@@ -1,4 +1,4 @@
-// The feedback widget, sitting in the masthead under the theme toggle.
+// The feedback widget, mounted in the navigation where the page provides a slot.
 //
 // A small button that nudges once in a while, opening a short form: say the thing,
 // optionally tag what it's about, optionally leave an address. Posts to the worker,
