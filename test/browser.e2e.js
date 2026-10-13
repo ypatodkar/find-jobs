@@ -130,10 +130,17 @@ async function main() {
     assert.equal(await page.evaluate(id => window.Seen.has(id), openedId), true);
     assert.equal(await page.locator(`.job[data-job-id="${openedId}"]`).first().evaluate(row => row.classList.contains('row-seen')), true);
     assert.equal(await page.locator('#advanced-filters').evaluate(el => el.open), false);
-    const workspaceTop = await page.locator('#results-split').evaluate(el => el.getBoundingClientRect().top);
+    // Document-relative, not viewport-relative: locator.click() scrolls its target
+    // into view, so comparing getBoundingClientRect().top either side of it measures
+    // the scroll it just did as well as the layout. The claim being made here is that
+    // opening the filters does not move the workspace, which is what this measures.
+    const workspacePos = () => page.evaluate(() =>
+      document.getElementById('results-split').getBoundingClientRect().top + window.scrollY);
+    const workspaceTop = await workspacePos();
     await page.locator('#advanced-filters > summary').click();
     assert.ok(await page.locator('#sum-company').isVisible());
-    assert.equal(await page.locator('#results-split').evaluate(el => el.getBoundingClientRect().top), workspaceTop);
+    assert.equal(await workspacePos(), workspaceTop,
+      'opening advanced filters must not push the job list down');
     await page.screenshot({ path: '.catalogue/advanced-desktop.png', fullPage: false });
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#advanced-filters').evaluate(el => el.open), false);
@@ -204,7 +211,9 @@ async function main() {
     assert.equal(await page.locator('#job-list [data-match]').count(), 0);
     await page.locator('#job-list .job-card-open').first().click();
     await page.waitForFunction(() => document.querySelector('#job-detail .description-body')?.textContent.includes('Five years'));
-    const matchButton = page.locator('#job-detail .job-score-check');
+    // The score block names the résumé being compared and offers "Check match"
+    // once that pair has not been scored.
+    const matchButton = page.locator('#job-detail [data-match]');
     await matchButton.click();
     await page.waitForSelector('#job-detail [data-match-result] .resume-result');
     await page.screenshot({ path: '.catalogue/match-desktop.png', fullPage: false });
@@ -223,7 +232,12 @@ async function main() {
     await page.waitForSelector('#job-detail [data-match-result] .resume-result');
     await page.locator('#resume-clear').evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     assert.equal(await page.locator('#resume-selected').isVisible(), false);
-    assert.equal(await page.locator('.resume-result').count(), 0);
+    // Scores belong to a (job, résumé) pair now, so removing one résumé clears its own
+    // results and leaves everyone else's standing. This job was scored against both
+    // résumés, so the earlier one's score is still correct and still shown — what must
+    // be gone is the removed résumé, and any number attributed to it.
+    assert.equal(await page.locator('#resume-results .resume-result').count(), 0,
+      'the shortlist results it produced are cleared');
     assert.equal(await page.locator('.job-match-link:visible').count(), 0);
     fs.mkdirSync('.catalogue', { recursive: true });
     await page.screenshot({ path: '.catalogue/desktop.png', fullPage: false });

@@ -1093,11 +1093,8 @@ footer code {
   list-style: none;
 }
 .advanced-filters > summary::-webkit-details-marker { display: none; }
-.advanced-filters > summary::before { content: "+"; color: var(--accent); font: 700 1.1rem/1 var(--sans); }
-.advanced-filters[open] > summary::before { content: "−"; }
-.advanced-filters > summary:hover { color: var(--accent); }
 .advanced-filters > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.advanced-filters > summary span:not(:empty) { color: var(--accent); background: var(--accent-fill); border-radius: 999px; padding: 3px 7px; font: 600 .68rem/1 var(--mono); }
+.advanced-filters > summary span:not(:empty) { color: var(--ink-faint); font: 500 var(--t-meta)/1 var(--sans); }
 .advanced-filters > .filter-section { padding-top: 15px; }
 .filter-section {
   display: flex;
@@ -2418,25 +2415,7 @@ html[data-theme="dark"] .featured { background-color: var(--surface); }
    headline, so it never competes with the page title. */
 #counter-slot { display: flex; justify-content: center; flex: 1 1 auto; min-width: 0; }
 
-.counter {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 7px;
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  color: var(--ink-faint);
-  white-space: nowrap;
-  cursor: help;
-}
-.counter-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  align-self: center;
-  flex: 0 0 auto;
-}
-.counter-n { color: var(--accent); font-variant-numeric: tabular-nums; }
+
 
 @media (prefers-reduced-motion: no-preference) {
   .counter-dot { animation: counter-pulse 2.6s ease-in-out infinite; }
@@ -3229,7 +3208,6 @@ body.resume-saved-ready .resume-file-btn::before { content: none; }
 }
 .advanced-filters > summary:hover { border-color: var(--rule-strong); }
 .advanced-filters[open] > summary { background: var(--surface-selected); }
-.advanced-filters > summary::before { content: none; }
 #advanced-filter-count { color: var(--ink-faint); }
 .advanced-filters { position: relative; }
 .advanced-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
@@ -3275,3 +3253,90 @@ body.resume-saved-ready .resume-file-btn::before { content: none; }
 .job-score-check:hover { color: var(--ink); }
 .job-description-link { color: var(--ink-soft); }
 .resume-score { color: var(--ink); background: transparent; }
+
+/* ---- résumé match: one job, several résumés ------------------------------------
+   The control names the comparison being made, because a score with no résumé
+   attached to it is a number you cannot act on. Everything here is the inspector's
+   own type and spacing — it is a section of the panel, not a panel of its own. */
+.job-score-controls { display: flex; align-items: flex-end; gap: var(--space-2); margin-top: var(--space-3); }
+.job-score-pick { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.job-score-pick-label { color: var(--ink-faint); font-size: var(--t-label); font-weight: 500; }
+.job-score-select {
+  width: 100%;
+  height: var(--control-h-sm);
+  padding: 0 8px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 500 var(--t-meta)/1 var(--sans);
+}
+.job-score-add { flex: none; width: var(--control-h-sm); height: var(--control-h-sm); padding: 0; }
+
+.score-prompt, .score-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
+}
+.score-empty { flex-wrap: wrap; }
+.score-prompt-note, .score-empty-note { margin: 0; color: var(--ink-faint); font-size: var(--t-company); }
+.score-empty-note { flex: 1; min-width: 180px; line-height: 1.5; }
+
+.job-match-msg { margin: var(--space-3) 0 0; color: var(--ink-soft); font-size: var(--t-company); }
+.job-match-msg.is-error { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.job-match-msg.is-error p { margin: 0; color: var(--ink); }
+
+/* Every résumé against this one job: the comparison people came for, in one glance
+   rather than four switches of the control above. */
+.score-roster { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--rule); }
+.score-roster .fit-finding-label { margin-bottom: var(--space-2); }
+.score-roster-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-soft);
+  font: 500 var(--t-company)/1.3 var(--sans);
+  text-align: left;
+  cursor: pointer;
+}
+.score-roster-row:hover { background: var(--surface-hover); color: var(--ink); }
+.score-roster-row.is-active { background: var(--surface-selected); color: var(--ink); }
+.score-roster-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.score-roster-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.score-roster-value { flex: none; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.score-roster-value.is-empty { color: var(--ink-faint); font-weight: 400; font-size: var(--t-meta); }
+
+/* ---- the site-wide click total -------------------------------------------------
+   A third figure on the counts line, in the same muted type as the two beside it.
+   It is the whole site's total, not this visitor's history — those are different
+   numbers and the second one lives in "Companies you've opened". */
+.counter-slot { display: inline; }
+/* A background statistic in the same muted type as the two counts beside it: the old
+   treatment gave it a violet dot, a violet figure and a monospace face, which made the
+   quietest number on the page the loudest. */
+.counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink-faint);
+  font-size: var(--t-company);
+  white-space: nowrap;
+  cursor: help;
+}
+.counter-icon { color: var(--ink-faint); }
+.counter-n { color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.counter-sep { color: var(--ink-faint); }
+.counter-dot { display: none; }
+@media (max-width: 620px) { .counter-label { display: none; } }
+.job-score > .fit-head-label { display: block; margin-bottom: 0; }
+.job-score .fit-head { margin-top: var(--space-3); }

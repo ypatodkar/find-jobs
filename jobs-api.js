@@ -73,36 +73,6 @@
     global.history[replace ? 'replaceState' : 'pushState']({ job: id || null }, '', url);
   }
 
-  // The picker lists the résumés and is hidden when there is only one, because a
-  // select with a single option is a control that cannot be used. It redraws on the
-  // same event the zone does, so adding or renaming in one place shows in the other.
-  function paintPicker(root) {
-    const scope = root || document;
-    const api = global.Resumes;
-    for (const pick of scope.querySelectorAll('.job-score-pick')) {
-      const select = pick.querySelector('.job-score-select');
-      if (!api || !select) { pick.hidden = true; continue; }
-      const { items, active } = api.list();
-      pick.hidden = items.length < 2;
-      if (items.length < 2) continue;
-      select.replaceChildren();
-      for (const item of items) {
-        const option = document.createElement('option');
-        option.value = item.id;
-        option.textContent = item.label || item.name || 'Résumé';
-        option.selected = item.id === active;
-        select.append(option);
-      }
-    }
-  }
-  document.addEventListener('resumes:changed', () => paintPicker());
-  document.addEventListener('change', event => {
-    const select = event.target.closest('.job-score-select');
-    if (select) { global.Resumes?.select(select.value); return; }
-    const add = event.target.closest('.job-score-add input[type="file"]');
-    if (add && add.files && add.files[0]) { global.Resumes?.addFile(add.files[0]); add.value = ''; }
-  });
-
   function closeDescription(restoreFocus) {
     controller?.abort();
     openId = null;
@@ -141,20 +111,19 @@
         <p class="job-detail-meta"></p>
         <p class="job-detail-actions" hidden><a class="description-original" target="_blank" rel="noopener noreferrer">View job <svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a></p>
       </div>
-      <div class="job-score" data-score-for="${attr(id)}">
-        <div class="job-score-controls">
-          <label class="job-score-pick" hidden><span class="visually-hidden">Résumé to score against</span><select class="job-score-select"></select></label>
-          <label class="job-score-add" title="Add another résumé"><input type="file" accept=".pdf,.docx,.txt,.md,.markdown,application/pdf,text/plain,text/markdown"><svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span class="visually-hidden">Add another résumé</span></label>
-          <button type="button" class="job-score-check" data-match="${attr(id)}">Check résumé score</button>
-        </div>
-        <div class="job-match-result" data-match-result="${attr(id)}"></div>
-      </div>
+      ${/* An empty shell. resume-match.js owns everything inside it, because what
+           belongs here depends on which résumé is selected and whether that résumé
+           has been scored against this job — both of which are its business, not
+           this file's. */ ""}
+      <section class="job-score" data-score-for="${attr(id)}" aria-label="Résumé match"></section>
       <section class="description-section" aria-label="Job description">
         <h3 class="description-section-title">Job description</h3>
         <div class="description-body" aria-busy="true"></div>
       </section>`;
     const body = inner.querySelector('.description-body');
-    paintPicker(inner);
+    // Tell the matcher which job is on screen so it can paint the score block for the
+    // résumé currently selected.
+    document.dispatchEvent(new CustomEvent('job:opened', { detail: { id } }));
     const render = text => global.DescriptionFormat?.render
       ? global.DescriptionFormat.render(body, text)
       : body.replaceChildren(Object.assign(document.createElement('p'), { textContent: text }));

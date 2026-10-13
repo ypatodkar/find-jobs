@@ -118,7 +118,11 @@
     for (const pending of singleJobControllers) pending.abort();
     singleJobControllers.clear();
     results.replaceChildren(); results.removeAttribute('aria-busy');
-    document.querySelectorAll('[data-match-result]').forEach(slot => slot.replaceChildren());
+    // Emptying the result slot used to be the whole story, which left the score block
+    // with no result and no way to ask for one — the "Check match" button lives in
+    // that slot. Repaint it instead, so it returns to whatever is true now: a cached
+    // score for the selected résumé, or the offer to fetch one.
+    paintScoreBlock();
     retry.disabled = false; retry.textContent = 'Compare current filters';
     retry.hidden = !resumeText; comparedFilters = null;
   }
@@ -300,6 +304,8 @@
     if (event.target.closest('#resume-names-done')) { commitNames(); return; }
     const remove = event.target.closest('[data-remove-resume]');
     if (!remove) return;
+    const going = store.read().items.find(r => r.id === remove.dataset.removeResume);
+    if (going) scores.forget(going);
     store.remove(remove.dataset.removeResume);
     const next = store.activeItem();
     resumeText = next ? next.text : '';
@@ -341,7 +347,7 @@
 
   forget.addEventListener('click', () => {
     const current = store.activeItem();
-    if (current) store.remove(current.id);
+    if (current) { scores.forget(current); store.remove(current.id); }
     const next = store.activeItem();
     resumeText = next ? next.text : '';
     announce();
@@ -374,8 +380,245 @@
     // A résumé from a previous visit is offered rather than re-run: returning to the
     // page should not silently spend a provider call before anyone has asked for one.
     showSaved();
+    // The pane can open before /jobs/config answers, and paintScoreBlock refuses to
+    // draw anything until matching is known to exist. Without this the score block
+    // stays empty for the job already on screen after a reload — the one case where
+    // a cached score should appear with no interaction at all.
+    paintScoreBlock();
+    repaintRowFits();
     if (store.activeItem()) summaryNote.textContent = 'Your saved r\u00e9sum\u00e9 is ready \u2014 match it against your current filters.';
   }).catch(disableMatching).finally(() => clearTimeout(configTimer));
+  // ---- scores, per job and per résumé -----------------------------------------
+  // A score belongs to a pair: this job, judged against this résumé's text. Keying on
+  // the résumé's id alone would hand the old score back after someone replaced the
+  // file behind it, so the key is a hash of the content, and the rubric version the
+  // server reports is stored with every entry — a rubric change invalidates the lot,
+  // because the numbers no longer mean the same thing.
+  //
+  // It lives in this browser beside the résumés themselves. Nothing new is stored on
+  // the server: the API already caches an assessment against its own hash, so a repeat
+  // request is cheap, and this only avoids making one at all.
+  const SCORES = 'find-jobs-scores';
+  const SCORE_LIMIT = 400;
+
+  function contentHash(text) {
+    // FNV-1a. Not a security boundary — it names a cache entry, and the thing it names
+    // never leaves this browser.
+    let h = 0x811c9dc5;
+    for (let i = 0; i < text.length; i++) {
+      h ^= text.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return h.toString(36) + ':' + text.length;
+  }
+
+  const scoreKey = (jobId, resume) => jobId + '\u0000' + contentHash(resume.text);
+
+  const scores = {
+    all() {
+      try { const raw = JSON.parse(localStorage.getItem(SCORES) || '{}'); return raw && typeof raw === 'object' ? raw : {}; }
+      catch { return {}; }
+    },
+    save(map) {
+      try {
+        const keys = Object.keys(map);
+        if (keys.length > SCORE_LIMIT) {
+          // Oldest first; an unbounded cache in localStorage eventually throws on write
+          // and takes the feature down with it.
+          keys.sort((a, b) => (map[a].at || 0) - (map[b].at || 0));
+          for (const k of keys.slice(0, keys.length - SCORE_LIMIT)) delete map[k];
+        }
+        localStorage.setItem(SCORES, JSON.stringify(map));
+      } catch { /* private mode: scoring still works, it just will not be remembered */ }
+    },
+    get(jobId, resume) {
+      if (!resume) return null;
+      const entry = this.all()[scoreKey(jobId, resume)];
+      if (!entry || !entry.assessment) return null;
+      if (rubric && entry.rubric && entry.rubric !== rubric) return null;
+      return entry;
+    },
+    put(jobId, resume, match) {
+      const map = this.all();
+      map[scoreKey(jobId, resume)] = {
+        at: Date.now(),
+        rubric: match.assessment.rubricVersion || null,
+        job: { job_id: match.job.job_id, title: match.job.title, company: match.job.company, url: match.job.url },
+        assessment: match.assessment,
+      };
+      this.save(map);
+    },
+    forget(resume) {
+      if (!resume) return;
+      const map = this.all();
+      const suffix = '\u0000' + contentHash(resume.text);
+      let changed = false;
+      for (const k of Object.keys(map)) if (k.endsWith(suffix)) { delete map[k]; changed = true; }
+      if (changed) this.save(map);
+    },
+    dropOtherRubrics(version) {
+      if (!version) return;
+      const map = this.all();
+      let changed = false;
+      for (const k of Object.keys(map)) if (map[k].rubric && map[k].rubric !== version) { delete map[k]; changed = true; }
+      if (changed) this.save(map);
+    },
+  };
+
+  // The rubric the server is currently using, learned from the first assessment it
+  // returns. Until one arrives nothing is invalidated, because nothing is known.
+  let rubric = null;
+
+  // ---- the score block in the inspector ---------------------------------------
+  // One job on screen at a time, so one place to say which job that is. Switching
+  // résumés repaints this and nothing else: the description, the scroll position and
+  // the selected row all stay where they were.
+  let openJob = null;
+  let scoreRun = 0;
+  const inflight = new Set();
+
+  const PLUS = '<svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>';
+
+  const scoreHost = () => (openJob ? document.querySelector(`.job-score[data-score-for="${CSS.escape(openJob)}"]`) : null);
+
+  function paintScoreBlock() {
+    const host = scoreHost();
+    if (!host) return;
+    host.replaceChildren();
+    if (!matchingReady) return;
+
+    const { items, active } = store.read();
+    host.append(node('p', 'Résumé match', 'fit-head-label'));
+
+    if (!items.length) {
+      const empty = node('div', null, 'score-empty');
+      empty.append(node('p', 'Add a résumé to see how your experience reads against this role.', 'score-empty-note'));
+      const add = node('button', 'Add résumé', 'btn btn-secondary btn-sm');
+      add.type = 'button'; add.dataset.scoreAdd = '1';
+      empty.append(add);
+      host.append(empty);
+      return;
+    }
+
+    // Which résumé this job is being judged against. The label is stated rather than
+    // implied: a number with no name attached is a number you cannot act on.
+    const controls = node('div', null, 'job-score-controls');
+    const pick = document.createElement('label');
+    pick.className = 'job-score-pick';
+    pick.append(node('span', 'Compare this job against', 'job-score-pick-label'));
+    const select = document.createElement('select');
+    select.className = 'job-score-select';
+    for (const item of items) {
+      const option = document.createElement('option');
+      option.value = item.id;
+      option.textContent = item.label || item.name || 'Résumé';
+      option.selected = item.id === active;
+      select.append(option);
+    }
+    pick.append(select);
+    controls.append(pick);
+
+    const add = node('button', null, 'job-score-add btn btn-secondary');
+    add.type = 'button'; add.dataset.scoreAdd = '1';
+    add.title = 'Add another résumé';
+    add.innerHTML = PLUS + '<span class="visually-hidden">Add another résumé</span>';
+    controls.append(add);
+    host.append(controls);
+
+    const result = node('div', null, 'job-match-result');
+    result.dataset.matchResult = openJob;
+    host.append(result);
+    paintResult();
+    paintRoster(host, items, active);
+  }
+
+  // The result area for the selected résumé: its score if this pair has one, and the
+  // offer to make the call if not.
+  function paintResult(state) {
+    const host = scoreHost();
+    const result = host && host.querySelector('.job-match-result');
+    if (!result) return;
+    const current = store.activeItem();
+    if (!current) { result.replaceChildren(); return; }
+
+    if (state === 'loading') {
+      result.replaceChildren(node('p', 'Comparing this résumé with the description…', 'job-match-msg'));
+      return;
+    }
+    if (state && state.error) {
+      const box = node('div', null, 'job-match-msg is-error');
+      box.append(node('p', state.error));
+      const retry = node('button', 'Try again', 'btn btn-secondary btn-sm');
+      retry.type = 'button'; retry.dataset.match = openJob;
+      box.append(retry);
+      result.replaceChildren(box);
+      return;
+    }
+
+    const hit = scores.get(openJob, current);
+    if (hit) {
+      result.replaceChildren(card({ job: hit.job, assessment: hit.assessment }, { inPane: true }));
+      return;
+    }
+    const prompt = node('div', null, 'score-prompt');
+    prompt.append(node('p', 'Not scored yet', 'score-prompt-note'));
+    const check = node('button', 'Check match', 'btn btn-primary btn-sm');
+    check.type = 'button'; check.dataset.match = openJob;
+    prompt.append(check);
+    result.replaceChildren(prompt);
+  }
+
+  // Every résumé against this one job, so the comparison people actually came for —
+  // "which of mine reads best here" — is one glance rather than four switches.
+  function paintRoster(host, items, active) {
+    if (items.length < 2) return;
+    const roster = node('div', null, 'score-roster');
+    roster.append(node('p', 'Scores for this job', 'fit-finding-label'));
+    for (const item of items) {
+      const row = node('button', null, 'score-roster-row');
+      row.type = 'button';
+      row.dataset.pickResume = item.id;
+      if (item.id === active) row.classList.add('is-active');
+      row.append(node('span', item.label || item.name || 'Résumé', 'score-roster-name'));
+      const hit = scores.get(openJob, item);
+      row.append(node('span', hit ? String(hit.assessment.score) : 'Not evaluated',
+        'score-roster-value' + (hit ? '' : ' is-empty')));
+      roster.append(row);
+    }
+    host.append(roster);
+  }
+
+  document.addEventListener('job:opened', event => {
+    openJob = event.detail && event.detail.id;
+    paintScoreBlock();
+  });
+  // Uploading, renaming, removing or switching all change what this should show.
+  document.addEventListener('resumes:changed', () => paintScoreBlock());
+
+  document.addEventListener('change', event => {
+    const select = event.target.closest('.job-score-select');
+    if (!select) return;
+    // Switching résumé repaints the score and the roster; the job, the description and
+    // the scroll position are untouched.
+    store.select(select.value);
+    const current = store.activeItem();
+    if (current) { resumeText = current.text; fileName.textContent = current.label || current.name; }
+    renderList(); paintChip();
+    paintScoreBlock(); repaintRowFits();
+  });
+
+  document.addEventListener('click', event => {
+    const row = event.target.closest('[data-pick-resume]');
+    if (row) {
+      store.select(row.dataset.pickResume);
+      const current = store.activeItem();
+      if (current) { resumeText = current.text; fileName.textContent = current.label || current.name; }
+      renderList(); paintChip(); paintScoreBlock(); repaintRowFits();
+      return;
+    }
+    if (event.target.closest('[data-score-add]')) { fileInput.click(); }
+  });
+
   // Bands for colour, not decoration: a number alone makes you work out whether 23 is
   // good. The thresholds are the rubric's own — each dimension is a 0-4 judgement
   // rendered as 0/25/50/75/100, so 50 is "partially meets" and 75 is "meets".
@@ -408,13 +651,21 @@
   // A score the user has already paid for is worth showing where they scan, not only
   // where they asked for it. Rows are re-rendered on paging and filtering, so this is
   // also replayed from the session's scores whenever the list changes.
-  const rowScores = new Map();
   function paintRowFit(jobId, score) {
-    if (typeof score === 'number') rowScores.set(jobId, score);
     const slot = document.querySelector(`[data-fit-for="${CSS.escape(jobId)}"]`);
     if (!slot) return;
-    const value = rowScores.get(jobId);
-    if (typeof value !== 'number') { slot.hidden = true; return; }
+    let value = score;
+    if (typeof value !== 'number') {
+      const hit = scores.get(jobId, store.activeItem());
+      value = hit ? hit.assessment.score : null;
+    }
+    if (typeof value !== 'number') {
+      if (slot.dataset.fitValue === '') return;
+      slot.dataset.fitValue = '';
+      slot.replaceChildren();
+      slot.hidden = true;
+      return;
+    }
     // Writing the same number again would mutate the list, wake the observer below,
     // and bring us straight back here — a loop that pins the main thread and takes
     // the whole page with it. Only an actual change is written.
@@ -426,7 +677,7 @@
     slot.hidden = false;
   }
   function repaintRowFits() {
-    for (const id of rowScores.keys()) paintRowFit(id);
+    for (const slot of document.querySelectorAll('[data-fit-for]')) paintRowFit(slot.dataset.fitFor);
   }
   // Rows are replaced wholesale on paging and filtering, so scores are replayed onto
   // the new ones. childList only, and not subtree: the score lives one level down and
@@ -442,8 +693,9 @@
       // The pane already names the role above this, so repeating the title and company
       // here would say it twice. What is missing from the pane is the number, so that
       // is what the card leads with.
+      // The block around this already says "Résumé match" above the résumé picker,
+      // so repeating it here would head the same section twice.
       const head = node('div', null, 'fit-head');
-      head.append(node('p', 'Résumé match', 'fit-head-label'));
       const total = node('p', null, 'fit-total');
       total.append(node('span', String(a.score), 'fit-total-score'), node('span', '/100', 'fit-total-max'));
       head.append(total);
@@ -632,49 +884,64 @@
     const button = event.target.closest('[data-match]');
     if (!button || !matchingReady) return;
     const jobId = button.getAttribute('data-match');
-    const slot = document.querySelector(`[data-match-result="${CSS.escape(jobId)}"]`);
-    if (!slot) return;
 
-    const resume = resumeText;
-    if (!resume) {
-      slot.replaceChildren(node('p', 'Choose a r\u00e9sum\u00e9 file above to start matching jobs.', 'job-match-msg'));
-      // Nothing to expand any more — the upload button is always on the page — so
-      // take them to it and put the focus there. Scrolling the label rather than the
-      // input, because the input itself is visually hidden behind it.
-      document.dispatchEvent(new CustomEvent('resumes:needed'));
-      return;
-    }
+    // The résumé being compared is the one named in the control above the button, not
+    // whatever was last uploaded.
+    const resume = store.activeItem();
+    if (!resume) { document.dispatchEvent(new CustomEvent('resumes:needed')); return; }
 
-    button.disabled = true;
-    const label = button.textContent;
-    button.textContent = 'Comparing\u2026';
-    slot.replaceChildren(node('p', 'Comparing your r\u00e9sum\u00e9 with this description\u2026', 'job-match-msg'));
+    // Already answered for this exact pair — show it rather than paying for it again.
+    if (scores.get(jobId, resume)) { paintResult(); return; }
+
+    const key = scoreKey(jobId, resume);
+    if (inflight.has(key)) return;
+    inflight.add(key);
+
+    const run = ++scoreRun;
+    paintResult('loading');
     const ctrl = new AbortController();
-    const current = version;
     singleJobControllers.add(ctrl);
     const timer = setTimeout(() => ctrl.abort(), 60000);
     try {
       const data = await JobsAPI.request('/matches',
-        { resume, consent: true, job_id: jobId }, ctrl.signal);
-      if (current !== version || ctrl.signal.aborted || !slot.isConnected) return;
+        { resume: resume.text, consent: true, job_id: jobId }, ctrl.signal);
       const match = data.matches && data.matches[0];
       if (!match) throw new Error(data.message || 'No assessment came back for this role.');
-      slot.replaceChildren(card(match, { inPane: true }));
+
+      // Store it whatever happened on screen meanwhile: the answer is true for this
+      // pair regardless of what is being looked at now, and throwing it away would
+      // mean paying for it twice.
+      rubric = match.assessment.rubricVersion || rubric;
+      scores.dropOtherRubrics(rubric);
+      scores.put(jobId, resume, match);
       paintRowFit(jobId, match.assessment.score);
+
+      // Painting, though, is only correct if the question has not moved on — a slower
+      // first request must not overwrite the answer to a second one.
+      const live = store.activeItem();
+      if (run !== scoreRun || jobId !== openJob || !live || live.id !== resume.id) return;
+      paintScoreBlock();
     } catch (error) {
-      if (current !== version || !slot.isConnected) return;
+      if (run !== scoreRun || jobId !== openJob) return;
       if (error.status === 503) { disableMatching(); return; }
-      slot.replaceChildren(node('p',
-        error.name === 'AbortError' ? 'That comparison timed out. Please try again.' : error.message,
-        'job-match-msg'));
+      paintResult({ error: error.name === 'AbortError'
+        ? 'That comparison timed out. Please try again.'
+        : (error.message || 'That comparison could not be completed.') });
     } finally {
       clearTimeout(timer);
       singleJobControllers.delete(ctrl);
-      button.disabled = false; button.textContent = label;
+      inflight.delete(key);
     }
   });
 
   clear.addEventListener('click', () => {
+    // "Remove résumé and results" used to clear only what was on screen, which was
+    // indistinguishable from removal while scores lived for one render. Now that a
+    // score outlives its render, the control has to mean what it says: the résumé
+    // goes, and its scores go with it, or the next paint brings the old number back
+    // for a document the user believes they deleted.
+    const going = store.activeItem();
+    if (going) { scores.forget(going); store.remove(going.id); announce(); }
     resumeText = '';
     document.body.classList.remove('resume-has-file');
     invalidate(); fileInput.value = '';
