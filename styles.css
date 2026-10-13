@@ -1870,13 +1870,40 @@ body.detail-open { overflow: hidden; }
 @media (min-width: 1280px) {
   .wrap { max-width: 1400px; }
   .results-shell { max-width: none; }
+  /* The two halves meet rather than float apart. A list and the thing it is showing
+     are one surface split in two, not two objects with a channel between them, and
+     the gap was reading as "unrelated" at exactly the moment they are most related.
+     One shared edge does the dividing. */
   .results-split {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(390px, 470px);
-    gap: 22px;
+    gap: 0;
     align-items: start;
   }
   .results-main { min-width: 0; }
+
+  /* Rows, not cards. Separate rounded cards cannot butt against a shared edge — the
+     corners leave gaps the eye reads as damage — so inside the panel the rows are
+     divided by hairlines and the panel carries the border for all of them. */
+  #job-list {
+    border: 1px solid var(--rule);
+    border-right: 0;
+    border-radius: 12px 0 0 12px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  #job-list > .job {
+    border-width: 0 0 1px 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  #job-list > .job:last-child { border-bottom: 0; }
+  #job-list > .job.is-selected {
+    box-shadow: inset 3px 0 0 var(--accent);
+    background: var(--accent-fill);
+  }
+
   .job-detail {
     display: block;
     position: sticky;
@@ -1884,7 +1911,7 @@ body.detail-open { overflow: hidden; }
     top: 18px;
     max-height: calc(100vh - 36px);
     border: 1px solid var(--rule);
-    border-radius: 12px;
+    border-radius: 0 12px 12px 0;
     background: var(--surface);
     overflow: hidden;
   }
