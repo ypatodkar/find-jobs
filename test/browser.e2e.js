@@ -28,7 +28,7 @@ async function main() {
     await page.goto(base);
     await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('110 open roles'));
     // With matching unavailable there is no chip to manage and no form behind it.
-    assert.equal(await page.locator('#resume-status-chip').isVisible(), false);
+    assert.equal(await page.locator('#resume-manage').isVisible(), false);
     assert.ok((await page.locator('#resume-summary-note').textContent()).includes('unavailable'));
     assert.equal(await page.locator('#resume-form').isVisible(), false);
     assert.equal(await page.locator('.job-match-link:visible').count(), 0);
@@ -37,13 +37,29 @@ async function main() {
     await page.route('**/api/jobs/config', oldApiConfig);
     await page.reload();
     await page.waitForFunction(() => document.getElementById('resume-summary-note').textContent.includes('unavailable'));
-    assert.equal(await page.locator('#resume-status-chip').isVisible(), false);
+    assert.equal(await page.locator('#resume-manage').isVisible(), false);
     assert.equal(await page.locator('#resume-form').isVisible(), false);
     await page.unroute('**/api/jobs/config', oldApiConfig);
     await page.route('**/api/jobs/config', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"matching":true}' }));
     await page.reload();
     await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('110 open roles'));
-    await page.locator('#resume-status-chip').waitFor({ state: 'visible' });
+    await page.locator('#resume-manage').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#onboard-slot').count(), 0);
+    await page.locator('#settings-trigger').click();
+    assert.equal(await page.locator('#settings-popover').isVisible(), true);
+    assert.equal(await page.locator('#settings-popover .visitor-edit').isVisible(), true);
+    await page.screenshot({ path: '.catalogue/settings-desktop.png', fullPage: false });
+    await page.locator('#settings-popover .visitor-edit').click();
+    await page.locator('#visitor-name').fill('Alex');
+    await page.locator('.visitor-save').click();
+    assert.ok((await page.locator('#settings-popover .visitor-greet').textContent()).includes('Hello, Alex'));
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#settings-popover').isVisible(), false);
+    await page.locator('#theme-toggle').click();
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
+    assert.equal(await page.locator('#job-list > .job.is-selected').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(31, 35, 42)');
+    await page.screenshot({ path: '.catalogue/dark-desktop.png', fullPage: false });
+    await page.locator('#theme-toggle').click();
     fs.mkdirSync('.catalogue', { recursive: true });
     await page.screenshot({ path: '.catalogue/top-desktop.png', fullPage: false });
     assert.equal(await page.locator('#job-list .job').count(), 45);
@@ -114,12 +130,18 @@ async function main() {
     assert.equal(await page.evaluate(id => window.Seen.has(id), openedId), true);
     assert.equal(await page.locator(`.job[data-job-id="${openedId}"]`).first().evaluate(row => row.classList.contains('row-seen')), true);
     assert.equal(await page.locator('#advanced-filters').evaluate(el => el.open), false);
+    const workspaceTop = await page.locator('#results-split').evaluate(el => el.getBoundingClientRect().top);
     await page.locator('#advanced-filters > summary').click();
     assert.ok(await page.locator('#sum-company').isVisible());
-    await page.locator('#advanced-filters > summary').click();
+    assert.equal(await page.locator('#results-split').evaluate(el => el.getBoundingClientRect().top), workspaceTop);
+    await page.screenshot({ path: '.catalogue/advanced-desktop.png', fullPage: false });
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#advanced-filters').evaluate(el => el.open), false);
     // The panel is behind the masthead chip; Manage is how it opens.
-    assert.equal(await page.locator('#resume-panel-region').evaluate(el => el.hidden), true);
+    assert.equal(await page.locator('#resume-popover').evaluate(el => el.hidden), true,
+      'the résumé manager is a popover, closed until its trigger is pressed');
     await page.locator('#resume-manage').click();
+    assert.equal(await page.locator('#resume-popover').evaluate(el => el.hidden), false);
     assert.equal(await page.locator('#resume-file-btn').isVisible(), true);
     assert.equal(await page.locator('#resume-panel, #resume-text, #resume-consent').count(), 0);
     const resumeFile = page.locator('#resume-file');
@@ -137,6 +159,10 @@ async function main() {
     await resumeFile.setInputFiles({ name: 'resume.txt', mimeType: 'text/plain', buffer: Buffer.from(resume) });
     // Choosing a file no longer starts a comparison; it has to be asked for.
     await page.waitForFunction(() => document.getElementById('resume-file-state').textContent.includes('press'));
+    assert.equal(await page.locator('#resume-list .resume-row').count(), 1, 'a single saved résumé remains visible and removable');
+    assert.equal(await page.locator('#resume-list .resume-row-remove').count(), 1);
+    assert.equal(await page.locator('#resume-file-btn svg').count(), 1, 'upload icon remains after the button label updates');
+    await page.screenshot({ path: '.catalogue/single-resume-desktop.png', fullPage: false });
     assert.equal(sent.length, 0, 'no provider call before the button is pressed');
     await page.locator('#resume-run').evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     await page.waitForFunction(() => document.getElementById('resume-status').textContent.includes('temporarily unavailable'));
@@ -181,8 +207,13 @@ async function main() {
     const matchButton = page.locator('#job-detail .job-score-check');
     await matchButton.click();
     await page.waitForSelector('#job-detail [data-match-result] .resume-result');
+    await page.screenshot({ path: '.catalogue/match-desktop.png', fullPage: false });
     await resumeFile.setInputFiles({ name: 'updated.txt', mimeType: 'text/plain', buffer: Buffer.from(updatedResume) });
     await page.waitForFunction(() => document.getElementById('resume-file-state').textContent.includes('press'));
+    assert.equal(await page.locator('#resume-list .resume-row').count(), 2);
+    await page.locator('#resume-manage').click();
+    await page.screenshot({ path: '.catalogue/resumes-desktop.png', fullPage: false });
+    await page.locator('#resume-manage').click();
     await page.locator('#resume-run').evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     await page.waitForFunction(() => document.getElementById('resume-file-state').textContent === 'Comparison complete');
     assert.equal(successful.at(-1).resume, updatedResume);
@@ -201,7 +232,7 @@ async function main() {
     // The 503 is only discovered when a comparison is actually requested.
     await page.locator('#resume-run').evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     await page.locator('#resume-form').waitFor({ state: 'hidden' });
-    assert.equal(await page.locator('#resume-status-chip').isVisible(), false);
+    assert.equal(await page.locator('#resume-manage').isVisible(), false);
     assert.ok((await page.locator('#resume-summary-note').textContent()).includes('unavailable'));
     assert.equal(await page.locator('.job-match-link:visible').count(), 0);
     assert.equal(await page.locator('#resume-selected').isVisible(), false);
@@ -213,11 +244,21 @@ async function main() {
     await page.locator('#mobile-job-search').fill('Frontend');
     await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('55 matching roles'));
     await page.screenshot({ path: '.catalogue/mobile.png', fullPage: false });
+    await page.locator('#mobile-filter-toggle').click();
+    assert.equal(await page.locator('#job-controls').getAttribute('role'), 'dialog');
+    await page.screenshot({ path: '.catalogue/mobile-filters.png', fullPage: false });
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#mobile-filter-toggle').getAttribute('aria-expanded'), 'false');
+    await page.locator('#job-list .job-card-open').first().click();
+    await page.locator('#job-detail').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.querySelector('#job-detail .description-body')?.textContent.includes('Five years'));
+    await page.screenshot({ path: '.catalogue/mobile-detail.png', fullPage: false });
+    await page.locator('.job-detail-back').click();
     await page.evaluate(() => window.scrollTo(0, document.getElementById('job-list').getBoundingClientRect().top + window.scrollY - 40));
     await page.screenshot({ path: '.catalogue/list-mobile.png', fullPage: false });
     await page.goto(base + '/?company=Alpha');
     await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('matching roles'));
-    assert.equal(await page.locator('#advanced-filters').evaluate(el => el.open), true);
+    assert.equal(await page.locator('#advanced-filters').evaluate(el => el.open), false);
     assert.ok((await page.locator('#advanced-filter-count').textContent()).includes('1 active'));
     await page.goto(base + '/firm.html?id=accel');
     await page.waitForFunction(() => document.getElementById('firm-stats').textContent.includes('55 matching roles'));

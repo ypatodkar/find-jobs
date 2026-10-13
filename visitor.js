@@ -76,19 +76,29 @@
   function renderGreeting() {
     var el = slot();
     if (!el) return;
-    var label = me && me.name ? "Hello, " + esc(me.name) : "Hello there";
+    var label = me && me.name ? "Hello, " + esc(me.name) : "Your profile";
     el.innerHTML =
       '<span class="visitor-greet">' +
       label +
       ' <button type="button" class="visitor-edit" aria-label="Change your name">' +
-      (me && me.name ? "edit" : "add name") +
+      (me && me.name ? "Edit name" : "Add name") +
       "</button></span>";
     el.querySelector(".visitor-edit").addEventListener("click", function () {
       renderPrompt(true);
     });
   }
 
+  function homeFor(isPrompt) {
+    // On the jobs page the profile editor belongs inside settings. Older catalogue
+    // pages retain their existing first-visit prompt until they use the same shell.
+    var el = document.getElementById("visitor-slot");
+    var onboard = document.getElementById("onboard-slot");
+    if (isPrompt && !document.getElementById("settings-popover") && onboard && el && el.parentNode !== onboard) onboard.appendChild(el);
+    return el;
+  }
+
   function renderPrompt(isEdit) {
+    homeFor(true);
     var el = slot();
     if (!el) return;
     el.innerHTML =
@@ -123,8 +133,9 @@
 
   function init() {
     ensure();
-    // Ask once, ever. After that it's an edit affordance next to the greeting.
-    if (!me.asked) renderPrompt(false);
+    // The job browser offers optional naming in settings, without interrupting a
+    // first visit or forcing an input into the primary navigation.
+    if (!me.asked && !document.getElementById("settings-popover")) renderPrompt(false);
     else renderGreeting();
   }
 

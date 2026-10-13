@@ -8,11 +8,12 @@
   const status = $('resume-status'), results = $('resume-results');
   const actions = document.querySelector('.resume-actions');
   const retry = $('resume-retry'), clear = $('resume-clear');
-  const section = document.querySelector('.resume-match');
+  // The panel this used to mark unavailable is now the popover in the navigation.
+  const section = document.getElementById('resume-popover');
   const form = $('resume-form'), availability = $('resume-availability');
   const summaryNote = $('resume-summary-note'), actionLabel = $('resume-action-closed');
   const runSaved = $('resume-run'), forget = $('resume-forget');
-  const fileBtn = $('resume-file-btn');
+  const fileBtn = $('resume-file-text');
 
   // The résumé lives in this browser and nowhere else.
   //
@@ -140,7 +141,7 @@
     document.body.classList.remove('resume-has-file');
     // The chip offers a feature that has just stopped existing, so it goes with it.
     paintChip();
-    if (region) region.hidden = true;
+    if (popover) popover.hidden = true;
   }
   // The pane draws its own picker and needs the list; it does not need the storage,
   // so only these four things cross the boundary.
@@ -151,48 +152,58 @@
     addFile: file => { if (fileInput) { const dt = new DataTransfer(); dt.items.add(file); fileInput.files = dt.files; fileInput.dispatchEvent(new Event('change', { bubbles: true })); } },
   };
 
-  // ---- the status chip -------------------------------------------------------
-  // Uploading a résumé is a thing you do once; browsing jobs is why you came. The
-  // panel is kept behind a status line in the masthead so the document step stops
-  // taking the top of the page from the list it is meant to help you read.
-  const chip = $('resume-status-chip');
+  // ---- the résumé menu --------------------------------------------------------
+  // A control in the navigation, not a panel above the job list. It states what it
+  // holds and opens a popover anchored to itself, so switching résumés never moves
+  // the list underneath it.
+  const menu = $('resume-menu');
+  const trigger = $('resume-manage');
+  const popover = $('resume-popover');
   const chipText = $('resume-chip-text');
-  const manage = $('resume-manage');
-  const region = $('resume-panel-region');
 
   function paintChip() {
-    if (!chip) return;
+    if (!trigger) return;
     const { items } = matchingReady ? store.read() : { items: [] };
-    chip.hidden = !matchingReady;
+    trigger.hidden = !matchingReady;
     if (!chipText) return;
-    chipText.textContent = items.length === 0 ? 'No résumé'
-      : items.length === 1 ? 'Résumé ready'
+    chipText.textContent = items.length === 0 ? 'Add résumé'
+      : items.length === 1 ? '1 résumé'
       : items.length + ' résumés';
-    if (manage) manage.textContent = items.length === 0 ? 'Add' : 'Manage';
   }
 
-  function togglePanel(open) {
-    if (!region) return;
-    const next = open === undefined ? region.hidden : open;
-    region.hidden = !next;
-    if (manage) manage.setAttribute('aria-expanded', String(next));
+  function openMenu(open) {
+    if (!popover || !trigger) return;
+    const next = open === undefined ? popover.hidden : open;
+    popover.hidden = !next;
+    trigger.setAttribute('aria-expanded', String(next));
     if (next) {
-      region.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      const target = $('resume-file-btn');
-      if (target) target.focus({ preventScroll: true });
+      const first = popover.querySelector('.resume-row-pick, #resume-file');
+      if (first) first.focus({ preventScroll: true });
     }
   }
-  manage?.addEventListener('click', () => togglePanel());
+  trigger?.addEventListener('click', () => openMenu());
 
-  // Asking for a score without a résumé opens the panel rather than scrolling to a
-  // block that is no longer on the page.
-  document.addEventListener('resumes:needed', () => togglePanel(true));
+  // Closing on an outside click and on Escape, which is what a popover has to do to
+  // behave like one rather than like a panel that happens to float.
+  // On pointerdown, not click: a control inside the popover that re-renders the list —
+  // naming, removing, switching — is detached from the document before its click event
+  // bubbles here, so by then it looks like a click on the outside and the popover shuts
+  // itself the moment it is used. pointerdown fires while the element is still in place.
+  document.addEventListener('pointerdown', event => {
+    if (!popover || popover.hidden) return;
+    if (!menu.contains(event.target)) openMenu(false);
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && popover && !popover.hidden) { openMenu(false); trigger.focus(); }
+  });
+
+  // Asking for a score without a résumé opens the menu where one is added.
+  document.addEventListener('resumes:needed', () => openMenu(true));
 
   // ---- the collection -------------------------------------------------------
-  // A list of one is not a choice, so it only appears from the second résumé on.
-  // Naming works the same way: the first file is never asked for a label, because
-  // there is nothing to tell it apart from. Adding a second is what makes both
-  // ambiguous, so that is when both are asked for at once.
+  // Every saved file stays visible in the manager, including a single file: its
+  // filename and Remove action must not disappear just because there is no choice
+  // to make yet. Selection and naming controls only appear with multiple files.
   const listEl = $('resume-list');
   let naming = false;
 
@@ -200,8 +211,8 @@
     if (!listEl) return;
     const { items, active } = store.read();
     listEl.replaceChildren();
-    listEl.hidden = items.length < 2;
-    if (items.length < 2) { naming = false; return; }
+    listEl.hidden = items.length === 0;
+    if (items.length === 0) { naming = false; return; }
 
     if (naming) {
       listEl.append(node('p', 'Name your résumés so you can tell them apart.', 'resume-list-hint'));
@@ -211,12 +222,14 @@
       row.dataset.id = item.id;
       if (item.id === active) row.classList.add('is-active');
 
-      const pick = document.createElement('input');
-      pick.type = 'radio'; pick.name = 'resume-pick'; pick.value = item.id;
-      pick.checked = item.id === active;
-      pick.className = 'resume-row-pick';
-      pick.setAttribute('aria-label', 'Use ' + (item.label || item.name));
-      row.append(pick);
+      if (items.length > 1) {
+        const pick = document.createElement('input');
+        pick.type = 'radio'; pick.name = 'resume-pick'; pick.value = item.id;
+        pick.checked = item.id === active;
+        pick.className = 'resume-row-pick';
+        pick.setAttribute('aria-label', 'Use ' + (item.label || item.name));
+        row.append(pick);
+      }
 
       if (naming) {
         const input = document.createElement('input');
@@ -232,8 +245,9 @@
         row.append(copy);
       }
 
-      const remove = node('button', 'Remove', 'resume-row-remove');
+      const remove = node('button', null, 'resume-row-remove');
       remove.type = 'button'; remove.dataset.removeResume = item.id;
+      remove.innerHTML = '<svg class="i" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
       remove.setAttribute('aria-label', 'Remove ' + (item.label || item.name));
       row.append(remove);
       listEl.append(row);
@@ -242,7 +256,7 @@
       const done = node('button', 'Save names', 'resume-names-done');
       done.type = 'button'; done.id = 'resume-names-done';
       listEl.append(done);
-    } else {
+    } else if (items.length > 1) {
       // The guidance the single-résumé status line carried, kept here because that
       // line is hidden once the list is doing the same job better.
       listEl.append(node('p', 'Open a role and press \u201cCheck r\u00e9sum\u00e9 score\u201d to use the selected r\u00e9sum\u00e9.', 'resume-list-hint resume-list-foot'));
@@ -320,7 +334,7 @@
     invalidate();
     selected.hidden = false;
     fileName.textContent = kept.label || kept.name || 'Saved r\u00e9sum\u00e9';
-    selected.dataset.state = 'ready'; selectedIcon.textContent = '\u2713';
+    selected.dataset.state = 'ready'; selectedIcon.textContent = '';
     actions.hidden = false; clear.hidden = false;
     await compare();
   });
@@ -391,37 +405,91 @@
     return tile;
   }
 
+  // A score the user has already paid for is worth showing where they scan, not only
+  // where they asked for it. Rows are re-rendered on paging and filtering, so this is
+  // also replayed from the session's scores whenever the list changes.
+  const rowScores = new Map();
+  function paintRowFit(jobId, score) {
+    if (typeof score === 'number') rowScores.set(jobId, score);
+    const slot = document.querySelector(`[data-fit-for="${CSS.escape(jobId)}"]`);
+    if (!slot) return;
+    const value = rowScores.get(jobId);
+    if (typeof value !== 'number') { slot.hidden = true; return; }
+    // Writing the same number again would mutate the list, wake the observer below,
+    // and bring us straight back here — a loop that pins the main thread and takes
+    // the whole page with it. Only an actual change is written.
+    if (slot.dataset.fitValue === String(value)) return;
+    slot.dataset.fitValue = String(value);
+    slot.replaceChildren(
+      Object.assign(document.createElement('strong'), { textContent: value + '%', className: 'job-fit-score' }),
+      Object.assign(document.createElement('span'), { textContent: 'Match', className: 'job-fit-word' }));
+    slot.hidden = false;
+  }
+  function repaintRowFits() {
+    for (const id of rowScores.keys()) paintRowFit(id);
+  }
+  // Rows are replaced wholesale on paging and filtering, so scores are replayed onto
+  // the new ones. childList only, and not subtree: the score lives one level down and
+  // watching the whole tree would see this function's own writes.
+  const jobList = document.getElementById('job-list');
+  if (jobList) new MutationObserver(repaintRowFits).observe(jobList, { childList: true });
+
   function card({ job, assessment: a }, options = {}) {
     const article = node('article', null, 'resume-result');
     article.dataset.band = band(a.score);
 
-    const heading = node('div', null, 'resume-result-heading');
-    const title = node('h3');
-    if (/^https?:\/\//i.test(job.url || '')) {
-      const link = node('a', job.title, 'job-title'); link.href = job.url;
-      link.target = '_blank'; link.rel = 'noopener noreferrer';
-      link.dataset.jobId = job.job_id; link.dataset.company = job.company; link.dataset.city = job.city || '';
-      title.append(link);
-    } else title.textContent = job.title;
-    heading.append(title, node('span', `${a.score}/100`, 'resume-score'));
-    article.append(heading);
-
-    const meta = [job.company, job.city, job.salary].filter(Boolean).join(' · ');
-    if (meta) article.append(node('p', meta, 'resume-meta'));
+    if (options.inPane) {
+      // The pane already names the role above this, so repeating the title and company
+      // here would say it twice. What is missing from the pane is the number, so that
+      // is what the card leads with.
+      const head = node('div', null, 'fit-head');
+      head.append(node('p', 'Résumé match', 'fit-head-label'));
+      const total = node('p', null, 'fit-total');
+      total.append(node('span', String(a.score), 'fit-total-score'), node('span', '/100', 'fit-total-max'));
+      head.append(total);
+      const track = node('div', null, 'fit-track fit-track-total');
+      const fill = node('div', null, 'fit-fill');
+      fill.style.width = `${Math.max(2, a.score)}%`;
+      track.append(fill);
+      head.append(track);
+      article.append(head);
+    } else {
+      const heading = node('div', null, 'resume-result-heading');
+      const title = node('h3');
+      if (/^https?:\/\//i.test(job.url || '')) {
+        const link = node('a', job.title, 'job-title'); link.href = job.url;
+        link.target = '_blank'; link.rel = 'noopener noreferrer';
+        link.dataset.jobId = job.job_id; link.dataset.company = job.company; link.dataset.city = job.city || '';
+        title.append(link);
+      } else title.textContent = job.title;
+      heading.append(title, node('span', `${a.score}/100`, 'resume-score'));
+      article.append(heading);
+      const meta = [job.company, job.city, job.salary].filter(Boolean).join(' · ');
+      if (meta) article.append(node('p', meta, 'resume-meta'));
+    }
 
     const grid = node('div', null, 'fit-grid');
     for (const d of a.dimensions) grid.append(meter(d.key, d.label, d.score, d.confidence < 0.5));
     article.append(grid);
 
-    // The gap is the one line worth reading first: it is the thing the résumé does not
-    // answer, which is what decides whether to apply. It gets the accent border.
-    if (a.gap?.text) {
-      const callout = node('div', null, 'fit-callout');
-      callout.append(node('span', 'Requirement to check', 'fit-callout-label'), node('p', a.gap.text));
-      article.append(callout);
-    }
+    // Two findings, named for the questions they answer rather than for where the
+    // data came from. Strength first, then the thing the résumé does not demonstrate,
+    // which is what actually decides whether to apply.
+    //
+    // There is deliberately no "suggestions" section. The rubric returns three scores,
+    // a supporting passage and a missing requirement; advice on how to improve is not
+    // among them, and writing it from the score alone would be invention dressed as
+    // analysis. Adding it means adding a question to the rubric, which is a model
+    // change, not a layout one.
     if (a.evidence?.text) {
-      article.append(node('p', 'Strongest evidence in your résumé', 'resume-evidence-label'), node('blockquote', a.evidence.text));
+      const why = node('div', null, 'fit-finding');
+      why.append(node('span', 'Why you match', 'fit-finding-label'), node('blockquote', a.evidence.text));
+      article.append(why);
+    }
+    if (a.gap?.text) {
+      const gap = node('div', null, 'fit-finding fit-finding-gap');
+      gap.append(node('span', 'Potential gap', 'fit-finding-label'), node('p', a.gap.text));
+      article.append(gap);
     }
     if (a.uncertain) article.append(node('p', 'The model is uncertain about part of this assessment. Read the description before relying on the score.', 'resume-note'));
     if (a.truncated) article.append(node('p', 'This long description was shortened for comparison; read the full posting.', 'resume-note'));
@@ -592,6 +660,7 @@
       const match = data.matches && data.matches[0];
       if (!match) throw new Error(data.message || 'No assessment came back for this role.');
       slot.replaceChildren(card(match, { inPane: true }));
+      paintRowFit(jobId, match.assessment.score);
     } catch (error) {
       if (current !== version || !slot.isConnected) return;
       if (error.status === 503) { disableMatching(); return; }

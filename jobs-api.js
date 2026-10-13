@@ -136,20 +136,23 @@
     inner.innerHTML = `
       <button type="button" class="job-detail-back">← Back to results</button>
       <div class="job-detail-head">
-        <p class="job-detail-eyebrow">Job description</p>
+        <p class="job-detail-eyebrow"></p>
         <h2></h2>
         <p class="job-detail-meta"></p>
-        <p class="job-detail-actions" hidden><a class="description-original" target="_blank" rel="noopener noreferrer">View job <span aria-hidden="true">↗</span></a></p>
+        <p class="job-detail-actions" hidden><a class="description-original" target="_blank" rel="noopener noreferrer">View job <svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a></p>
       </div>
       <div class="job-score" data-score-for="${attr(id)}">
         <div class="job-score-controls">
           <label class="job-score-pick" hidden><span class="visually-hidden">Résumé to score against</span><select class="job-score-select"></select></label>
-          <label class="job-score-add" title="Add another résumé"><input type="file" accept=".pdf,.docx,.txt,.md,.markdown,application/pdf,text/plain,text/markdown"><span aria-hidden="true">+</span><span class="visually-hidden">Add another résumé</span></label>
+          <label class="job-score-add" title="Add another résumé"><input type="file" accept=".pdf,.docx,.txt,.md,.markdown,application/pdf,text/plain,text/markdown"><svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span class="visually-hidden">Add another résumé</span></label>
           <button type="button" class="job-score-check" data-match="${attr(id)}">Check résumé score</button>
         </div>
         <div class="job-match-result" data-match-result="${attr(id)}"></div>
       </div>
-      <div class="description-body" aria-busy="true"></div>`;
+      <section class="description-section" aria-label="Job description">
+        <h3 class="description-section-title">Job description</h3>
+        <div class="description-body" aria-busy="true"></div>
+      </section>`;
     const body = inner.querySelector('.description-body');
     paintPicker(inner);
     const render = text => global.DescriptionFormat?.render
@@ -161,6 +164,7 @@
     try {
       const { job } = await request('/jobs/' + encodeURIComponent(id), undefined, current.signal);
       if (current !== controller || openId !== id) return;
+      inner.querySelector('.job-detail-eyebrow').textContent = job.company || '';
       inner.querySelector('.job-detail-head h2').textContent = job.title;
       inner.querySelector('.job-detail-meta').textContent =
         [job.company, job.city, job.remote && job.city !== 'Remote' ? 'Remote option' : null, job.salary].filter(Boolean).join(' · ');
@@ -232,9 +236,36 @@
   // A URL carrying ?job=<id> opens straight onto that posting.
   function openFromUrl() {
     const id = new URL(global.location.href).searchParams.get('job');
+    if (id) { description(id, null, { fromUrl: true }); return true; }
+    return false;
+  }
+
+  // On a wide screen the pane is already on the page, so leaving it empty wastes the
+  // half of the screen it occupies and leaves the layout looking unfinished. The first
+  // result opens itself, which is what every list-detail product does — once, on the
+  // first load only, so paging or filtering later does not keep spending a request on
+  // a row nobody asked about.
+  function openFirstOnce() {
+    if (!wide() || openId) return;
+    const row = document.querySelector('#job-list > .job[data-job-id]');
+    const id = row && row.getAttribute('data-job-id');
     if (id) description(id, null, { fromUrl: true });
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { history(); openFromUrl(); });
-  else { history(); openFromUrl(); }
+  function awaitFirstPage() {
+    const list = document.getElementById('job-list');
+    if (!list) return;
+    if (list.querySelector('.job[data-job-id]')) { openFirstOnce(); return; }
+    const watch = new MutationObserver(() => {
+      if (!list.querySelector('.job[data-job-id]')) return;
+      watch.disconnect();
+      openFirstOnce();
+    });
+    watch.observe(list, { childList: true, subtree: true });
+    // Never leave an observer running on a page that failed to load any rows.
+    setTimeout(() => watch.disconnect(), 30000);
+  }
+  const start = () => { history(); if (!openFromUrl()) awaitFirstPage(); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
   global.JobsAPI = { request, search, remember, withHistory, description, closeDescription };
 })(window);

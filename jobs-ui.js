@@ -198,10 +198,13 @@
 
     function updateSummary(available) {
       const n = selected.size;
+      // The control carries its own name now, so unfiltered it reads "Role" rather
+      // than "All (12)" under a separate heading that said "Role". Once something is
+      // chosen the name gives way to the choice, which is the more useful word.
       const value =
-        n === 0 ? (opts.emptyLabel ? `${opts.emptyLabel} (${available})` : `All (${available})`)
+        n === 0 ? opts.label
         : n === 1 ? opts.labelFor([...selected][0])
-        : `${n} ${opts.exclude ? "excluded" : "selected"}`;
+        : `${opts.label} · ${n}${opts.exclude ? " excluded" : ""}`;
       summary.textContent = value;
       summary.setAttribute("aria-label", `${opts.label} filter: ${value}`);
       root.classList.toggle("has-selection", n > 0);
@@ -507,7 +510,6 @@
     // One picker per dimension, built into the markup up front so ids stay stable.
     const pickerMarkup = (d) => `
       <div class="picker-wrap">
-        <span class="picker-label">${escapeHtml(d.label)}</span>
         <details class="company-picker" id="pick-${d.key}">
           <summary id="sum-${d.key}">All</summary>
           <div class="company-panel">
@@ -530,13 +532,30 @@
       if (!dims.length) return "";
       const section = `
       <section class="filter-section">
-        ${g.id === "core" ? `<p class="filter-section-title" id="fg-${g.id}">${escapeHtml(g.title)}</p>` : ""}
-        <div class="filter-grid" id="grid-${g.id}" role="group" ${g.id === "core" ? 'aria-labelledby="fg-core"' : 'aria-label="Advanced filters"'}>${dims.map(pickerMarkup).join("")}</div>
+        ${/* The group's name is a heading for a row of three labelled controls that
+             already say what they filter. It stays as the group's accessible name
+             rather than as a line of type above them. */ ""}
+        <div class="filter-grid" id="grid-${g.id}" role="group" aria-label="${escapeHtml(g.id === "core" ? g.title : "Advanced filters")}">${dims.map(pickerMarkup).join("")}</div>
       </section>`;
       return g.id === "advanced"
-        ? `<details class="advanced-filters" id="advanced-filters"><summary>Advanced Search <span id="advanced-filter-count"></span></summary>${section}</details>`
+        ? `<details class="advanced-filters" id="advanced-filters"><summary><svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4H14M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3"/></svg>Advanced <span id="advanced-filter-count"></span></summary><div class="advanced-panel"><div class="advanced-panel-head"><strong>Advanced filters</strong><button type="button" id="advanced-clear">Reset all</button></div>${section}</div></details>`
         : section;
     }).join("");
+
+    const advancedPanel = $("advanced-filters");
+    advancedPanel?.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && advancedPanel.open) {
+        event.preventDefault();
+        advancedPanel.open = false;
+        advancedPanel.querySelector("summary").focus();
+      }
+    });
+    document.addEventListener("pointerdown", (event) => {
+      if (advancedPanel?.open && !matchMedia("(max-width: 720px)").matches && !advancedPanel.contains(event.target)) {
+        advancedPanel.open = false;
+      }
+    });
+    $("advanced-clear")?.addEventListener("click", () => el.resetBtn?.click());
 
     // Posted, Salary, and opened-company history are less common filters. Move their
     // existing controls into Advanced Search without replacing their event targets.
@@ -678,7 +697,14 @@
                    keeps its pill: it is the one that changes whether you can apply. */ ""}
               ${rowMeta || sponsor ? `<span class="job-tags">${rowMeta}${sponsor}</span>` : ""}
             </span>
-            <span class="job-aside">${payBit}${posted ? `<span class="job-posted">${escapeHtml(posted)}</span>` : ""}</span>
+            ${/* The score sits where the eye ends up after the title, and is filled in
+                 by the matcher for roles it has already judged — the list carries no
+                 scores of its own, because asking for forty-five at once would mean
+                 forty-five provider calls before anyone had clicked anything. */ ""}
+            <span class="job-aside">
+              <span class="job-fit" data-fit-for="${escapeHtml(j.job_id || "")}" hidden></span>
+              ${payBit}${posted ? `<span class="job-posted">${escapeHtml(posted)}</span>` : ""}
+            </span>
           </${cardTag}>
           ${/* No buttons on the row. Selecting it opens the description, and the one
                action that leaves the site lives in the panel beside it — a list of 45
@@ -1191,10 +1217,6 @@
       if (el.sortSelect) el.sortSelect.value = state.sort;
       if (el.hideOpened) el.hideOpened.checked = state.hideOpened;
       if (el.hideOpenedCompanies) el.hideOpenedCompanies.checked = state.hideOpenedCompanies;
-
-      const advanced = $("advanced-filters");
-      if (advanced && (DIMENSIONS.some((d) => d.group === "advanced" && state.selected[d.key].size) ||
-        state.range !== "all" || state.salary !== "all" || state.hideOpenedCompanies)) advanced.open = true;
 
       setView(f.view === "grouped" ? "grouped" : "flat");
     }

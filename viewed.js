@@ -77,8 +77,8 @@
     }
 
     mount.innerHTML =
-      '<button type="button" class="viewed-btn" aria-expanded="' + open + '">' +
-      "Companies you've opened" +
+      '<button type="button" class="viewed-btn" aria-label="Companies you have opened" aria-expanded="' + open + '">' +
+      '<span class="viewed-label-long">Companies you\'ve opened</span><span class="viewed-label-short">Opened</span>' +
       '<span class="viewed-n">' + list.length + "</span>" +
       '<svg class="viewed-chev" width="11" height="11" viewBox="0 0 12 12" aria-hidden="true">' +
       '<path d="M3 4.5 L6 7.5 L9 4.5" fill="none" stroke="currentColor" stroke-width="1.6" ' +
