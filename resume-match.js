@@ -477,7 +477,15 @@
   let scoreRun = 0;
   const inflight = new Set();
 
-  const PLUS = '<svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>';
+  // Lucide, inline: the file set is small and fixed, and a sprite or a package would
+  // be a dependency for six paths.
+  const ICON = {
+    file: '<svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>',
+    chevron: '<svg class="i rpick-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
+    check: '<svg class="i rpick-check" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
+    plus: '<svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
+  };
+  const PLUS = ICON.plus;
 
   const scoreHost = () => (openJob ? document.querySelector(`.job-score[data-score-for="${CSS.escape(openJob)}"]`) : null);
 
@@ -502,27 +510,53 @@
 
     // Which résumé this job is being judged against. The label is stated rather than
     // implied: a number with no name attached is a number you cannot act on.
+    //
+    // A listbox rather than a <select>: the native control renders as the operating
+    // system's own menu, which on macOS looks nothing like the rest of this page and
+    // cannot carry a file icon, a check, or an "add" action beneath the options.
+    const current = items.find(r => r.id === active) || items[0];
     const controls = node('div', null, 'job-score-controls');
-    const pick = document.createElement('label');
-    pick.className = 'job-score-pick';
-    pick.append(node('span', 'Compare this job against', 'job-score-pick-label'));
-    const select = document.createElement('select');
-    select.className = 'job-score-select';
-    for (const item of items) {
-      const option = document.createElement('option');
-      option.value = item.id;
-      option.textContent = item.label || item.name || 'Résumé';
-      option.selected = item.id === active;
-      select.append(option);
-    }
-    pick.append(select);
-    controls.append(pick);
+    controls.append(node('p', 'Compare this job against', 'job-score-pick-label'));
 
-    const add = node('button', null, 'job-score-add btn btn-secondary');
+    const picker = node('div', null, 'rpick');
+    const trigger = node('button', null, 'rpick-trigger');
+    trigger.type = 'button';
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.innerHTML = ICON.file +
+      '<span class="rpick-label"></span>' + ICON.chevron;
+    trigger.querySelector('.rpick-label').textContent = current ? (current.label || current.name || 'Résumé') : 'Choose a résumé';
+
+    const menu = node('div', null, 'rpick-menu');
+    menu.hidden = true;
+    menu.append(node('p', 'Your résumés', 'rpick-title'));
+    const list = node('div', null, 'rpick-list');
+    list.setAttribute('role', 'listbox');
+    list.setAttribute('aria-label', 'Your résumés');
+    for (const item of items) {
+      const option = node('button', null, 'rpick-option');
+      option.type = 'button';
+      option.setAttribute('role', 'option');
+      const chosen = item.id === active;
+      option.setAttribute('aria-selected', String(chosen));
+      // Roving tabindex: one stop for the whole list, arrows move within it.
+      option.tabIndex = chosen ? 0 : -1;
+      if (chosen) option.classList.add('is-selected');
+      option.dataset.pickResume = item.id;
+      option.innerHTML = ICON.file + '<span class="rpick-option-name"></span>' + (chosen ? ICON.check : '');
+      option.querySelector('.rpick-option-name').textContent = item.label || item.name || 'Résumé';
+      list.append(option);
+    }
+    menu.append(list);
+    const foot = node('div', null, 'rpick-foot');
+    const add = node('button', null, 'rpick-add');
     add.type = 'button'; add.dataset.scoreAdd = '1';
-    add.title = 'Add another résumé';
-    add.innerHTML = PLUS + '<span class="visually-hidden">Add another résumé</span>';
-    controls.append(add);
+    add.innerHTML = ICON.plus + '<span>Add résumé</span>';
+    foot.append(add);
+    menu.append(foot);
+
+    picker.append(trigger, menu);
+    controls.append(picker);
     host.append(controls);
 
     const result = node('div', null, 'job-match-result');
@@ -588,6 +622,101 @@
     host.append(roster);
   }
 
+  // ---- the résumé picker's behaviour -------------------------------------------
+  // Positioned with position:fixed and placed by hand. The inspector is an
+  // overflow:hidden box with its own scroller, so anything absolutely positioned
+  // inside it is clipped at the panel edge; fixed escapes that, and no ancestor
+  // carries a transform that would trap it.
+  let pickerOpen = null;
+
+  function placeMenu(trigger, menu) {
+    const r = trigger.getBoundingClientRect();
+    const width = Math.min(344, Math.max(260, window.innerWidth - 24));
+    menu.style.width = width + 'px';
+    // Clamp into the viewport on both axes, and flip above the trigger when there is
+    // more room up there than down.
+    let left = Math.min(Math.max(12, r.left), window.innerWidth - width - 12);
+    const below = window.innerHeight - r.bottom - 12;
+    const above = r.top - 12;
+    const flip = below < 220 && above > below;
+    menu.style.maxHeight = Math.max(160, (flip ? above : below)) + 'px';
+    menu.style.left = left + 'px';
+    if (flip) { menu.style.top = 'auto'; menu.style.bottom = (window.innerHeight - r.top + 6) + 'px'; }
+    else { menu.style.bottom = 'auto'; menu.style.top = (r.bottom + 6) + 'px'; }
+  }
+
+  function closePicker(restoreFocus) {
+    if (!pickerOpen) return;
+    const { trigger, menu } = pickerOpen;
+    menu.hidden = true;
+    trigger.setAttribute('aria-expanded', 'false');
+    pickerOpen = null;
+    window.removeEventListener('scroll', reposition, true);
+    window.removeEventListener('resize', reposition);
+    if (restoreFocus && trigger.isConnected) trigger.focus({ preventScroll: true });
+  }
+  function reposition() {
+    if (pickerOpen) placeMenu(pickerOpen.trigger, pickerOpen.menu);
+  }
+
+  function openPicker(trigger) {
+    const menu = trigger.parentElement.querySelector('.rpick-menu');
+    if (!menu) return;
+    closePicker(false);
+    menu.hidden = false;
+    trigger.setAttribute('aria-expanded', 'true');
+    pickerOpen = { trigger, menu };
+    placeMenu(trigger, menu);
+    // The panel scrolls under a fixed menu, so follow it rather than let the two drift.
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    const chosen = menu.querySelector('.rpick-option.is-selected') || menu.querySelector('.rpick-option');
+    if (chosen) chosen.focus({ preventScroll: true });
+  }
+
+  document.addEventListener('click', event => {
+    const trigger = event.target.closest('.rpick-trigger');
+    if (trigger) {
+      if (pickerOpen && pickerOpen.trigger === trigger) closePicker(true);
+      else openPicker(trigger);
+      return;
+    }
+    if (pickerOpen && !pickerOpen.menu.contains(event.target)) closePicker(false);
+  });
+
+  document.addEventListener('keydown', event => {
+    if (!pickerOpen) {
+      // Opening from the keyboard lands on the current choice, not on the first row.
+      const trigger = event.target.closest && event.target.closest('.rpick-trigger');
+      if (trigger && (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ')) {
+        event.preventDefault(); openPicker(trigger);
+      }
+      return;
+    }
+    const { menu, trigger } = pickerOpen;
+    if (event.key === 'Escape') { event.preventDefault(); closePicker(true); return; }
+    if (event.key === 'Tab') { closePicker(false); return; }
+    if (!menu.contains(event.target)) return;
+
+    const options = [...menu.querySelectorAll('.rpick-option')];
+    const here = options.indexOf(event.target.closest('.rpick-option'));
+    const move = to => {
+      const next = options[Math.max(0, Math.min(options.length - 1, to))];
+      if (!next) return;
+      for (const o of options) o.tabIndex = -1;
+      next.tabIndex = 0;
+      next.focus({ preventScroll: true });
+      next.scrollIntoView({ block: 'nearest' });
+    };
+    if (event.key === 'ArrowDown') { event.preventDefault(); move(here < 0 ? 0 : here + 1); }
+    else if (event.key === 'ArrowUp') { event.preventDefault(); move(here < 0 ? options.length - 1 : here - 1); }
+    else if (event.key === 'Home') { event.preventDefault(); move(0); }
+    else if (event.key === 'End') { event.preventDefault(); move(options.length - 1); }
+    else if (event.key === 'Enter' || event.key === ' ') {
+      if (here >= 0) { event.preventDefault(); options[here].click(); }
+    }
+  });
+
   document.addEventListener('job:opened', event => {
     openJob = event.detail && event.detail.id;
     paintScoreBlock();
@@ -610,10 +739,17 @@
   document.addEventListener('click', event => {
     const row = event.target.closest('[data-pick-resume]');
     if (row) {
+      const fromPicker = !!row.closest('.rpick-menu');
+      if (fromPicker) closePicker(false);
       store.select(row.dataset.pickResume);
       const current = store.activeItem();
       if (current) { resumeText = current.text; fileName.textContent = current.label || current.name; }
       renderList(); paintChip(); paintScoreBlock(); repaintRowFits();
+      // The block was rebuilt, so focus the trigger that replaced the one just used.
+      if (fromPicker) {
+        const back = scoreHost() && scoreHost().querySelector('.rpick-trigger');
+        if (back) back.focus({ preventScroll: true });
+      }
       return;
     }
     if (event.target.closest('[data-score-add]')) { fileInput.click(); }
@@ -851,7 +987,11 @@
       showSaved();
       // The first résumé is not named — there is nothing to tell it apart from yet.
       // The second makes the first ambiguous, so both get asked for at once.
-      if (!added.isFirst) promptLabels(added.id);
+      //
+      // The naming fields live in the manager, which may not be open: a résumé can be
+      // added from the picker in the inspector, and asking someone to name files on a
+      // panel they cannot see is asking nothing at all. Open it with the question.
+      if (!added.isFirst) { openMenu(true); promptLabels(added.id); }
       document.body.classList.add('resume-has-file');
       selected.dataset.state = 'ready'; selectedIcon.textContent = '✓';
       // Deliberately does not compare here. Reading a file is not the same as asking

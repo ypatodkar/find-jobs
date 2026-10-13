@@ -3340,3 +3340,102 @@ body.resume-saved-ready .resume-file-btn::before { content: none; }
 @media (max-width: 620px) { .counter-label { display: none; } }
 .job-score > .fit-head-label { display: block; margin-bottom: 0; }
 .job-score .fit-head { margin-top: var(--space-3); }
+
+/* ---- résumé picker -------------------------------------------------------------
+   A listbox, not a <select>. The native control draws the operating system's own
+   menu — which on macOS shares nothing with this page, and cannot hold a file icon,
+   a check, or an "add" action under the options.
+
+   The menu is position:fixed and placed by hand because the inspector is an
+   overflow:hidden box with its own scroller: anything absolute inside it is cut off
+   at the panel's edge. */
+.rpick { position: relative; }
+.rpick-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 11px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--ink);
+  font: 500 var(--t-company)/1 var(--sans);
+  text-align: left;
+  cursor: pointer;
+}
+.rpick-trigger:hover { border-color: var(--rule-strong); }
+.rpick-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.rpick-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rpick-chevron { transition: transform .12s ease; }
+.rpick-trigger[aria-expanded="true"] .rpick-chevron { transform: rotate(180deg); }
+
+.rpick-menu {
+  position: fixed;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  box-shadow: 0 10px 32px rgb(0 0 0 / 12%), 0 1px 2px rgb(0 0 0 / 6%);
+  overflow: hidden;
+}
+.rpick-menu[hidden] { display: none; }
+.rpick-title {
+  margin: 4px 6px 6px;
+  color: var(--ink-faint);
+  font-size: var(--t-label);
+  font-weight: 500;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.rpick-list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.rpick-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  font: 500 var(--t-company)/1.3 var(--sans);
+  text-align: left;
+  cursor: pointer;
+}
+.rpick-option:hover { background: var(--surface-hover); }
+.rpick-option.is-selected { background: var(--surface-selected); }
+.rpick-option:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.rpick-option-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rpick-check { color: var(--ink); }
+
+.rpick-foot { margin-top: 4px; padding-top: 5px; border-top: 1px solid var(--rule); }
+.rpick-add {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  font: 500 var(--t-company)/1.3 var(--sans);
+  text-align: left;
+  cursor: pointer;
+}
+.rpick-add:hover { background: var(--surface-hover); }
+.rpick-add:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* The picker owns the full width of the row now, so the separate "+" beside it is
+   gone — its job moved into the menu's footer. */
+.job-score-controls { display: block; }
+.job-score-pick-label { display: block; margin-bottom: 5px; }
+.job-score-add { display: none; }
+
+/* Compact, like every other secondary control, rather than a banner. */
+.score-prompt .btn-primary, .score-prompt .btn-secondary { height: var(--control-h-sm); padding: 0 var(--space-3); font-size: var(--t-meta); border-radius: 6px; }
