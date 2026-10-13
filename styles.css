@@ -3110,3 +3110,51 @@ body:has(#job-list) .resume-match:not([hidden]) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+
+/* Dynamic filters are rendered as .filter-section > .filter-grid by jobs-ui.js. */
+@media (min-width: 1280px) {
+  body:has(#job-list) #picker-row > .filter-section {
+    min-width: 0;
+  }
+  body:has(#job-list) #picker-row > .filter-section .filter-section-title {
+    display: none;
+  }
+  body:has(#job-list) #grid-core {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  body:has(#job-list) #grid-core .picker-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  body:has(#job-list) #grid-core .picker-label {
+    font-size: .66rem;
+  }
+  body:has(#job-list) #grid-core .company-picker { width: 100%; }
+  body:has(#job-list) #picker-row > .advanced-filters {
+    width: 100%;
+    padding-top: 0;
+    border-top: 0;
+  }
+  body:has(#job-list) .controls {
+    grid-template-rows: auto auto auto;
+  }
+  body:has(#job-list) .controls > .filter-sections {
+    display: contents;
+  }
+  body:has(#job-list) #picker-row > .filter-section {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  body:has(#job-list) #picker-row > .advanced-filters {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  body:has(#job-list) .controls > .filter-tail {
+    grid-row: 3;
+  }
+}
