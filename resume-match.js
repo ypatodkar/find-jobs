@@ -8,7 +8,8 @@
   const status = $('resume-status'), results = $('resume-results');
   const actions = document.querySelector('.resume-actions');
   const retry = $('resume-retry'), clear = $('resume-clear');
-  const section = document.querySelector('.resume-match');
+  // The panel this used to mark unavailable is now the popover in the navigation.
+  const section = document.getElementById('resume-popover');
   const form = $('resume-form'), availability = $('resume-availability');
   const summaryNote = $('resume-summary-note'), actionLabel = $('resume-action-closed');
   const runSaved = $('resume-run'), forget = $('resume-forget');
@@ -140,7 +141,7 @@
     document.body.classList.remove('resume-has-file');
     // The chip offers a feature that has just stopped existing, so it goes with it.
     paintChip();
-    if (region) region.hidden = true;
+    if (popover) popover.hidden = true;
   }
   // The pane draws its own picker and needs the list; it does not need the storage,
   // so only these four things cross the boundary.
@@ -151,42 +152,53 @@
     addFile: file => { if (fileInput) { const dt = new DataTransfer(); dt.items.add(file); fileInput.files = dt.files; fileInput.dispatchEvent(new Event('change', { bubbles: true })); } },
   };
 
-  // ---- the status chip -------------------------------------------------------
-  // Uploading a résumé is a thing you do once; browsing jobs is why you came. The
-  // panel is kept behind a status line in the masthead so the document step stops
-  // taking the top of the page from the list it is meant to help you read.
-  const chip = $('resume-status-chip');
+  // ---- the résumé menu --------------------------------------------------------
+  // A control in the navigation, not a panel above the job list. It states what it
+  // holds and opens a popover anchored to itself, so switching résumés never moves
+  // the list underneath it.
+  const menu = $('resume-menu');
+  const trigger = $('resume-manage');
+  const popover = $('resume-popover');
   const chipText = $('resume-chip-text');
-  const manage = $('resume-manage');
-  const region = $('resume-panel-region');
 
   function paintChip() {
-    if (!chip) return;
+    if (!trigger) return;
     const { items } = matchingReady ? store.read() : { items: [] };
-    chip.hidden = !matchingReady;
+    trigger.hidden = !matchingReady;
     if (!chipText) return;
-    chipText.textContent = items.length === 0 ? 'No résumé'
-      : items.length === 1 ? 'Résumé ready'
+    chipText.textContent = items.length === 0 ? 'Add résumé'
+      : items.length === 1 ? '1 résumé'
       : items.length + ' résumés';
-    if (manage) manage.textContent = items.length === 0 ? 'Add' : 'Manage';
   }
 
-  function togglePanel(open) {
-    if (!region) return;
-    const next = open === undefined ? region.hidden : open;
-    region.hidden = !next;
-    if (manage) manage.setAttribute('aria-expanded', String(next));
+  function openMenu(open) {
+    if (!popover || !trigger) return;
+    const next = open === undefined ? popover.hidden : open;
+    popover.hidden = !next;
+    trigger.setAttribute('aria-expanded', String(next));
     if (next) {
-      region.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      const target = $('resume-file-btn');
-      if (target) target.focus({ preventScroll: true });
+      const first = popover.querySelector('.resume-row-pick, #resume-file-btn');
+      if (first) first.focus({ preventScroll: true });
     }
   }
-  manage?.addEventListener('click', () => togglePanel());
+  trigger?.addEventListener('click', () => openMenu());
 
-  // Asking for a score without a résumé opens the panel rather than scrolling to a
-  // block that is no longer on the page.
-  document.addEventListener('resumes:needed', () => togglePanel(true));
+  // Closing on an outside click and on Escape, which is what a popover has to do to
+  // behave like one rather than like a panel that happens to float.
+  // On pointerdown, not click: a control inside the popover that re-renders the list —
+  // naming, removing, switching — is detached from the document before its click event
+  // bubbles here, so by then it looks like a click on the outside and the popover shuts
+  // itself the moment it is used. pointerdown fires while the element is still in place.
+  document.addEventListener('pointerdown', event => {
+    if (!popover || popover.hidden) return;
+    if (!menu.contains(event.target)) openMenu(false);
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && popover && !popover.hidden) { openMenu(false); trigger.focus(); }
+  });
+
+  // Asking for a score without a résumé opens the menu where one is added.
+  document.addEventListener('resumes:needed', () => openMenu(true));
 
   // ---- the collection -------------------------------------------------------
   // A list of one is not a choice, so it only appears from the second résumé on.
@@ -232,8 +244,9 @@
         row.append(copy);
       }
 
-      const remove = node('button', 'Remove', 'resume-row-remove');
+      const remove = node('button', null, 'resume-row-remove');
       remove.type = 'button'; remove.dataset.removeResume = item.id;
+      remove.innerHTML = '<svg class="i" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
       remove.setAttribute('aria-label', 'Remove ' + (item.label || item.name));
       row.append(remove);
       listEl.append(row);
@@ -320,7 +333,7 @@
     invalidate();
     selected.hidden = false;
     fileName.textContent = kept.label || kept.name || 'Saved r\u00e9sum\u00e9';
-    selected.dataset.state = 'ready'; selectedIcon.textContent = '\u2713';
+    selected.dataset.state = 'ready'; selectedIcon.textContent = '';
     actions.hidden = false; clear.hidden = false;
     await compare();
   });

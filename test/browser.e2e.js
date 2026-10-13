@@ -28,7 +28,7 @@ async function main() {
     await page.goto(base);
     await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('110 open roles'));
     // With matching unavailable there is no chip to manage and no form behind it.
-    assert.equal(await page.locator('#resume-status-chip').isVisible(), false);
+    assert.equal(await page.locator('#resume-manage').isVisible(), false);
     assert.ok((await page.locator('#resume-summary-note').textContent()).includes('unavailable'));
     assert.equal(await page.locator('#resume-form').isVisible(), false);
     assert.equal(await page.locator('.job-match-link:visible').count(), 0);
@@ -37,13 +37,13 @@ async function main() {
     await page.route('**/api/jobs/config', oldApiConfig);
     await page.reload();
     await page.waitForFunction(() => document.getElementById('resume-summary-note').textContent.includes('unavailable'));
-    assert.equal(await page.locator('#resume-status-chip').isVisible(), false);
+    assert.equal(await page.locator('#resume-manage').isVisible(), false);
     assert.equal(await page.locator('#resume-form').isVisible(), false);
     await page.unroute('**/api/jobs/config', oldApiConfig);
     await page.route('**/api/jobs/config', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"matching":true}' }));
     await page.reload();
     await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('110 open roles'));
-    await page.locator('#resume-status-chip').waitFor({ state: 'visible' });
+    await page.locator('#resume-manage').waitFor({ state: 'visible' });
     fs.mkdirSync('.catalogue', { recursive: true });
     await page.screenshot({ path: '.catalogue/top-desktop.png', fullPage: false });
     assert.equal(await page.locator('#job-list .job').count(), 45);
@@ -118,8 +118,10 @@ async function main() {
     assert.ok(await page.locator('#sum-company').isVisible());
     await page.locator('#advanced-filters > summary').click();
     // The panel is behind the masthead chip; Manage is how it opens.
-    assert.equal(await page.locator('#resume-panel-region').evaluate(el => el.hidden), true);
+    assert.equal(await page.locator('#resume-popover').evaluate(el => el.hidden), true,
+      'the résumé manager is a popover, closed until its trigger is pressed');
     await page.locator('#resume-manage').click();
+    assert.equal(await page.locator('#resume-popover').evaluate(el => el.hidden), false);
     assert.equal(await page.locator('#resume-file-btn').isVisible(), true);
     assert.equal(await page.locator('#resume-panel, #resume-text, #resume-consent').count(), 0);
     const resumeFile = page.locator('#resume-file');
@@ -201,7 +203,7 @@ async function main() {
     // The 503 is only discovered when a comparison is actually requested.
     await page.locator('#resume-run').evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     await page.locator('#resume-form').waitFor({ state: 'hidden' });
-    assert.equal(await page.locator('#resume-status-chip').isVisible(), false);
+    assert.equal(await page.locator('#resume-manage').isVisible(), false);
     assert.ok((await page.locator('#resume-summary-note').textContent()).includes('unavailable'));
     assert.equal(await page.locator('.job-match-link:visible').count(), 0);
     assert.equal(await page.locator('#resume-selected').isVisible(), false);

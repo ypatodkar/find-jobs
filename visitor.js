@@ -88,7 +88,18 @@
     });
   }
 
+  function homeFor(isPrompt) {
+    // Asked once, in a strip below the navigation — a form sitting permanently in the
+    // global nav asks the same question on every visit. Once answered it becomes a
+    // line inside the settings menu, where a stored preference belongs.
+    var el = document.getElementById("visitor-slot");
+    var onboard = document.getElementById("onboard-slot");
+    if (isPrompt && onboard && el && el.parentNode !== onboard) onboard.appendChild(el);
+    return el;
+  }
+
   function renderPrompt(isEdit) {
+    homeFor(true);
     var el = slot();
     if (!el) return;
     el.innerHTML =

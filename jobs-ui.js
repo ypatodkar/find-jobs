@@ -538,7 +538,7 @@
         <div class="filter-grid" id="grid-${g.id}" role="group" aria-label="${escapeHtml(g.id === "core" ? g.title : "Advanced filters")}">${dims.map(pickerMarkup).join("")}</div>
       </section>`;
       return g.id === "advanced"
-        ? `<details class="advanced-filters" id="advanced-filters"><summary>Advanced Search <span id="advanced-filter-count"></span></summary>${section}</details>`
+        ? `<details class="advanced-filters" id="advanced-filters"><summary><svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4H14M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3"/><path d="M14 2v4M8 10v4M16 18v4"/></svg>Advanced <span id="advanced-filter-count"></span></summary>${section}</details>`
         : section;
     }).join("");
 

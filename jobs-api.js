@@ -139,12 +139,12 @@
         <p class="job-detail-eyebrow"></p>
         <h2></h2>
         <p class="job-detail-meta"></p>
-        <p class="job-detail-actions" hidden><a class="description-original" target="_blank" rel="noopener noreferrer">View job <span aria-hidden="true">↗</span></a></p>
+        <p class="job-detail-actions" hidden><a class="description-original" target="_blank" rel="noopener noreferrer">View job <svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a></p>
       </div>
       <div class="job-score" data-score-for="${attr(id)}">
         <div class="job-score-controls">
           <label class="job-score-pick" hidden><span class="visually-hidden">Résumé to score against</span><select class="job-score-select"></select></label>
-          <label class="job-score-add" title="Add another résumé"><input type="file" accept=".pdf,.docx,.txt,.md,.markdown,application/pdf,text/plain,text/markdown"><span aria-hidden="true">+</span><span class="visually-hidden">Add another résumé</span></label>
+          <label class="job-score-add" title="Add another résumé"><input type="file" accept=".pdf,.docx,.txt,.md,.markdown,application/pdf,text/plain,text/markdown"><svg class="i" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span class="visually-hidden">Add another résumé</span></label>
           <button type="button" class="job-score-check" data-match="${attr(id)}">Check résumé score</button>
         </div>
         <div class="job-match-result" data-match-result="${attr(id)}"></div>
