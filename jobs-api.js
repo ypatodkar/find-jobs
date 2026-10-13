@@ -73,6 +73,36 @@
     global.history[replace ? 'replaceState' : 'pushState']({ job: id || null }, '', url);
   }
 
+  // The picker lists the résumés and is hidden when there is only one, because a
+  // select with a single option is a control that cannot be used. It redraws on the
+  // same event the zone does, so adding or renaming in one place shows in the other.
+  function paintPicker(root) {
+    const scope = root || document;
+    const api = global.Resumes;
+    for (const pick of scope.querySelectorAll('.job-score-pick')) {
+      const select = pick.querySelector('.job-score-select');
+      if (!api || !select) { pick.hidden = true; continue; }
+      const { items, active } = api.list();
+      pick.hidden = items.length < 2;
+      if (items.length < 2) continue;
+      select.replaceChildren();
+      for (const item of items) {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = item.label || item.name || 'Résumé';
+        option.selected = item.id === active;
+        select.append(option);
+      }
+    }
+  }
+  document.addEventListener('resumes:changed', () => paintPicker());
+  document.addEventListener('change', event => {
+    const select = event.target.closest('.job-score-select');
+    if (select) { global.Resumes?.select(select.value); return; }
+    const add = event.target.closest('.job-score-add input[type="file"]');
+    if (add && add.files && add.files[0]) { global.Resumes?.addFile(add.files[0]); add.value = ''; }
+  });
+
   function closeDescription(restoreFocus) {
     controller?.abort();
     openId = null;
@@ -112,11 +142,16 @@
         <p class="job-detail-actions" hidden><a class="description-original" target="_blank" rel="noopener noreferrer">Open role ↗</a></p>
       </div>
       <div class="job-score" data-score-for="${attr(id)}">
-        <button type="button" class="job-score-check" data-match="${attr(id)}">Check résumé score</button>
+        <div class="job-score-controls">
+          <label class="job-score-pick" hidden><span class="visually-hidden">Résumé to score against</span><select class="job-score-select"></select></label>
+          <label class="job-score-add" title="Add another résumé"><input type="file" accept=".pdf,.docx,.txt,.md,.markdown,application/pdf,text/plain,text/markdown"><span aria-hidden="true">+</span><span class="visually-hidden">Add another résumé</span></label>
+          <button type="button" class="job-score-check" data-match="${attr(id)}">Check résumé score</button>
+        </div>
         <div class="job-match-result" data-match-result="${attr(id)}"></div>
       </div>
       <div class="description-body" aria-busy="true"></div>`;
     const body = inner.querySelector('.description-body');
+    paintPicker(inner);
     const render = text => global.DescriptionFormat?.render
       ? global.DescriptionFormat.render(body, text)
       : body.replaceChildren(Object.assign(document.createElement('p'), { textContent: text }));

@@ -97,6 +97,9 @@
               <!-- The filename and the status live together and are announced, because a
                    status that only appears visually leaves a screen reader at "Reading
                    file…" with no way to learn it finished. -->
+              <!-- The collection, once there is more than one to choose between. With a
+                   single résumé this stays empty: a list of one is not a choice. -->
+              <div id="resume-list" class="resume-list" hidden></div>
               <div id="resume-selected" class="resume-selected" role="status" aria-live="polite" hidden>
                 <span class="resume-selected-icon" aria-hidden="true">&#10003;</span>
                 <span class="resume-selected-copy"><strong id="resume-file-name"></strong><span id="resume-file-state"></span></span>

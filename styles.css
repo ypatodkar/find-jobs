@@ -1907,6 +1907,80 @@ html[data-theme="dark"] { --tag-remote: #34d399; --tag-visa: #38bdf8; --tag-no: 
 .search-wrap:focus-within .search-key { opacity: 0; }
 @media (max-width: 760px) { .search-key { display: none; } }
 
+/* ---- Several résumés ----------------------------------------------------------
+   The list appears from the second one on, and so does the picker in the pane: a
+   control with one option is a control that cannot be used, and a name is only
+   worth asking for once there is something to tell apart. */
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+.resume-list { margin-top: 12px; }
+.resume-list[hidden] { display: none; }
+.resume-list-hint { margin: 0 0 8px; color: var(--ink-soft); font-size: .76rem; }
+.resume-list-foot { margin: 9px 0 0; color: var(--ink-faint); font-size: .74rem; }
+
+/* With a list on screen, the single-résumé row and its Remove are saying again what
+   each row already says, and the second Remove is ambiguous about what it removes. */
+.resume-list:not([hidden]) ~ .resume-selected { display: none; }
+.resume-list:not([hidden]) ~ .resume-controls .resume-forget { display: none; }
+.resume-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.resume-row + .resume-row { margin-top: 6px; }
+.resume-row.is-active { border-color: color-mix(in oklab, var(--accent) 45%, var(--rule)); background: var(--accent-fill); }
+.resume-row-pick { flex: none; accent-color: var(--accent); }
+.resume-row-copy { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex: 1; }
+.resume-row-copy strong { font-size: .82rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resume-row-file { color: var(--ink-faint); font-size: .7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resume-row-name {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 500 .82rem/1.2 var(--sans);
+}
+.resume-row-name:focus-visible { outline: 2px solid var(--accent2); outline-offset: 1px; }
+.resume-row-remove {
+  flex: none; padding: 4px 6px; border: 0; background: none;
+  color: var(--ink-faint); font: 500 .72rem/1 var(--sans); cursor: pointer; text-decoration: underline;
+}
+.resume-row-remove:hover { color: var(--ink); }
+.resume-names-done {
+  margin-top: 10px; padding: 7px 13px;
+  border: 1px solid var(--accent); border-radius: 7px;
+  background: var(--accent); color: #fff;
+  font: 600 .76rem/1.2 var(--sans); cursor: pointer;
+}
+
+.job-score-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.job-score-pick[hidden] { display: none; }
+.job-score-select {
+  max-width: 190px;
+  padding: 6px 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 500 .74rem/1.2 var(--sans);
+}
+.job-score-add {
+  display: grid; place-items: center;
+  width: 30px; height: 30px;
+  border: 1px solid var(--rule-strong); border-radius: 7px;
+  background: var(--bg); color: var(--ink-soft);
+  font-size: 1.05rem; line-height: 1; cursor: pointer;
+}
+.job-score-add:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-fill); }
+.job-score-add input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
 /* ---- Match result: the score as something you can read at a glance --------------
    A bare "23/100" makes the reader do the work of deciding whether 23 is good. The
    bands come from the rubric itself: each dimension is a 0-4 judgement rendered as
