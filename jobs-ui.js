@@ -530,8 +530,10 @@
       if (!dims.length) return "";
       const section = `
       <section class="filter-section">
-        ${g.id === "core" ? `<p class="filter-section-title" id="fg-${g.id}">${escapeHtml(g.title)}</p>` : ""}
-        <div class="filter-grid" id="grid-${g.id}" role="group" ${g.id === "core" ? 'aria-labelledby="fg-core"' : 'aria-label="Advanced filters"'}>${dims.map(pickerMarkup).join("")}</div>
+        ${/* The group's name is a heading for a row of three labelled controls that
+             already say what they filter. It stays as the group's accessible name
+             rather than as a line of type above them. */ ""}
+        <div class="filter-grid" id="grid-${g.id}" role="group" aria-label="${escapeHtml(g.id === "core" ? g.title : "Advanced filters")}">${dims.map(pickerMarkup).join("")}</div>
       </section>`;
       return g.id === "advanced"
         ? `<details class="advanced-filters" id="advanced-filters"><summary>Advanced Search <span id="advanced-filter-count"></span></summary>${section}</details>`

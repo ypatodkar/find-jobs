@@ -395,33 +395,58 @@
     const article = node('article', null, 'resume-result');
     article.dataset.band = band(a.score);
 
-    const heading = node('div', null, 'resume-result-heading');
-    const title = node('h3');
-    if (/^https?:\/\//i.test(job.url || '')) {
-      const link = node('a', job.title, 'job-title'); link.href = job.url;
-      link.target = '_blank'; link.rel = 'noopener noreferrer';
-      link.dataset.jobId = job.job_id; link.dataset.company = job.company; link.dataset.city = job.city || '';
-      title.append(link);
-    } else title.textContent = job.title;
-    heading.append(title, node('span', `${a.score}/100`, 'resume-score'));
-    article.append(heading);
-
-    const meta = [job.company, job.city, job.salary].filter(Boolean).join(' · ');
-    if (meta) article.append(node('p', meta, 'resume-meta'));
+    if (options.inPane) {
+      // The pane already names the role above this, so repeating the title and company
+      // here would say it twice. What is missing from the pane is the number, so that
+      // is what the card leads with.
+      const head = node('div', null, 'fit-head');
+      head.append(node('p', 'Résumé match', 'fit-head-label'));
+      const total = node('p', null, 'fit-total');
+      total.append(node('span', String(a.score), 'fit-total-score'), node('span', '/100', 'fit-total-max'));
+      head.append(total);
+      const track = node('div', null, 'fit-track fit-track-total');
+      const fill = node('div', null, 'fit-fill');
+      fill.style.width = `${Math.max(2, a.score)}%`;
+      track.append(fill);
+      head.append(track);
+      article.append(head);
+    } else {
+      const heading = node('div', null, 'resume-result-heading');
+      const title = node('h3');
+      if (/^https?:\/\//i.test(job.url || '')) {
+        const link = node('a', job.title, 'job-title'); link.href = job.url;
+        link.target = '_blank'; link.rel = 'noopener noreferrer';
+        link.dataset.jobId = job.job_id; link.dataset.company = job.company; link.dataset.city = job.city || '';
+        title.append(link);
+      } else title.textContent = job.title;
+      heading.append(title, node('span', `${a.score}/100`, 'resume-score'));
+      article.append(heading);
+      const meta = [job.company, job.city, job.salary].filter(Boolean).join(' · ');
+      if (meta) article.append(node('p', meta, 'resume-meta'));
+    }
 
     const grid = node('div', null, 'fit-grid');
     for (const d of a.dimensions) grid.append(meter(d.key, d.label, d.score, d.confidence < 0.5));
     article.append(grid);
 
-    // The gap is the one line worth reading first: it is the thing the résumé does not
-    // answer, which is what decides whether to apply. It gets the accent border.
-    if (a.gap?.text) {
-      const callout = node('div', null, 'fit-callout');
-      callout.append(node('span', 'Requirement to check', 'fit-callout-label'), node('p', a.gap.text));
-      article.append(callout);
-    }
+    // Two findings, named for the questions they answer rather than for where the
+    // data came from. Strength first, then the thing the résumé does not demonstrate,
+    // which is what actually decides whether to apply.
+    //
+    // There is deliberately no "suggestions" section. The rubric returns three scores,
+    // a supporting passage and a missing requirement; advice on how to improve is not
+    // among them, and writing it from the score alone would be invention dressed as
+    // analysis. Adding it means adding a question to the rubric, which is a model
+    // change, not a layout one.
     if (a.evidence?.text) {
-      article.append(node('p', 'Strongest evidence in your résumé', 'resume-evidence-label'), node('blockquote', a.evidence.text));
+      const why = node('div', null, 'fit-finding');
+      why.append(node('span', 'Why you match', 'fit-finding-label'), node('blockquote', a.evidence.text));
+      article.append(why);
+    }
+    if (a.gap?.text) {
+      const gap = node('div', null, 'fit-finding fit-finding-gap');
+      gap.append(node('span', 'Potential gap', 'fit-finding-label'), node('p', a.gap.text));
+      article.append(gap);
     }
     if (a.uncertain) article.append(node('p', 'The model is uncertain about part of this assessment. Read the description before relying on the score.', 'resume-note'));
     if (a.truncated) article.append(node('p', 'This long description was shortened for comparison; read the full posting.', 'resume-note'));

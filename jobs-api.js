@@ -232,9 +232,36 @@
   // A URL carrying ?job=<id> opens straight onto that posting.
   function openFromUrl() {
     const id = new URL(global.location.href).searchParams.get('job');
+    if (id) { description(id, null, { fromUrl: true }); return true; }
+    return false;
+  }
+
+  // On a wide screen the pane is already on the page, so leaving it empty wastes the
+  // half of the screen it occupies and leaves the layout looking unfinished. The first
+  // result opens itself, which is what every list-detail product does — once, on the
+  // first load only, so paging or filtering later does not keep spending a request on
+  // a row nobody asked about.
+  function openFirstOnce() {
+    if (!wide() || openId) return;
+    const row = document.querySelector('#job-list > .job[data-job-id]');
+    const id = row && row.getAttribute('data-job-id');
     if (id) description(id, null, { fromUrl: true });
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { history(); openFromUrl(); });
-  else { history(); openFromUrl(); }
+  function awaitFirstPage() {
+    const list = document.getElementById('job-list');
+    if (!list) return;
+    if (list.querySelector('.job[data-job-id]')) { openFirstOnce(); return; }
+    const watch = new MutationObserver(() => {
+      if (!list.querySelector('.job[data-job-id]')) return;
+      watch.disconnect();
+      openFirstOnce();
+    });
+    watch.observe(list, { childList: true, subtree: true });
+    // Never leave an observer running on a page that failed to load any rows.
+    setTimeout(() => watch.disconnect(), 30000);
+  }
+  const start = () => { history(); if (!openFromUrl()) awaitFirstPage(); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
   global.JobsAPI = { request, search, remember, withHistory, description, closeDescription };
 })(window);

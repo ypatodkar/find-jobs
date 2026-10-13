@@ -1064,26 +1064,6 @@ footer code {
   gap: 8px;
   min-width: 0;
 }
-/* A quiet label: it orients, and should not compete with the filters themselves. The
-   rule runs to the end of the row so the group reads as a band rather than a caption. */
-.filter-section-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-.filter-section-title::after {
-  content: "";
-  flex: 1 1 auto;
-  height: 1px;
-  background: var(--rule);
-}
-
 /* One row of dropdowns that wraps into a tidy grid instead of a ragged line. */
 .filter-grid {
   display: grid;
@@ -2738,92 +2718,204 @@ body.resume-saved-ready .resume-file-btn::before { content: none; }
   .resume-forget { margin-left: 0; text-align: center; }
 }
 
-/* ---- Restraint pass -----------------------------------------------------------
-   The page had an outlined button on every row, a pill for every fact and a colour
-   for every score, so nothing was emphasised because everything was. The rules here
-   are subtractive: one filled control on the page, borders that divide rather than
-   compete, and numbers left to speak for themselves.
+/* ================================================================================
+   Workspace layout
+   --------------------------------------------------------------------------------
+   The page was a landing page with a job list underneath it: an introduction, a
+   paragraph, a stats line and four stacked rows of controls put the first job 675px
+   down a 900px screen, so two rows were visible. This section makes the list the
+   page and everything above it a control strip — measured against 250-320px and
+   five whole rows.
 
-   Loaded last so it overrides the earlier, louder treatment of the same elements
-   rather than requiring every one of them to be rewritten in place. */
+   It replaces three earlier passes that each layered overrides on the one before.
+   Rules that contradicted each other are resolved here rather than restated.
+   ================================================================================ */
 
-/* One primary action. It is the only filled, high-contrast control on the page, which
-   is what makes it findable without an outline on everything else. */
+:root { --control-h: 38px; }
+
+/* ---- the strip above the list ------------------------------------------------- */
+.appbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 46px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+.appbar-brand { display: flex; align-items: baseline; gap: 18px; min-width: 0; }
+.appbar-mark { color: var(--ink); font-size: .9rem; font-weight: 650; letter-spacing: -.02em; white-space: nowrap; }
+.appbar-nav { display: flex; gap: 14px; }
+.appbar-nav a { color: var(--ink-faint); font-size: .79rem; text-decoration: none; }
+.appbar-nav a:hover { color: var(--ink); }
+.appbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+.page-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 14px 0 10px;
+}
+.page-head .title { margin: 0; font-size: 1.5rem; font-weight: 650; letter-spacing: -.03em; line-height: 1.2; }
+.page-head-aside { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.page-head-aside .stats { margin: 0; font-size: .76rem; }
+.page-head-aside #viewed-slot:empty { display: none; }
+
+/* ---- filters: two rows, not four ----------------------------------------------
+   Search and the three primary dimensions share the first row; everything that
+   modifies the result set rather than defining it shares the second. */
+@media (min-width: 1100px) {
+  .controls {
+    display: grid;
+    grid-template-columns: minmax(230px, 0.8fr) minmax(430px, 1.6fr);
+    align-items: center;
+    column-gap: 14px;
+    row-gap: 10px;
+    padding: 12px 0;
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .controls > .search-wrap { grid-column: 1; grid-row: 1; width: 100%; min-width: 0; }
+  .controls > .filter-sections { display: contents; }
+  #picker-row > .filter-section { grid-column: 2; grid-row: 1; min-width: 0; }
+  #grid-core { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  #grid-core .picker-wrap { display: flex; flex-direction: column; align-items: stretch; gap: 3px; min-width: 0; }
+  #grid-core .picker-label { font-size: .63rem; letter-spacing: .05em; }
+  #grid-core .company-picker { width: 100%; }
+  /* Row two: the expander on the left, the things that modify the result set on the
+     right. They were a row each, which is 30px of nothing twice over. Opened, the
+     advanced panel grows its own cell and pushes the row down. */
+  #picker-row > .advanced-filters {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+    width: 100%;
+    padding-top: 0;
+    border-top: 0;
+  }
+  #picker-row > .advanced-filters[open] { grid-column: 1 / -1; }
+  .controls > .filter-tail {
+    grid-column: 2;
+    grid-row: 2;
+    justify-content: flex-end;
+    padding: 0;
+    border-top: 0;
+  }
+  #picker-row > .advanced-filters[open] ~ .filter-tail { grid-column: 1 / -1; grid-row: 3; }
+  .search-wrap input[type="search"] { min-height: var(--control-h); font-size: .84rem; }
+  #grid-core select, #grid-core .company-picker { min-height: var(--control-h); }
+}
+
+/* ---- results header ------------------------------------------------------------ */
+.results-bar { margin: 10px 0 8px; padding: 0; }
+.results-heading h2 { font-size: .95rem; font-weight: 650; letter-spacing: -.02em; }
+.results-heading { display: flex; align-items: baseline; gap: 10px; }
+.results-meta { font-size: .76rem; }
+
+/* ---- the two panes -------------------------------------------------------------
+   One surface with a divider down it, not two cards with a channel between. */
+@media (min-width: 1280px) {
+  .wrap { max-width: 1480px; padding: 18px 28px 64px; }
+  .results-shell { max-width: none; }
+  .results-split {
+    display: grid;
+    grid-template-columns: minmax(0, 58fr) minmax(400px, 42fr);
+    gap: 0;
+    align-items: start;
+  }
+  .results-main { min-width: 0; }
+  #job-list {
+    border: 1px solid var(--rule);
+    border-right: 0;
+    border-radius: 8px 0 0 8px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  #job-list > .job {
+    border-width: 0 0 1px 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    transition: background-color .12s ease;
+  }
+  #job-list > .job:last-child { border-bottom: 0; }
+  #job-list > .job:hover:not(.is-selected) { background: color-mix(in oklab, var(--ink) 2.5%, var(--bg)); }
+  #job-list > .job.is-selected {
+    background: color-mix(in oklab, var(--ink) 4%, var(--bg));
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+  .job-detail {
+    display: block;
+    position: sticky;
+    top: 14px;
+    max-height: calc(100vh - 28px);
+    border: 1px solid var(--rule);
+    border-radius: 0 8px 8px 0;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .job-detail-inner { max-height: calc(100vh - 28px); overflow-y: auto; overscroll-behavior: contain; padding: 22px 24px 28px; }
+  /* An empty pane should still read as half the workspace, not a short note floating
+     beside a full list. */
+  .job-detail:has(.job-detail-empty) .job-detail-inner { min-height: 320px; }
+}
+
+/* ---- rows: one line of title, one of context ----------------------------------- */
+.job { box-shadow: none; }
+.job-card-open { padding: 12px 16px; gap: 12px; align-items: center; }
+.job-main { gap: 2px; }
+.job .job-title { font-size: .94rem; font-weight: 600; line-height: 1.3; letter-spacing: -.012em; }
+.job-keyline { font-size: .78rem; line-height: 1.4; }
+.job-tags { gap: 8px; margin-top: 0; align-items: center; }
+.job-meta-plain { color: var(--ink-faint); font-size: .74rem; }
+.job-posted { color: var(--ink-faint); font-size: .72rem; }
+.job-logo { width: 32px; height: 32px; border-radius: 7px; }
+.job-logo-fallback { font-size: .7rem; }
+.job-tag { border: 1px solid var(--rule); border-radius: 999px; background: transparent; padding: 1px 8px; font-weight: 500; font-size: .66rem; }
+.job-work-mode, .job-seniority { border: 0; background: none; color: var(--ink-faint); padding: 0; }
+
+/* ---- the inspector -------------------------------------------------------------
+   One filled control on the page. Everything else is a neutral border, which is what
+   makes this findable without an outline on all its neighbours. */
+.job-detail-head h2 { font-size: 1.3rem; font-weight: 650; letter-spacing: -.03em; }
+.job-detail-eyebrow { font-size: .64rem; letter-spacing: .09em; }
+.job-detail-meta { font-size: .79rem; }
 .job-detail .description-original {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   width: 100%;
-  justify-content: center;
-  padding: 11px 16px;
+  min-height: 42px;
+  padding: 10px 16px;
   border: 1px solid var(--ink);
   border-radius: 8px;
   background: var(--ink);
   color: var(--bg);
-  font-size: .86rem;
+  font-size: .85rem;
   font-weight: 600;
-  text-align: center;
+  text-decoration: none;
 }
-.job-detail .description-original:hover { background: color-mix(in oklab, var(--ink) 86%, var(--bg)); border-color: color-mix(in oklab, var(--ink) 86%, var(--bg)); }
-
-/* Rows: title first, everything else quieter and on one line. */
-.job-card-open { padding: 13px 16px; gap: 12px; }
-.job .job-title { font-size: 1rem; font-weight: 600; letter-spacing: -.012em; }
-.job-keyline { font-size: .8rem; }
-.job-meta-plain { color: var(--ink-faint); font-size: .76rem; }
-.job-tags { gap: 7px; margin-top: 3px; align-items: center; }
-.job-posted { color: var(--ink-faint); font-size: .74rem; }
-.job-logo { width: 34px; height: 34px; border-radius: 8px; }
-.job-logo-fallback { font-size: .74rem; }
-.job.has-actions .job-card-open,
-.job.in-group.has-actions .job-card-open { padding-right: 16px; }
-
-/* Visa status keeps a pill because it changes whether you can apply at all; nothing
-   else on the row needs one. */
-.job-tag { border: 1px solid var(--rule); background: transparent; font-weight: 500; }
-.job-work-mode, .job-seniority { border: 0; background: none; color: var(--ink-faint); padding: 0; }
-
-/* Scores: understated. A bar carries the shape, the figure carries the value, and no
-   traffic light decides for the reader what a number means. */
-.resume-result .resume-score {
-  border-color: var(--rule);
-  background: transparent;
-  color: var(--ink);
-  font-weight: 600;
+.job-detail .description-original:hover {
+  background: color-mix(in oklab, var(--ink) 86%, var(--bg));
+  border-color: color-mix(in oklab, var(--ink) 86%, var(--bg));
 }
-.fit-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rule); }
-.fit-tile { padding: 0 12px 0 0; border: 0; border-radius: 0; background: none; }
-.fit-tile-label { color: var(--ink-faint); font-size: .66rem; letter-spacing: .04em; font-weight: 600; }
-.fit-tile-value { color: var(--ink); margin-top: 2px; }
-.fit-tile-score { font-size: 1.1rem; font-weight: 600; }
-.fit-track { height: 3px; background: var(--rule); margin-top: 7px; }
-.fit-fill { background: var(--ink-soft); }
-.fit-callout { border-left-color: var(--rule-strong); background: transparent; padding: 0; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rule); border-left: 0; border-radius: 0; }
-.fit-callout-label { color: var(--ink-faint); font-weight: 600; letter-spacing: .04em; }
-.fit-callout p { font-size: .82rem; color: var(--ink-soft); }
-
-/* The headline score, stated once and large, the way the panel's own heading does. */
-.resume-result-heading { align-items: baseline; }
-
-/* Controls: neutral until one of them is the point. */
-.job-score-check, .job-score-select, .job-score-add {
-  border-color: var(--rule);
-  color: var(--ink-soft);
-}
+.description-body { font-size: .85rem; line-height: 1.72; }
+.job-score-check, .job-score-select, .job-score-add { border-color: var(--rule); color: var(--ink-soft); border-radius: 7px; }
+.job-score-check { min-height: 34px; background: transparent; }
 .job-score-check:hover { border-color: var(--rule-strong); background: var(--chip-bg); color: var(--ink); }
 
-/* Shadows do no dividing work once there are borders doing it. */
-.job, .results-shell .job { box-shadow: none; }
-
-/* The résumé status, in the masthead where a state belongs, rather than a panel at
-   the top of the page where the job list should be. */
+/* ---- résumé status, in the header where a state belongs ------------------------ */
 .resume-chip {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 4px 4px 4px 10px;
+  padding: 3px 3px 3px 10px;
   border: 1px solid var(--rule);
-  border-radius: 999px;
+  border-radius: 7px;
   color: var(--ink-soft);
   font-size: .76rem;
   white-space: nowrap;
@@ -2831,32 +2923,62 @@ body.resume-saved-ready .resume-file-btn::before { content: none; }
 .resume-chip[hidden] { display: none; }
 .resume-chip-icon { display: grid; place-items: center; color: var(--ink-faint); }
 .resume-manage {
-  padding: 4px 10px;
+  padding: 4px 9px;
   border: 1px solid var(--rule);
-  border-radius: 999px;
+  border-radius: 5px;
   background: var(--bg);
   color: var(--ink);
-  font: 600 .74rem/1.2 var(--sans);
+  font: 600 .73rem/1.2 var(--sans);
   cursor: pointer;
 }
 .resume-manage:hover { border-color: var(--rule-strong); background: var(--chip-bg); }
 .resume-match[hidden] { display: none; }
-@media (max-width: 760px) { .resume-chip { display: none; } }
+.resume-match:not([hidden]) { margin: 10px 0 2px; }
 
-/* Selection states what is being read; it does not need to shout it. A neutral fill
-   and a thin accent edge say the same thing as a violet wash, and leave the accent
-   meaning something when it is used on the one action that matters. */
-#job-list > .job.is-selected {
-  /* A warm neutral rather than --chip-bg, which is tinted violet and made selection
-     read as another accent competing with the one action that earns it. */
-  background: color-mix(in oklab, var(--ink) 4%, var(--bg));
-  box-shadow: inset 2px 0 0 var(--accent);
+/* ---- scores: the figure carries the value, not a colour ------------------------ */
+.resume-result .resume-score { border-color: var(--rule); background: transparent; color: var(--ink); font-weight: 600; }
+/* The headline number, stated once and large; the three dimensions beneath it are
+   the working, not the answer. */
+.fit-head { margin-bottom: 2px; }
+.fit-head-label { margin: 0; color: var(--ink-faint); font-size: .63rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+.fit-total { margin: 4px 0 0; color: var(--ink); line-height: 1.05; font-variant-numeric: tabular-nums; }
+.fit-total-score { font-size: 2.1rem; font-weight: 680; letter-spacing: -.035em; }
+.fit-total-max { color: var(--ink-faint); font-size: .86rem; font-weight: 500; }
+.fit-track-total { height: 4px; margin-top: 10px; }
+.fit-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rule); }
+.fit-tile { padding: 0 12px 0 0; border: 0; border-radius: 0; background: none; }
+.fit-tile-label { color: var(--ink-faint); font-size: .64rem; letter-spacing: .05em; font-weight: 600; }
+.fit-tile-value { color: var(--ink); margin-top: 2px; }
+.fit-tile-score { font-size: 1.05rem; font-weight: 650; }
+.fit-track { height: 3px; margin-top: 7px; background: var(--rule); }
+.fit-fill { background: var(--ink-soft); }
+.fit-finding { margin-top: 15px; padding-top: 13px; border-top: 1px solid var(--rule); }
+.fit-finding-label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--ink-faint);
+  font-size: .63rem;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
 }
-#job-list > .job:hover:not(.is-selected) { background: color-mix(in oklab, var(--ink) 2.5%, var(--bg)); }
-.job.is-selected { border-color: var(--rule); box-shadow: none; }
-#job-list > .job.is-selected .job-title { color: var(--ink); }
+.fit-finding p { margin: 0; color: var(--ink-soft); font-size: .82rem; line-height: 1.55; }
+.fit-finding blockquote {
+  margin: 0;
+  padding-left: 11px;
+  border-left: 2px solid var(--rule-strong);
+  color: var(--ink-soft);
+  font-size: .82rem;
+  line-height: 1.55;
+}
+.fit-finding-gap p { color: var(--ink); }
 
-/* Metadata belongs on the keyline with the company, not on a line of its own that
-   doubles every row's height. */
-.job-tags { margin-top: 0; }
-.job-main { gap: 2px; }
+@media (max-width: 1099px) {
+  .appbar { flex-wrap: wrap; }
+  .page-head { margin: 12px 0 8px; }
+}
+@media (max-width: 760px) {
+  .wrap { padding: 14px 16px 56px; }
+  .appbar-nav { gap: 12px; }
+  .page-head .title { font-size: 1.3rem; }
+}
