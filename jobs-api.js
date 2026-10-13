@@ -139,7 +139,7 @@
         <p class="job-detail-eyebrow">Job description</p>
         <h2></h2>
         <p class="job-detail-meta"></p>
-        <p class="job-detail-actions" hidden><a class="description-original" target="_blank" rel="noopener noreferrer">Open role ↗</a></p>
+        <p class="job-detail-actions" hidden><a class="description-original" target="_blank" rel="noopener noreferrer">View job <span aria-hidden="true">↗</span></a></p>
       </div>
       <div class="job-score" data-score-for="${attr(id)}">
         <div class="job-score-controls">
@@ -194,7 +194,9 @@
   // by anything downstream — a bubble-phase listener here would run after it and
   // every preview would be counted as someone opening the posting.
   document.addEventListener('click', event => {
-    if (!wide()) return;
+    // Every width now: the row carries no buttons, so selecting it is the only way in
+    // to the description, and on a phone the pane covers the list instead of sitting
+    // beside it. The posting is reached from the panel's one primary action.
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     // "Open role" sits inside the card's action row; a click on it is a request for
     // the posting, not for a preview, so it is left to navigate.

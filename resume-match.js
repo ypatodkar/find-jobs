@@ -103,7 +103,7 @@
 
   // Anything showing the list — the zone, and the picker in each description pane —
   // redraws from one event rather than each keeping its own copy to fall behind.
-  const announce = () => document.dispatchEvent(new CustomEvent('resumes:changed'));
+  const announce = () => { document.dispatchEvent(new CustomEvent('resumes:changed')); paintChip(); };
 
   let resumeText = '', controller, version = 0, comparedFilters = null;
   let matchingReady = false;
@@ -138,6 +138,9 @@
     actionLabel.textContent = 'View status';
     document.body.classList.remove('matching-ready');
     document.body.classList.remove('resume-has-file');
+    // The chip offers a feature that has just stopped existing, so it goes with it.
+    paintChip();
+    if (region) region.hidden = true;
   }
   // The pane draws its own picker and needs the list; it does not need the storage,
   // so only these four things cross the boundary.
@@ -147,6 +150,43 @@
     active: () => store.activeItem(),
     addFile: file => { if (fileInput) { const dt = new DataTransfer(); dt.items.add(file); fileInput.files = dt.files; fileInput.dispatchEvent(new Event('change', { bubbles: true })); } },
   };
+
+  // ---- the status chip -------------------------------------------------------
+  // Uploading a résumé is a thing you do once; browsing jobs is why you came. The
+  // panel is kept behind a status line in the masthead so the document step stops
+  // taking the top of the page from the list it is meant to help you read.
+  const chip = $('resume-status-chip');
+  const chipText = $('resume-chip-text');
+  const manage = $('resume-manage');
+  const region = $('resume-panel-region');
+
+  function paintChip() {
+    if (!chip) return;
+    const { items } = matchingReady ? store.read() : { items: [] };
+    chip.hidden = !matchingReady;
+    if (!chipText) return;
+    chipText.textContent = items.length === 0 ? 'No résumé'
+      : items.length === 1 ? 'Résumé ready'
+      : items.length + ' résumés';
+    if (manage) manage.textContent = items.length === 0 ? 'Add' : 'Manage';
+  }
+
+  function togglePanel(open) {
+    if (!region) return;
+    const next = open === undefined ? region.hidden : open;
+    region.hidden = !next;
+    if (manage) manage.setAttribute('aria-expanded', String(next));
+    if (next) {
+      region.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      const target = $('resume-file-btn');
+      if (target) target.focus({ preventScroll: true });
+    }
+  }
+  manage?.addEventListener('click', () => togglePanel());
+
+  // Asking for a score without a résumé opens the panel rather than scrolling to a
+  // block that is no longer on the page.
+  document.addEventListener('resumes:needed', () => togglePanel(true));
 
   // ---- the collection -------------------------------------------------------
   // A list of one is not a choice, so it only appears from the second résumé on.
@@ -268,6 +308,7 @@
     if (fileBtn) fileBtn.textContent = count === 0 ? 'Upload r\u00e9sum\u00e9' : 'Add another r\u00e9sum\u00e9';
     renderList();
     document.body.classList.toggle('resume-saved-ready', !!kept);
+    paintChip();
   }
 
   // One click, no file picker: the whole point of keeping it.
@@ -532,8 +573,7 @@
       // Nothing to expand any more — the upload button is always on the page — so
       // take them to it and put the focus there. Scrolling the label rather than the
       // input, because the input itself is visually hidden behind it.
-      ($('resume-file-btn') || fileInput).scrollIntoView({ behavior: 'smooth', block: 'center' });
-      fileInput.focus({ preventScroll: true });
+      document.dispatchEvent(new CustomEvent('resumes:needed'));
       return;
     }
 

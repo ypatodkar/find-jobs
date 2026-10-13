@@ -631,16 +631,16 @@
       const logo = inGroup ? "" : `<span class="job-logo" aria-hidden="true">${j.logo
         ? `<img src="${escapeHtml(j.logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.hidden=true;this.nextElementSibling.hidden=false" /><span class="job-logo-fallback" hidden>${escapeHtml(m.initials)}</span>`
         : `<span class="job-logo-fallback">${escapeHtml(m.initials)}</span>`}</span>`;
-      const disciplines = [...new Set(j.roles || [])].slice(0, 2)
-        .map((r) => `<span class="job-tag job-discipline">${escapeHtml(ROLE_LABELS[r] || r)}</span>`).join("");
       const sponsorStatus = j.sponsorship || "unknown";
       const sponsorLabel = { yes: "Visa: Available", no: "Visa: Unavailable", unknown: "Visa: Not mentioned" }[sponsorStatus] || "Visa: Not mentioned";
       const sponsorEvidence = j.sponsorshipEvidence ? ` — ${j.sponsorshipEvidence}` : "";
       const sponsor = sponsorStatus === "unknown" ? "" : `<span class="job-tag sponsor-tag ${escapeHtml(sponsorStatus)}" title="${escapeHtml(sponsorLabel + sponsorEvidence)}">${escapeHtml(sponsorLabel)}</span>`;
       const place = j.city === "Bay Area" ? "SF Bay Area" : j.city || (j.remote ? "Remote" : "");
       const location = place ? `<span class="job-place">${escapeHtml(place)}</span>` : "";
-      const workMode = j.remote ? `<span class="job-tag job-work-mode">${place === "Remote" ? "Remote" : "Remote option"}</span>` : "";
-      const seniority = j.seniority ? `<span class="job-tag job-seniority">${escapeHtml(SENIORITY_LABELS[j.seniority] || j.seniority)}</span>` : "";
+      const workMode = j.remote && place !== "Remote" ? "Remote option" : "";
+      const seniorityText = j.seniority ? (SENIORITY_LABELS[j.seniority] || j.seniority) : "";
+      const rowMeta = [workMode, seniorityText].filter(Boolean)
+        .map((t) => `<span class="job-meta-plain">${escapeHtml(t)}</span>`).join(`<span class="job-meta-sep" aria-hidden="true">·</span>`);
       const posted = relativeDate(j.posted);
       const pay = compactPay(j);
       const payBit = pay
@@ -666,31 +666,23 @@
         ? `href="${escapeHtml(j.url)}" target="_blank" rel="noopener noreferrer" data-job-id="${escapeHtml(j.job_id || "")}" data-company="${escapeHtml(j.company)}" data-city="${escapeHtml(j.city || "")}" data-title="${escapeHtml(j.title)}" aria-label="Open posting for ${escapeHtml(j.title)} at ${escapeHtml(j.company)}"`
         : "";
       return `
-        <article class="job${inGroup ? " in-group" : ""}${cfg.loadPage ? " has-actions" : ""}" data-job-id="${escapeHtml(j.job_id || "")}">
+        <article class="job${inGroup ? " in-group" : ""}" data-job-id="${escapeHtml(j.job_id || "")}">
           <${cardTag} class="job-card-open" ${cardProps}>
             ${logo}
             <span class="job-main">
               ${title}
               ${companyBit || location ? `<span class="job-keyline">${companyBit}${companyBit && location ? `<span class="job-meta-sep" aria-hidden="true">·</span>` : ""}${location}</span>` : ""}
-              ${disciplines || workMode || seniority || sponsor ? `<span class="job-tags">${disciplines}${workMode}${seniority}${sponsor}</span>` : ""}
+              ${/* Seniority and work mode read as plain text beside the location. They
+                   were four pills competing with the title for the eye, which is a lot
+                   of decoration for facts a sentence states more quietly. Visa status
+                   keeps its pill: it is the one that changes whether you can apply. */ ""}
+              ${rowMeta || sponsor ? `<span class="job-tags">${rowMeta}${sponsor}</span>` : ""}
             </span>
-            <span class="job-aside">${payBit}${posted ? `<span class="job-posted">Posted ${escapeHtml(posted)}</span>` : ""}</span>
+            <span class="job-aside">${payBit}${posted ? `<span class="job-posted">${escapeHtml(posted)}</span>` : ""}</span>
           </${cardTag}>
-          ${/* Two actions, because reading and applying are different intentions and
-               the card click only covers one of them. "See description" is offered
-               only when there is something behind it — the list carries a
-               hasDescription flag rather than the text, which is the whole reason a
-               page of 45 is 162 KB — so a button that opens "not available" is never
-               drawn. "Open role" carries the same data attributes the card does, so
-               a posting opened from here is counted exactly as one opened from the
-               card used to be. */ ""}
-          <div class="job-actions">
-            ${cfg.loadPage && j.hasDescription ? `<button type="button" class="job-description-open" data-description="${escapeHtml(j.job_id)}" aria-label="Read description for ${escapeHtml(j.title)} at ${escapeHtml(j.company)}">See description</button>` : ""}
-            ${j.url ? `<a class="job-open-role" href="${escapeHtml(j.url)}" target="_blank" rel="noopener noreferrer" data-job-id="${escapeHtml(j.job_id || "")}" data-company="${escapeHtml(j.company)}" data-city="${escapeHtml(j.city || "")}" data-title="${escapeHtml(j.title)}" aria-label="Open the posting for ${escapeHtml(j.title)} at ${escapeHtml(j.company)}">Open role <span aria-hidden="true">↗</span></a>` : ""}
-          </div>
-          ${/* The score lives with the description now, not on the row. A number is
-               only worth reading next to what produced it, and a card has no room to
-               show why. Opening a role puts the button and its answer in the pane. */ ""}
+          ${/* No buttons on the row. Selecting it opens the description, and the one
+               action that leaves the site lives in the panel beside it — a list of 45
+               rows carrying two buttons each is 90 things competing with the titles. */ ""}
         </article>`;
     }
 

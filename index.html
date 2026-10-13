@@ -51,6 +51,13 @@
         <div class="masthead-top">
           <div class="nav-links"><a class="backlink" href="firms.html">Browse by investor →</a><a class="backlink" href="about.html">About</a></div>
           <div class="masthead-actions">
+            <div id="resume-status-chip" class="resume-chip" hidden>
+              <span class="resume-chip-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+              </span>
+              <span id="resume-chip-text">Résumé ready</span>
+              <button type="button" id="resume-manage" class="resume-manage" aria-expanded="false" aria-controls="resume-panel-region">Manage</button>
+            </div>
             <div id="visitor-slot"></div>
             <a class="masthead-link" href="https://lnkd.in/p/g2hge79J" target="_blank" rel="noopener noreferrer" aria-label="This project on LinkedIn" title="LinkedIn">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true" focusable="false">
@@ -79,7 +86,7 @@
            One zone carries every state. Empty it invites; mid-read it reports; with a
            résumé held it becomes the file's name and the two things left to do. body
            classes do the switching, so the markup stays one row. -->
-      <section class="resume-match is-unavailable" aria-labelledby="resume-heading">
+      <section class="resume-match is-unavailable" id="resume-panel-region" aria-labelledby="resume-heading" hidden>
         <h2 id="resume-heading" class="resume-heading">R&eacute;sum&eacute; matching</h2>
         <div id="resume-form" hidden>
           <div class="resume-drop" id="resume-drop">

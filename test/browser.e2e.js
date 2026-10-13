@@ -27,7 +27,8 @@ async function main() {
     await page.route('**/api/jobs/config', unavailableConfig);
     await page.goto(base);
     await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('110 open roles'));
-    assert.equal(await page.locator('.resume-match').isVisible(), true);
+    // With matching unavailable there is no chip to manage and no form behind it.
+    assert.equal(await page.locator('#resume-status-chip').isVisible(), false);
     assert.ok((await page.locator('#resume-summary-note').textContent()).includes('unavailable'));
     assert.equal(await page.locator('#resume-form').isVisible(), false);
     assert.equal(await page.locator('.job-match-link:visible').count(), 0);
@@ -36,17 +37,18 @@ async function main() {
     await page.route('**/api/jobs/config', oldApiConfig);
     await page.reload();
     await page.waitForFunction(() => document.getElementById('resume-summary-note').textContent.includes('unavailable'));
-    assert.equal(await page.locator('.resume-match').isVisible(), true);
+    assert.equal(await page.locator('#resume-status-chip').isVisible(), false);
     assert.equal(await page.locator('#resume-form').isVisible(), false);
     await page.unroute('**/api/jobs/config', oldApiConfig);
     await page.route('**/api/jobs/config', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"matching":true}' }));
     await page.reload();
     await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('110 open roles'));
-    await page.locator('.resume-match').waitFor({ state: 'visible' });
+    await page.locator('#resume-status-chip').waitFor({ state: 'visible' });
     fs.mkdirSync('.catalogue', { recursive: true });
     await page.screenshot({ path: '.catalogue/top-desktop.png', fullPage: false });
     assert.equal(await page.locator('#job-list .job').count(), 45);
-    assert.equal(await page.locator('#job-list .job-description-open[data-description]').count(), 45);
+    assert.equal(await page.locator('#job-list .job-description-open, #job-list .job-open-role').count(), 0,
+      'rows carry no buttons; selecting one opens the description');
     const firstCard = page.locator('#job-list .job').first();
     assert.equal(await firstCard.locator('a.job-card-open').getAttribute('href'), data.jobs[0].url);
     assert.equal(await firstCard.locator('a.job-card-open').getAttribute('target'), '_blank');
@@ -58,7 +60,7 @@ async function main() {
     assert.equal(await page.locator('.job.is-selected').count(), 1);
     // track.js captures clicks, so the preview must cancel before it is counted.
     assert.equal(await page.evaluate(() => window.Seen.has('job_0')), false, 'previewing is not opening');
-    await firstCard.locator('.job-description-open').click();
+    await firstCard.locator('a.job-card-open').click();
     await page.waitForFunction(() => document.querySelector('#job-detail .description-body')?.textContent.includes('Five years'));
     assert.equal(popups, 0);
     assert.equal(await page.evaluate(() => window.Seen.has('job_0')), false);
@@ -74,10 +76,11 @@ async function main() {
     assert.equal(await page.evaluate(() => window.Seen.has('job_0')), true);
     await posting.close();
     assert.equal(await page.locator('.job-match-link:visible').count(), 0);
-    assert.equal(await page.locator('#job-list .job').first().locator('.job-work-mode').textContent(), 'Remote option');
+    assert.equal(await page.locator('#job-list .job').first().locator('.job-meta-plain').first().textContent(), 'Remote option');
     const remoteRow = page.locator('#job-list .job').filter({ hasText: 'Frontend Engineer 001' });
     assert.equal(await remoteRow.locator('.job-place').textContent(), 'Remote');
-    assert.equal(await remoteRow.locator('.job-work-mode').textContent(), 'Remote');
+    // A role whose location already reads "Remote" does not say it twice.
+    assert.equal(await remoteRow.locator('.job-meta-plain').filter({ hasText: 'Remote' }).count(), 0);
     await page.evaluate(() => window.scrollTo(0, document.getElementById('job-list').getBoundingClientRect().top + window.scrollY - 40));
     await page.screenshot({ path: '.catalogue/list-desktop.png', fullPage: false });
     assert.ok(!requests.some(url => /all-jobs\.json|api\/firm\//.test(url)));
@@ -97,11 +100,11 @@ async function main() {
     await page.locator('.cg-head').first().click();
     const groupedCard = page.locator('.cgroup.is-open .job').first();
     assert.match(await groupedCard.locator('a.job-card-open').getAttribute('href'), /^https:\/\/example\.com\/jobs\//);
-    await groupedCard.locator('.job-description-open').click();
+    await groupedCard.locator('a.job-card-open').click();
     await page.waitForFunction(() => document.querySelector('#job-detail .description-body')?.textContent.includes('Five years'));
     await page.locator('[data-company-more]').first().click();
     await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('19 matching roles'));
-    await page.locator('[data-description]').first().click();
+    await page.locator('#job-list .job-card-open').first().click();
     await page.waitForFunction(() => document.querySelector('#job-detail .description-body').textContent.includes('Five years'));
     assert.equal(await page.locator('#job-detail h2').textContent(), await page.locator('#job-list .job-title').first().textContent());
     assert.ok(await page.locator('.description-body p').count() > 0);
@@ -114,7 +117,9 @@ async function main() {
     await page.locator('#advanced-filters > summary').click();
     assert.ok(await page.locator('#sum-company').isVisible());
     await page.locator('#advanced-filters > summary').click();
-    // One button, always on the page: there is no expander to open any more.
+    // The panel is behind the masthead chip; Manage is how it opens.
+    assert.equal(await page.locator('#resume-panel-region').evaluate(el => el.hidden), true);
+    await page.locator('#resume-manage').click();
     assert.equal(await page.locator('#resume-file-btn').isVisible(), true);
     assert.equal(await page.locator('#resume-panel, #resume-text, #resume-consent').count(), 0);
     const resumeFile = page.locator('#resume-file');
@@ -196,7 +201,7 @@ async function main() {
     // The 503 is only discovered when a comparison is actually requested.
     await page.locator('#resume-run').evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     await page.locator('#resume-form').waitFor({ state: 'hidden' });
-    assert.equal(await page.locator('.resume-match').isVisible(), true);
+    assert.equal(await page.locator('#resume-status-chip').isVisible(), false);
     assert.ok((await page.locator('#resume-summary-note').textContent()).includes('unavailable'));
     assert.equal(await page.locator('.job-match-link:visible').count(), 0);
     assert.equal(await page.locator('#resume-selected').isVisible(), false);

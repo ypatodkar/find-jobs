@@ -2737,3 +2737,126 @@ body.resume-saved-ready .resume-file-btn::before { content: none; }
   #resume-run, .resume-file, .resume-file-btn { width: 100%; justify-content: center; }
   .resume-forget { margin-left: 0; text-align: center; }
 }
+
+/* ---- Restraint pass -----------------------------------------------------------
+   The page had an outlined button on every row, a pill for every fact and a colour
+   for every score, so nothing was emphasised because everything was. The rules here
+   are subtractive: one filled control on the page, borders that divide rather than
+   compete, and numbers left to speak for themselves.
+
+   Loaded last so it overrides the earlier, louder treatment of the same elements
+   rather than requiring every one of them to be rewritten in place. */
+
+/* One primary action. It is the only filled, high-contrast control on the page, which
+   is what makes it findable without an outline on everything else. */
+.job-detail .description-original {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  justify-content: center;
+  padding: 11px 16px;
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: .86rem;
+  font-weight: 600;
+  text-align: center;
+}
+.job-detail .description-original:hover { background: color-mix(in oklab, var(--ink) 86%, var(--bg)); border-color: color-mix(in oklab, var(--ink) 86%, var(--bg)); }
+
+/* Rows: title first, everything else quieter and on one line. */
+.job-card-open { padding: 13px 16px; gap: 12px; }
+.job .job-title { font-size: 1rem; font-weight: 600; letter-spacing: -.012em; }
+.job-keyline { font-size: .8rem; }
+.job-meta-plain { color: var(--ink-faint); font-size: .76rem; }
+.job-tags { gap: 7px; margin-top: 3px; align-items: center; }
+.job-posted { color: var(--ink-faint); font-size: .74rem; }
+.job-logo { width: 34px; height: 34px; border-radius: 8px; }
+.job-logo-fallback { font-size: .74rem; }
+.job.has-actions .job-card-open,
+.job.in-group.has-actions .job-card-open { padding-right: 16px; }
+
+/* Visa status keeps a pill because it changes whether you can apply at all; nothing
+   else on the row needs one. */
+.job-tag { border: 1px solid var(--rule); background: transparent; font-weight: 500; }
+.job-work-mode, .job-seniority { border: 0; background: none; color: var(--ink-faint); padding: 0; }
+
+/* Scores: understated. A bar carries the shape, the figure carries the value, and no
+   traffic light decides for the reader what a number means. */
+.resume-result .resume-score {
+  border-color: var(--rule);
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+}
+.fit-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rule); }
+.fit-tile { padding: 0 12px 0 0; border: 0; border-radius: 0; background: none; }
+.fit-tile-label { color: var(--ink-faint); font-size: .66rem; letter-spacing: .04em; font-weight: 600; }
+.fit-tile-value { color: var(--ink); margin-top: 2px; }
+.fit-tile-score { font-size: 1.1rem; font-weight: 600; }
+.fit-track { height: 3px; background: var(--rule); margin-top: 7px; }
+.fit-fill { background: var(--ink-soft); }
+.fit-callout { border-left-color: var(--rule-strong); background: transparent; padding: 0; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rule); border-left: 0; border-radius: 0; }
+.fit-callout-label { color: var(--ink-faint); font-weight: 600; letter-spacing: .04em; }
+.fit-callout p { font-size: .82rem; color: var(--ink-soft); }
+
+/* The headline score, stated once and large, the way the panel's own heading does. */
+.resume-result-heading { align-items: baseline; }
+
+/* Controls: neutral until one of them is the point. */
+.job-score-check, .job-score-select, .job-score-add {
+  border-color: var(--rule);
+  color: var(--ink-soft);
+}
+.job-score-check:hover { border-color: var(--rule-strong); background: var(--chip-bg); color: var(--ink); }
+
+/* Shadows do no dividing work once there are borders doing it. */
+.job, .results-shell .job { box-shadow: none; }
+
+/* The résumé status, in the masthead where a state belongs, rather than a panel at
+   the top of the page where the job list should be. */
+.resume-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 4px 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: .76rem;
+  white-space: nowrap;
+}
+.resume-chip[hidden] { display: none; }
+.resume-chip-icon { display: grid; place-items: center; color: var(--ink-faint); }
+.resume-manage {
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 600 .74rem/1.2 var(--sans);
+  cursor: pointer;
+}
+.resume-manage:hover { border-color: var(--rule-strong); background: var(--chip-bg); }
+.resume-match[hidden] { display: none; }
+@media (max-width: 760px) { .resume-chip { display: none; } }
+
+/* Selection states what is being read; it does not need to shout it. A neutral fill
+   and a thin accent edge say the same thing as a violet wash, and leave the accent
+   meaning something when it is used on the one action that matters. */
+#job-list > .job.is-selected {
+  /* A warm neutral rather than --chip-bg, which is tinted violet and made selection
+     read as another accent competing with the one action that earns it. */
+  background: color-mix(in oklab, var(--ink) 4%, var(--bg));
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+#job-list > .job:hover:not(.is-selected) { background: color-mix(in oklab, var(--ink) 2.5%, var(--bg)); }
+.job.is-selected { border-color: var(--rule); box-shadow: none; }
+#job-list > .job.is-selected .job-title { color: var(--ink); }
+
+/* Metadata belongs on the keyline with the company, not on a line of its own that
+   doubles every row's height. */
+.job-tags { margin-top: 0; }
+.job-main { gap: 2px; }
