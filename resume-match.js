@@ -391,6 +391,35 @@
     return tile;
   }
 
+  // A score the user has already paid for is worth showing where they scan, not only
+  // where they asked for it. Rows are re-rendered on paging and filtering, so this is
+  // also replayed from the session's scores whenever the list changes.
+  const rowScores = new Map();
+  function paintRowFit(jobId, score) {
+    if (typeof score === 'number') rowScores.set(jobId, score);
+    const slot = document.querySelector(`[data-fit-for="${CSS.escape(jobId)}"]`);
+    if (!slot) return;
+    const value = rowScores.get(jobId);
+    if (typeof value !== 'number') { slot.hidden = true; return; }
+    // Writing the same number again would mutate the list, wake the observer below,
+    // and bring us straight back here — a loop that pins the main thread and takes
+    // the whole page with it. Only an actual change is written.
+    if (slot.dataset.fitValue === String(value)) return;
+    slot.dataset.fitValue = String(value);
+    slot.replaceChildren(
+      Object.assign(document.createElement('strong'), { textContent: value + '%', className: 'job-fit-score' }),
+      Object.assign(document.createElement('span'), { textContent: 'Match', className: 'job-fit-word' }));
+    slot.hidden = false;
+  }
+  function repaintRowFits() {
+    for (const id of rowScores.keys()) paintRowFit(id);
+  }
+  // Rows are replaced wholesale on paging and filtering, so scores are replayed onto
+  // the new ones. childList only, and not subtree: the score lives one level down and
+  // watching the whole tree would see this function's own writes.
+  const jobList = document.getElementById('job-list');
+  if (jobList) new MutationObserver(repaintRowFits).observe(jobList, { childList: true });
+
   function card({ job, assessment: a }, options = {}) {
     const article = node('article', null, 'resume-result');
     article.dataset.band = band(a.score);
@@ -617,6 +646,7 @@
       const match = data.matches && data.matches[0];
       if (!match) throw new Error(data.message || 'No assessment came back for this role.');
       slot.replaceChildren(card(match, { inPane: true }));
+      paintRowFit(jobId, match.assessment.score);
     } catch (error) {
       if (current !== version || !slot.isConnected) return;
       if (error.status === 503) { disableMatching(); return; }

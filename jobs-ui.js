@@ -198,10 +198,13 @@
 
     function updateSummary(available) {
       const n = selected.size;
+      // The control carries its own name now, so unfiltered it reads "Role" rather
+      // than "All (12)" under a separate heading that said "Role". Once something is
+      // chosen the name gives way to the choice, which is the more useful word.
       const value =
-        n === 0 ? (opts.emptyLabel ? `${opts.emptyLabel} (${available})` : `All (${available})`)
+        n === 0 ? opts.label
         : n === 1 ? opts.labelFor([...selected][0])
-        : `${n} ${opts.exclude ? "excluded" : "selected"}`;
+        : `${opts.label} · ${n}${opts.exclude ? " excluded" : ""}`;
       summary.textContent = value;
       summary.setAttribute("aria-label", `${opts.label} filter: ${value}`);
       root.classList.toggle("has-selection", n > 0);
@@ -507,7 +510,6 @@
     // One picker per dimension, built into the markup up front so ids stay stable.
     const pickerMarkup = (d) => `
       <div class="picker-wrap">
-        <span class="picker-label">${escapeHtml(d.label)}</span>
         <details class="company-picker" id="pick-${d.key}">
           <summary id="sum-${d.key}">All</summary>
           <div class="company-panel">
@@ -680,7 +682,14 @@
                    keeps its pill: it is the one that changes whether you can apply. */ ""}
               ${rowMeta || sponsor ? `<span class="job-tags">${rowMeta}${sponsor}</span>` : ""}
             </span>
-            <span class="job-aside">${payBit}${posted ? `<span class="job-posted">${escapeHtml(posted)}</span>` : ""}</span>
+            ${/* The score sits where the eye ends up after the title, and is filled in
+                 by the matcher for roles it has already judged — the list carries no
+                 scores of its own, because asking for forty-five at once would mean
+                 forty-five provider calls before anyone had clicked anything. */ ""}
+            <span class="job-aside">
+              <span class="job-fit" data-fit-for="${escapeHtml(j.job_id || "")}" hidden></span>
+              ${payBit}${posted ? `<span class="job-posted">${escapeHtml(posted)}</span>` : ""}
+            </span>
           </${cardTag}>
           ${/* No buttons on the row. Selecting it opens the description, and the one
                action that leaves the site lives in the panel beside it — a list of 45

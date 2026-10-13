@@ -136,7 +136,7 @@
     inner.innerHTML = `
       <button type="button" class="job-detail-back">← Back to results</button>
       <div class="job-detail-head">
-        <p class="job-detail-eyebrow">Job description</p>
+        <p class="job-detail-eyebrow"></p>
         <h2></h2>
         <p class="job-detail-meta"></p>
         <p class="job-detail-actions" hidden><a class="description-original" target="_blank" rel="noopener noreferrer">View job <span aria-hidden="true">↗</span></a></p>
@@ -161,6 +161,7 @@
     try {
       const { job } = await request('/jobs/' + encodeURIComponent(id), undefined, current.signal);
       if (current !== controller || openId !== id) return;
+      inner.querySelector('.job-detail-eyebrow').textContent = job.company || '';
       inner.querySelector('.job-detail-head h2').textContent = job.title;
       inner.querySelector('.job-detail-meta').textContent =
         [job.company, job.city, job.remote && job.city !== 'Remote' ? 'Remote option' : null, job.salary].filter(Boolean).join(' · ');

@@ -2982,3 +2982,156 @@ body.resume-saved-ready .resume-file-btn::before { content: none; }
   .appbar-nav { gap: 12px; }
   .page-head .title { font-size: 1.3rem; }
 }
+
+/* ================================================================================
+   Explore: the browser rebuilt to the reference design
+   --------------------------------------------------------------------------------
+   White and warm-neutral surfaces, charcoal type, hairline borders, and violet held
+   back for selection and focus only — the reference uses no colour at all in the
+   list or the inspector, and the accent earns more by appearing less.
+
+   Typography does the ranking: weight and contrast rather than large jumps in size.
+   Nothing here is larger than the page heading except the score, which is the one
+   number the product exists to produce.
+   ================================================================================ */
+:root {
+  --ink: #18181b;
+  --surface-2: #fafafa;
+  --fit-bar: #18181b;
+}
+html[data-theme="dark"] { --surface-2: #171719; --fit-bar: #fafafa; }
+@media (prefers-color-scheme: dark) { html:not([data-theme="light"]) { --surface-2: #171719; --fit-bar: #fafafa; } }
+
+/* ---- heading ------------------------------------------------------------------- */
+.page-head { align-items: flex-start; margin: 16px 0 14px; }
+.page-head .title { font-size: 1.72rem; font-weight: 680; letter-spacing: -.035em; }
+.page-head-aside { align-items: center; }
+.page-head-aside .stats { color: var(--ink-faint); font-size: .84rem; }
+
+/* ---- filters as pills ----------------------------------------------------------
+   Each control states its own dimension, so the stacked label above it is gone: the
+   pill reads "Role" until a role is chosen, then reads the choice. */
+@media (min-width: 1100px) {
+  .controls { grid-template-columns: minmax(260px, 0.9fr) minmax(420px, 1.4fr); row-gap: 12px; }
+  #grid-core { gap: 8px; }
+  #grid-core .picker-wrap { gap: 0; }
+}
+.company-picker > summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: .86rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.company-picker > summary::after {
+  content: "";
+  flex: none;
+  width: 7px; height: 7px;
+  margin-left: 2px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: translateY(-2px) rotate(45deg);
+  opacity: .5;
+}
+.company-picker[open] > summary::after { transform: translateY(1px) rotate(-135deg); }
+.company-picker > summary:hover { border-color: var(--rule-strong); }
+.company-picker.has-selection > summary { border-color: var(--ink); font-weight: 600; }
+.search-wrap { border-radius: 999px; }
+.search-wrap input[type="search"] { min-height: 40px; }
+
+/* ---- list header --------------------------------------------------------------- */
+.results-bar { margin: 18px 0 0; padding-bottom: 10px; }
+.results-heading h2 {
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.results-meta { color: var(--ink-faint); font-size: .74rem; }
+
+/* ---- rows ----------------------------------------------------------------------
+   A square monogram, the title, then two lines of quieter context. The match sits
+   on the right where the eye arrives after the title. */
+@media (min-width: 1280px) {
+  #job-list { border: 0; border-right: 1px solid var(--rule); border-radius: 0; background: transparent; }
+  #job-list > .job { border-bottom: 1px solid var(--rule); }
+  #job-list > .job.is-selected { background: var(--surface-2); box-shadow: inset 2px 0 0 var(--accent); }
+  .job-detail { border: 0; border-radius: 0; background: transparent; }
+  .job-detail-inner { padding: 4px 0 28px 28px; }
+  .results-split { grid-template-columns: minmax(0, 58fr) minmax(380px, 42fr); }
+}
+.job-card-open { padding: 11px 16px; align-items: flex-start; gap: 13px; }
+.job-logo {
+  width: 36px; height: 36px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--ink-soft);
+}
+.job-logo-fallback { font-size: .82rem; font-weight: 600; }
+.job .job-title { font-size: .95rem; font-weight: 600; letter-spacing: -.01em; }
+.job-keyline { font-size: .83rem; line-height: 1.35; color: var(--ink-soft); }
+.job-keyline .job-company { font-weight: 400; color: var(--ink-soft); }
+.job-tags { margin-top: 1px; }
+.job-meta-plain, .job-place { color: var(--ink-faint); font-size: .79rem; }
+.job-aside { align-items: flex-end; gap: 2px; }
+.job-fit[hidden] { display: none; }
+.job-fit { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+.job-fit-score { color: var(--ink); font-size: 1rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.job-fit-word { color: var(--ink-faint); font-size: .79rem; }
+.job-posted { color: var(--ink-faint); font-size: .76rem; }
+
+/* ---- inspector ------------------------------------------------------------------ */
+.job-detail-head { border-bottom: 0; padding-bottom: 0; margin-bottom: 0; }
+.job-detail-eyebrow { color: var(--ink-faint); font-size: .72rem; font-weight: 500; letter-spacing: .09em; text-transform: uppercase; }
+.job-detail-head h2 { margin-top: 6px; font-size: 1.42rem; font-weight: 680; letter-spacing: -.03em; }
+.job-detail-meta { margin-top: 7px; color: var(--ink-soft); font-size: .88rem; }
+.job-detail-actions { margin-top: 18px; }
+.job-detail .description-original { border-radius: 999px; min-height: 48px; font-size: .92rem; font-weight: 600; }
+.job-score { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--rule); }
+
+/* The score: the one number the product exists to produce, and the only thing on the
+   page allowed to be bigger than the page heading. */
+.fit-head-label, .fit-finding-label, .fit-tile-label {
+  color: var(--ink);
+  font-size: .92rem;
+  font-weight: 650;
+  letter-spacing: -.01em;
+  text-transform: none;
+}
+.fit-total { margin-top: 8px; }
+.fit-total-score { font-size: 2.5rem; font-weight: 700; letter-spacing: -.04em; }
+.fit-total-max { font-size: 1rem; color: var(--ink-faint); }
+.fit-track { background: color-mix(in oklab, var(--ink) 11%, transparent); }
+.fit-track-total { height: 5px; margin-top: 12px; border-radius: 999px; }
+.fit-fill { background: var(--fit-bar); }
+
+/* The three dimensions read as columns of label-over-number, no bars: at this size a
+   3px rule says less than the figure already does. */
+.fit-grid { margin-top: 20px; padding-top: 18px; gap: 12px; }
+.fit-tile { padding: 0; }
+.fit-tile-label { font-size: .86rem; font-weight: 500; color: var(--ink-soft); }
+.fit-tile-value { margin-top: 4px; }
+.fit-tile-score { font-size: 1.32rem; font-weight: 650; letter-spacing: -.025em; }
+.fit-tile-max, .fit-tile .fit-track { display: none; }
+
+.fit-finding { margin-top: 22px; padding-top: 20px; }
+.fit-finding-label { display: block; margin-bottom: 8px; }
+.fit-finding p, .fit-finding blockquote { font-size: .88rem; line-height: 1.6; color: var(--ink-soft); }
+.fit-finding blockquote { border-left-width: 2px; }
+
+.description-body { font-size: .88rem; line-height: 1.7; }
+.job-score-check { border-radius: 999px; min-height: 36px; padding: 0 14px; }
+.job-score-select, .job-score-add { border-radius: 999px; }
