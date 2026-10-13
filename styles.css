@@ -3024,3 +3024,89 @@ body:has(#job-list) .resume-match:not([hidden]) {
   body:has(#job-list) .job .job-title { font-size: .89rem; }
   body:has(#job-list) .results-bar { margin-top: 16px; }
 }
+
+
+/* V2: real layout changes, rather than merely restyling the prior screen.
+   Compact navigation/intro, unified horizontal discovery toolbar, and readable
+   list/inspector proportions. Desktop only; the filter drawer is unchanged. */
+@media (min-width: 1280px) {
+  body:has(#job-list) .wrap { max-width: 1540px; padding: 18px 30px 72px; }
+  body:has(#job-list) header.masthead {
+    padding-bottom: 16px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--rule);
+  }
+  body:has(#job-list) .masthead-top { margin-bottom: 14px; }
+  body:has(#job-list) .masthead .title {
+    margin: 0 0 2px;
+    font-size: clamp(1.45rem, 2vw, 1.85rem);
+    line-height: 1.2;
+    font-weight: 680;
+  }
+  body:has(#job-list) .masthead .dek {
+    font-size: .83rem;
+    margin-bottom: 10px;
+    max-width: none;
+  }
+  body:has(#job-list) #viewed-slot { margin-bottom: 8px; }
+  body:has(#job-list) .stats { font-size: .7rem; }
+  body:has(#job-list) .controls {
+    display: grid;
+    grid-template-columns: minmax(240px, 1.15fr) minmax(540px, 2fr);
+    column-gap: 14px;
+    row-gap: 12px;
+    padding: 12px 0;
+    align-items: center;
+    border: 0;
+  }
+  body:has(#job-list) .controls > .search-wrap {
+    width: 100%;
+    min-width: 0;
+    grid-column: 1;
+    grid-row: 1;
+  }
+  body:has(#job-list) .controls > .filter-sections {
+    width: 100%;
+    min-width: 0;
+    grid-column: 2;
+    grid-row: 1;
+  }
+  body:has(#job-list) .filter-sections > :first-child:not(.advanced-filters) {
+    margin-top: 0;
+  }
+  body:has(#job-list) .filter-sections .picker-grid,
+  body:has(#job-list) .filter-sections .primary-pickers,
+  body:has(#job-list) .filter-sections .picker-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  body:has(#job-list) .filter-sections .picker-wrap {
+    min-width: 0;
+  }
+  body:has(#job-list) .filter-sections .picker-wrap select { min-width: 0; }
+  body:has(#job-list) .controls .filter-tail {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    padding: 10px 0 0;
+    border-top: 1px solid var(--rule);
+  }
+  body:has(#job-list) .filter-sections .advanced-filters {
+    grid-column: 1 / -1;
+  }
+  body:has(#job-list) .results-bar { margin: 8px 0 12px; }
+  body:has(#job-list) .results-split {
+    grid-template-columns: minmax(0, 1.35fr) minmax(420px, 1fr);
+  }
+  body:has(#job-list) .job-detail { top: 12px; max-height: calc(100vh - 24px); }
+  body:has(#job-list) .job-detail-inner { max-height: calc(100vh - 24px); }
+}
+/* Proper filter-row support irrespective of dynamic picker markup. */
+@media (min-width: 1280px) {
+  body:has(#job-list) #picker-row > .filter-primary,
+  body:has(#job-list) #picker-row > .picker-section:first-child,
+  body:has(#job-list) #picker-row > .picker-row:first-child {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
