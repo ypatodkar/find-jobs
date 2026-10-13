@@ -1833,6 +1833,164 @@ body.resume-saved-ready .resume-drop .resume-selected { border: 0; padding: 0; b
   .resume-drop .resume-controls > * { flex: 1; justify-content: center; text-align: center; }
 }
 
+/* ---- Tags: colour that means something ----------------------------------------
+   Every tag was the same grey box, so the eye had to read all four to find the one
+   it cared about. These are the four facts a row carries, and they are different
+   kinds of fact: where the work happens, how senior it is, whether a visa is
+   possible, what discipline it sits in. Colour sorts them before reading does.
+
+   Colour is never the only carrier — each tag still says its own word, because a tint
+   alone is nothing to anyone who cannot separate these hues. */
+.job-tag { border-radius: 999px; padding: 2px 9px; }
+.job-work-mode {
+  border-color: color-mix(in oklab, var(--tag-remote) 30%, transparent);
+  background: color-mix(in oklab, var(--tag-remote) 12%, transparent);
+  color: var(--tag-remote);
+}
+.job-seniority {
+  border-color: color-mix(in oklab, var(--accent) 26%, transparent);
+  background: color-mix(in oklab, var(--accent) 9%, transparent);
+  color: var(--accent);
+}
+.sponsor-tag.yes {
+  border-color: color-mix(in oklab, var(--tag-visa) 30%, transparent);
+  background: color-mix(in oklab, var(--tag-visa) 12%, transparent);
+  color: var(--tag-visa);
+}
+.sponsor-tag.no {
+  border-color: color-mix(in oklab, var(--tag-no) 30%, transparent);
+  background: color-mix(in oklab, var(--tag-no) 11%, transparent);
+  color: var(--tag-no);
+}
+:root { --tag-remote: #047857; --tag-visa: #0369a1; --tag-no: #be123c; }
+html[data-theme="dark"] { --tag-remote: #34d399; --tag-visa: #38bdf8; --tag-no: #fb7185; }
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) { --tag-remote: #34d399; --tag-visa: #38bdf8; --tag-no: #fb7185; }
+}
+
+/* ---- Rows answer the pointer --------------------------------------------------
+   A row that does nothing under the cursor reads as text. Inside the joined panel it
+   tints, because lifting one row out of a continuous surface would tear it; as a
+   free-standing card below the breakpoint it lifts. */
+@media (min-width: 1280px) {
+  #job-list > .job { transition: background-color .14s ease; }
+  #job-list > .job:hover:not(.is-selected) { background: var(--chip-bg); }
+}
+@media (max-width: 1279px) {
+  .job { transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
+  .job:hover { transform: translateY(-1px); border-color: color-mix(in oklab, var(--accent) 45%, var(--rule)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .job { transition: none; }
+  .job:hover { transform: none; }
+}
+
+/* ---- Search: the command bar it already wanted to be --------------------------- */
+.search-wrap { position: relative; transition: border-color .15s ease, box-shadow .15s ease; }
+.search-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 16%, transparent);
+}
+.search-key {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  padding: 3px 7px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink-faint);
+  font: 600 .68rem/1 var(--sans);
+  pointer-events: none;
+}
+.search-wrap:focus-within .search-key { opacity: 0; }
+@media (max-width: 760px) { .search-key { display: none; } }
+
+/* ---- Match result: the score as something you can read at a glance --------------
+   A bare "23/100" makes the reader do the work of deciding whether 23 is good. The
+   bands come from the rubric itself: each dimension is a 0-4 judgement rendered as
+   0/25/50/75/100, so 50 is "partially meets" and 75 is "meets". Colour carries the
+   same message as the number rather than replacing it — the figure is always shown,
+   because a colour alone fails for anyone who cannot distinguish them. */
+:root {
+  --fit-strong: #15803d;
+  --fit-strong-fill: color-mix(in oklab, #15803d 11%, transparent);
+  --fit-fair: #b45309;
+  --fit-fair-fill: color-mix(in oklab, #b45309 11%, transparent);
+  --fit-weak: #be123c;
+  --fit-weak-fill: color-mix(in oklab, #be123c 10%, transparent);
+}
+html[data-theme="dark"] {
+  --fit-strong: #4ade80;
+  --fit-strong-fill: color-mix(in oklab, #4ade80 14%, transparent);
+  --fit-fair: #fbbf24;
+  --fit-fair-fill: color-mix(in oklab, #fbbf24 14%, transparent);
+  --fit-weak: #fb7185;
+  --fit-weak-fill: color-mix(in oklab, #fb7185 14%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) {
+    --fit-strong: #4ade80;
+    --fit-strong-fill: color-mix(in oklab, #4ade80 14%, transparent);
+    --fit-fair: #fbbf24;
+    --fit-fair-fill: color-mix(in oklab, #fbbf24 14%, transparent);
+    --fit-weak: #fb7185;
+    --fit-weak-fill: color-mix(in oklab, #fb7185 14%, transparent);
+  }
+}
+[data-band="strong"] { --fit: var(--fit-strong); --fit-fill: var(--fit-strong-fill); }
+[data-band="fair"]   { --fit: var(--fit-fair);   --fit-fill: var(--fit-fair-fill); }
+[data-band="weak"]   { --fit: var(--fit-weak);   --fit-fill: var(--fit-weak-fill); }
+
+.resume-result .resume-score {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in oklab, var(--fit) 35%, transparent);
+  border-radius: 999px;
+  background: var(--fit-fill);
+  color: var(--fit);
+  font-size: .76rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fit-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 14px 0 0; }
+.fit-tile { padding: 10px 11px 11px; border: 1px solid var(--rule); border-radius: 9px; background: var(--bg); }
+.fit-tile-label {
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink-faint);
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fit-tile-value { margin: 3px 0 0; color: var(--fit); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.fit-tile-score { font-size: 1.12rem; font-weight: 700; letter-spacing: -.02em; }
+.fit-tile-max { color: var(--ink-faint); font-size: .66rem; font-weight: 500; }
+.fit-track { height: 5px; margin-top: 8px; border-radius: 999px; background: var(--rule); overflow: hidden; }
+.fit-fill { height: 100%; border-radius: 999px; background: var(--fit); }
+.fit-tile-flag { margin: 6px 0 0; color: var(--ink-faint); font-size: .62rem; letter-spacing: .04em; text-transform: uppercase; }
+
+/* The one line worth reading first: what the résumé does not answer. */
+.fit-callout {
+  margin-top: 14px;
+  padding: 11px 13px;
+  border-left: 3px solid var(--fit, var(--accent));
+  border-radius: 0 8px 8px 0;
+  background: var(--fit-fill, var(--accent-fill));
+}
+.fit-callout-label { display: block; margin-bottom: 4px; color: var(--ink); font-size: .63rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.fit-callout p { margin: 0; color: var(--ink); font-size: .8rem; line-height: 1.55; }
+
+@media (max-width: 520px) {
+  .fit-grid { grid-template-columns: 1fr; }
+}
+
 /* The score belongs beside the thing it scored, so the button sits in the pane and
    answers in place, between the posting's header and its text. */
 .job-score { margin: 0 0 16px; }

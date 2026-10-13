@@ -130,8 +130,39 @@
     showSaved();
     if (store.read()) summaryNote.textContent = 'Your saved r\u00e9sum\u00e9 is ready \u2014 match it against your current filters.';
   }).catch(disableMatching).finally(() => clearTimeout(configTimer));
-  function card({ job, assessment: a }) {
+  // Bands for colour, not decoration: a number alone makes you work out whether 23 is
+  // good. The thresholds are the rubric's own — each dimension is a 0-4 judgement
+  // rendered as 0/25/50/75/100, so 50 is "partially meets" and 75 is "meets".
+  const band = n => (n >= 70 ? 'strong' : n >= 45 ? 'fair' : 'weak');
+
+  // Three columns in a 470px pane cannot hold "Experience and responsibility", and a
+  // truncated label says less than a short one. The full wording stays as the tile's
+  // title attribute, so nothing is lost for anyone who wants it.
+  const SHORT = { skills: 'Skills', experience: 'Experience', domain: 'Domain' };
+
+  function meter(key, label, score, uncertain) {
+    const tile = node('div', null, 'fit-tile');
+    tile.dataset.band = band(score);
+    tile.title = label;
+    tile.append(node('p', SHORT[key] || label, 'fit-tile-label'));
+    const value = node('p', null, 'fit-tile-value');
+    value.append(node('span', String(score), 'fit-tile-score'), node('span', '/100', 'fit-tile-max'));
+    tile.append(value);
+    const track = node('div', null, 'fit-track');
+    const fill = node('div', null, 'fit-fill');
+    // Width is the score; the element carries it as a style because it is data, not
+    // design — there is no class for "23 per cent".
+    fill.style.width = `${Math.max(2, score)}%`;
+    track.append(fill);
+    tile.append(track);
+    if (uncertain) tile.append(node('p', 'uncertain', 'fit-tile-flag'));
+    return tile;
+  }
+
+  function card({ job, assessment: a }, options = {}) {
     const article = node('article', null, 'resume-result');
+    article.dataset.band = band(a.score);
+
     const heading = node('div', null, 'resume-result-heading');
     const title = node('h3');
     if (/^https?:\/\//i.test(job.url || '')) {
@@ -140,22 +171,38 @@
       link.dataset.jobId = job.job_id; link.dataset.company = job.company; link.dataset.city = job.city || '';
       title.append(link);
     } else title.textContent = job.title;
-    heading.append(title, node('span', `${a.score}/100 alignment`, 'resume-score'));
-    article.append(heading, node('p', [job.company, job.city, job.salary].filter(Boolean).join(' · '), 'resume-meta'));
-    const dimensions = node('dl', null, 'resume-dimensions');
-    for (const d of a.dimensions) {
-      const row = node('div'); row.append(node('dt', d.label), node('dd', `${d.score}/100${d.confidence < 0.5 ? ' · uncertain' : ''}`));
-      dimensions.append(row);
+    heading.append(title, node('span', `${a.score}/100`, 'resume-score'));
+    article.append(heading);
+
+    const meta = [job.company, job.city, job.salary].filter(Boolean).join(' · ');
+    if (meta) article.append(node('p', meta, 'resume-meta'));
+
+    const grid = node('div', null, 'fit-grid');
+    for (const d of a.dimensions) grid.append(meter(d.key, d.label, d.score, d.confidence < 0.5));
+    article.append(grid);
+
+    // The gap is the one line worth reading first: it is the thing the résumé does not
+    // answer, which is what decides whether to apply. It gets the accent border.
+    if (a.gap?.text) {
+      const callout = node('div', null, 'fit-callout');
+      callout.append(node('span', 'Requirement to check', 'fit-callout-label'), node('p', a.gap.text));
+      article.append(callout);
     }
-    article.append(dimensions);
-    if (a.evidence?.text) article.append(node('p', 'Relevant résumé evidence', 'resume-evidence-label'), node('blockquote', a.evidence.text));
-    if (a.gap?.text) article.append(node('p', 'Requirement to check against your experience', 'resume-evidence-label'), node('blockquote', a.gap.text));
-    if (a.uncertain) article.append(node('p', 'The model is uncertain about part of this assessment. Review the description before relying on the score.', 'resume-note'));
-    if (a.truncated) article.append(node('p', 'This long description was shortened for comparison; review the full posting.', 'resume-note'));
-    const button = node('button', 'Read full description', 'job-description-link');
-    button.type = 'button'; button.dataset.description = job.job_id; article.append(button);
+    if (a.evidence?.text) {
+      article.append(node('p', 'Strongest evidence in your résumé', 'resume-evidence-label'), node('blockquote', a.evidence.text));
+    }
+    if (a.uncertain) article.append(node('p', 'The model is uncertain about part of this assessment. Read the description before relying on the score.', 'resume-note'));
+    if (a.truncated) article.append(node('p', 'This long description was shortened for comparison; read the full posting.', 'resume-note'));
+
+    // In the pane the description is already open beside this, so the link would point
+    // at what you are looking at.
+    if (!options.inPane) {
+      const button = node('button', 'Read full description', 'job-description-link');
+      button.type = 'button'; button.dataset.description = job.job_id; article.append(button);
+    }
     return article;
   }
+
   async function compare() {
     if (!matchingReady || !resumeText) return;
     controller?.abort(); controller = new AbortController();
@@ -309,7 +356,7 @@
       if (current !== version || ctrl.signal.aborted || !slot.isConnected) return;
       const match = data.matches && data.matches[0];
       if (!match) throw new Error(data.message || 'No assessment came back for this role.');
-      slot.replaceChildren(card(match));
+      slot.replaceChildren(card(match, { inPane: true }));
     } catch (error) {
       if (current !== version || !slot.isConnected) return;
       if (error.status === 503) { disableMatching(); return; }
