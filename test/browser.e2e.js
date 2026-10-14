@@ -29,14 +29,24 @@ async function main() {
     await page.route('**/api/jobs/config', unavailableConfig);
     await page.goto(base);
     await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('110 open roles'));
+    // The list is the page: the window scrolls it, not a box inside the card, and
+    // the description stays pinned to the top of the window while it does.
+    assert.ok(await page.evaluate(() => document.documentElement.scrollHeight > innerHeight * 2), 'the list runs past the window');
+    assert.ok(await page.evaluate(() => { const m = document.getElementById('results-main'); return m.scrollHeight <= m.clientHeight + 1; }), 'the list is not a scroll box');
+    await page.evaluate(() => scrollTo(0, 1500));
+    assert.equal(await page.evaluate(() => Math.round(document.getElementById('job-detail').getBoundingClientRect().top)), 0, 'the description is pinned while the list scrolls');
+    await page.evaluate(() => scrollTo(0, 0));
     // The desktop divider changes both pane widths, supports the keyboard, and
     // restores the chosen split after a reload.
     const divider = page.locator('#pane-resizer');
     const listWidthBefore = await page.locator('#results-main').evaluate(el => el.getBoundingClientRect().width);
+    // The divider runs the full length of the list, which is now taller than the
+    // window, so it is grabbed near its top rather than at its off-screen middle.
     const dividerBox = await divider.boundingBox();
-    await page.mouse.move(dividerBox.x + dividerBox.width / 2, dividerBox.y + dividerBox.height / 2);
+    const grabY = dividerBox.y + 120;
+    await page.mouse.move(dividerBox.x + dividerBox.width / 2, grabY);
     await page.mouse.down();
-    await page.mouse.move(dividerBox.x - 80, dividerBox.y + dividerBox.height / 2, { steps: 5 });
+    await page.mouse.move(dividerBox.x - 80, grabY, { steps: 5 });
     await page.mouse.up();
     const listWidthAfter = await page.locator('#results-main').evaluate(el => el.getBoundingClientRect().width);
     assert.ok(listWidthAfter < listWidthBefore - 50, 'dragging the divider narrows the job list');
@@ -80,9 +90,13 @@ async function main() {
     assert.equal(await page.locator('#settings-popover').isVisible(), false);
     await page.locator('#theme-toggle').click();
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
-    assert.equal(await page.locator('#job-list > .job.is-selected').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(38, 40, 50)');
+    // The selected row in the violet palette: a quiet tint with a 2px violet edge.
+    assert.equal(await page.locator('#job-list > .job.is-selected').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(42, 34, 64)');
+    assert.equal(await page.locator('#job-list > .job.is-selected').evaluate(el => getComputedStyle(el).boxShadow), 'rgb(167, 139, 250) 2px 0px 0px 0px inset');
     await page.screenshot({ path: '.catalogue/dark-desktop.png', fullPage: false });
     await page.locator('#theme-toggle').click();
+    assert.equal(await page.locator('#job-list > .job.is-selected').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(245, 243, 255)');
+    assert.equal(await page.locator('#job-list > .job.is-selected').evaluate(el => getComputedStyle(el).boxShadow), 'rgb(109, 40, 217) 2px 0px 0px 0px inset');
     fs.mkdirSync('.catalogue', { recursive: true });
     await page.screenshot({ path: '.catalogue/top-desktop.png', fullPage: false });
     assert.equal(await page.locator('#job-list .job').count(), 45);
@@ -98,7 +112,7 @@ async function main() {
     assert.equal(popups, 0, 'a plain card click previews rather than opening the posting');
     assert.ok(new URL(page.url()).searchParams.get('job'), 'the open job is in the URL so it can be shared');
     assert.equal(await page.locator('.job.is-selected').count(), 1);
-    assert.match(await page.locator('.job.is-selected').evaluate(el => getComputedStyle(el).boxShadow), /rgb\(112, 80, 204\).*inset/, 'selected role has a visible violet left indicator');
+    assert.match(await page.locator('.job.is-selected').evaluate(el => getComputedStyle(el).boxShadow), /rgb\(109, 40, 217\).*inset/, 'selected role has a visible violet left indicator');
     // track.js captures clicks, so the preview must cancel before it is counted.
     assert.equal(await page.evaluate(() => window.Seen.has('job_0')), false, 'previewing is not opening');
     await firstCard.locator('a.job-card-open').click();
@@ -131,20 +145,29 @@ async function main() {
     assert.notEqual(await page.locator('#job-list .job-title').first().textContent(), first);
     await page.goBack();
     await page.waitForFunction(() => document.querySelector('[aria-current="page"]')?.textContent === '1');
+    // The sort is drawn as the same menu as the résumé selector, over the real select,
+    // so choosing from it reaches the URL like any other filter.
+    const sortMenu = page.locator('.results-sort .select-menu-trigger');
+    await sortMenu.click();
+    assert.equal(await page.locator('.results-sort .select-menu-option[aria-selected="true"]').textContent(), 'Newest first');
+    await page.getByRole('option', { name: 'Highest salary' }).click();
+    await page.waitForFunction(() => new URL(location.href).searchParams.get('sort') === 'salary');
+    assert.equal(await page.locator('.results-sort .select-menu-value').textContent(), 'Highest salary');
+    assert.equal(await page.locator('.results-sort .select-menu-pop').isVisible(), false);
+    await sortMenu.click();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => !new URL(location.href).searchParams.has('sort'));
     await page.getByRole('searchbox', { name: 'Search roles', exact: true }).fill('Backend');
     await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('55 matching roles'));
     await page.locator('#sum-city').click();
     await page.locator('#list-city input[type="checkbox"]').first().check();
     await page.locator('#sum-city').click();
-    await page.getByRole('button', { name: /Company directory/ }).click();
-    await page.waitForFunction(() => document.querySelectorAll('#job-list .cgroup').length === 3);
-    await page.locator('.cg-head').first().click();
-    const groupedCard = page.locator('.cgroup.is-open .job').first();
-    assert.match(await groupedCard.locator('a.job-card-open').getAttribute('href'), /^https:\/\/example\.com\/jobs\//);
-    await groupedCard.locator('a.job-card-open').click();
-    await page.waitForFunction(() => document.querySelector('#job-detail .description-body')?.textContent.includes('Five years'));
-    await page.locator('[data-company-more]').first().click();
-    await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('19 matching roles'));
+    await page.waitForFunction(() => /^\d+ matching roles$/.test(document.getElementById('job-count').textContent));
+    // One way to browse: every matching role, as rows. There is no company directory.
+    assert.equal(await page.getByRole('button', { name: /Company directory/ }).count(), 0);
+    assert.equal(await page.locator('#job-list .cgroup').count(), 0);
+    assert.match(await page.locator('#job-list a.job-card-open').first().getAttribute('href'), /^https:\/\/example\.com\/jobs\//);
     await page.locator('#job-list .job-card-open').first().click();
     await page.waitForFunction(() => document.querySelector('#job-detail .description-body').textContent.includes('Five years'));
     assert.equal(await page.locator('#job-detail h2').textContent(), await page.locator('#job-list .job-title').first().textContent());
@@ -154,9 +177,15 @@ async function main() {
     await page.locator('.description-original').evaluate(link => link.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     assert.equal(await page.evaluate(id => window.Seen.has(id), openedId), true);
     assert.equal(await page.locator(`.job[data-job-id="${openedId}"]`).first().evaluate(row => row.classList.contains('row-seen')), true);
+    // The row's status slot now says "Opened" instead of the date, and says so to a
+    // screen reader too. Selecting rows never did this — only following the link.
+    const openedRow = page.locator(`.job[data-job-id="${openedId}"]`).first();
+    assert.equal(await openedRow.locator('.job-opened').isVisible(), true);
+    assert.equal(await openedRow.locator('.job-posted').isVisible(), false);
+    assert.match(await openedRow.locator('.job-card-open').getAttribute('aria-label'), /Opened before$/);
+    assert.equal(await page.locator('#job-list .job.row-seen').count(), 1, 'selecting rows is not opening them');
+    assert.ok((await page.locator('#job-detail .job-detail-facts').textContent()).includes('Source'));
     assert.equal(await page.locator('#advanced-filters').evaluate(el => el.open), false);
-    const workspaceTop = await page.locator('#results-split').evaluate(el => el.getBoundingClientRect().top);
-    assert.equal(await page.locator('#job-view-tabs').evaluate(el => !!el.closest('#advanced-filters')), false);
     assert.equal(await page.locator('#hide-opened').evaluate(el => !!el.closest('#advanced-filters')), false);
     assert.equal(await page.locator('#preset-bar').evaluate(el => !!el.closest('#advanced-filters')), false);
     await page.locator('#preset-save').click();
@@ -167,6 +196,9 @@ async function main() {
     assert.ok((await page.locator('.preset-menu').textContent()).includes('Backend in Seattle'));
     await page.locator('#preset-picker > summary').click();
     await page.screenshot({ path: '.catalogue/saved-toolbar-desktop.png', fullPage: false });
+    // Measured after saving: a saved filter can add a toolbar row on a narrow list,
+    // which is not what this checks — only that opening the panel moves nothing.
+    const workspaceTop = await page.locator('#results-split').evaluate(el => el.getBoundingClientRect().top);
     await page.locator('#advanced-filters > summary').click();
     assert.ok(await page.locator('#sum-company').isVisible());
     assert.ok(Math.abs((await page.locator('#results-split').evaluate(el => el.getBoundingClientRect().top)) - workspaceTop) < 2,
@@ -211,7 +243,7 @@ async function main() {
     await page.waitForFunction(() => document.getElementById('resume-file-state').textContent.includes('press'));
     assert.equal(await page.locator('#resume-ready-state').isVisible(), true);
     assert.equal(await page.locator('#resume-chip-text').textContent(), 'resume.txt');
-    assert.ok((await page.locator('#job-detail .job-score-active').textContent()).includes('resume.txt'));
+    assert.equal(await page.locator('#job-detail .resume-picker-value').textContent(), 'resume.txt');
     assert.equal(await page.locator('#resume-list .resume-row').count(), 1, 'a single saved résumé remains visible and removable');
     assert.equal(await page.locator('#resume-list .resume-row-remove').count(), 1);
     assert.equal(await page.locator('#resume-file-btn svg').count(), 1, 'upload icon remains after the button label updates');
@@ -266,6 +298,27 @@ async function main() {
     assert.equal(await page.locator('#job-list .job-fit:visible').count(), 0,
       'scores from the previous résumé must disappear when the active résumé changes');
     assert.equal(await page.locator('#resume-list .resume-row').count(), 2);
+    // The pane's selector lists both, switches by keyboard, and brings back the score
+    // the first résumé already earned for this role — never the other résumé's.
+    const picker = page.locator('#job-detail .resume-picker-trigger');
+    assert.equal(await page.locator('#job-detail .resume-picker-value').textContent(), 'updated.txt');
+    assert.equal(await page.locator('#job-detail [data-match-result] .resume-result').count(), 0);
+    await picker.click();
+    assert.equal(await page.locator('#job-detail .resume-picker-option').count(), 2);
+    assert.equal(await page.locator('#job-detail .resume-picker-option[aria-selected="true"]').textContent(), 'updated.txt');
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('#job-detail .resume-picker-pop').isVisible(), false);
+    assert.ok(await picker.evaluate(el => el === document.activeElement), 'focus returns to the trigger');
+    assert.equal(await page.locator('#job-detail .resume-picker-value').textContent(), 'resume.txt');
+    await page.waitForSelector('#job-detail [data-match-result] .resume-result');
+    await picker.click();
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#job-detail .resume-picker-pop').isVisible(), false);
+    await picker.click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('#job-detail [data-match-result] .resume-result').count(), 0);
     await page.locator('#resume-manage').click();
     await page.screenshot({ path: '.catalogue/resumes-desktop.png', fullPage: false });
     await page.locator('#resume-manage').click();
@@ -317,6 +370,10 @@ async function main() {
     await page.locator('.job-detail-back').click();
     await page.evaluate(() => window.scrollTo(0, document.getElementById('job-list').getBoundingClientRect().top + window.scrollY - 40));
     await page.screenshot({ path: '.catalogue/list-mobile.png', fullPage: false });
+    // An old shared link to the company directory still opens, on the plain list.
+    await page.goto(base + '/?view=grouped');
+    await page.waitForFunction(() => document.querySelectorAll('#job-list .job').length > 0);
+    assert.equal(await page.locator('#job-list .cgroup').count(), 0);
     await page.goto(base + '/?company=Alpha');
     await page.waitForFunction(() => document.getElementById('job-count').textContent.includes('matching roles'));
     assert.equal(await page.locator('#advanced-filters').evaluate(el => el.open), false);
@@ -332,7 +389,7 @@ async function main() {
     await page.waitForFunction(() => document.getElementById('firm-stats').textContent.includes('55 matching roles'));
     assert.equal(await page.locator('#job-list .job').count(), 45);
     assert.deepEqual(errors, []);
-    console.log('Browser checks passed: paging, URL history, filters, company previews, descriptions, résumé states, mobile layout, and investor pages.');
+    console.log('Browser checks passed: paging, URL history, filters, descriptions, résumé states, mobile layout, and investor pages.');
   } finally {
     await browser?.close();
     await new Promise(resolve => { server.close(resolve); server.closeAllConnections(); });

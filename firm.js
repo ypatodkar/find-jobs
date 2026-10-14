@@ -34,7 +34,7 @@
   });
   window.JobView = view;
   view.onChange(() => drawer && drawer.syncCount());
-  for (const id of ['job-controls', 'job-view-tabs', 'job-results-bar', 'job-list']) $(id).hidden = false;
+  for (const id of ['job-controls', 'job-results-bar', 'job-list']) $(id).hidden = false;
   if (drawer) drawer.reveal();
   view.load();
 })();

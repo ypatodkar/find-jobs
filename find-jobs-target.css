@@ -1,25 +1,70 @@
 /* Find Jobs: the selected compact workspace direction. This sheet applies only to
    index.html, after the shared styles used by the investor and firm pages. */
 
-:root {
-  --fj-page: #fafafa; --fj-card: #fff; --fj-ink: #111; --fj-soft: #626262; --fj-muted: #929292;
-  --fj-line: #e9e9e9; --fj-border: #dedede; --fj-subtle: #f2f2f2; --fj-hover: #f5f5f5; --fj-list: #fafafa;
-  --fj-selected: #f0f0f2; --fj-violet: #7050cc; --fj-track: #f0f0f0; --fj-action: #101010; --fj-action-hover: #353535; --fj-on-action: #fff;
-  --fj-logo-outline: rgba(0, 0, 0, .55);
+/* ---- Palette -----------------------------------------------------------------
+   Every colour on this page is defined here, once per theme, and nowhere else. Rules
+   below use the --fj-* names; the shared stylesheet's own tokens (--ink, --accent,
+   --action, …) are mapped onto the same values so its controls match.
+
+   Violet is the product colour: filled actions, the selected row, active filters,
+   checked boxes, focus and the résumé score. Text is a deep violet-charcoal, never
+   bright purple. Surfaces stay white, with #FAF9FC only where a section needs to read
+   as secondary.
+
+   Contrast (WCAG): white on primary 7.1:1; primary text 15.9:1; secondary text 6.5:1.
+   Muted text is 4.1:1, under the 4.5:1 small text needs, so it is kept to
+   placeholders, disabled controls, separators and large type — dates, notes and
+   labels people read use secondary text. Dark buttons use #7C3AED rather than the
+   #A78BFA accent, because white on #A78BFA is 2.7:1 (white on #7C3AED is 5.7:1). */
+:root, html[data-theme="light"] {
+  --v-primary: #6d28d9; --v-primary-hover: #5b21b6; --v-primary-pressed: #4c1d95; --v-on-primary: #fff;
+  --v-text: #241b30; --v-text-2: #625b70; --v-text-3: #81798e;
+  --v-page: #fff; --v-surface: #faf9fc; --v-hover: #f7f5fa;
+  --v-border: #e7e3ed; --v-border-strong: #d6cfe0;
+  --v-selected: #f5f3ff; --v-accent: #6d28d9; --v-accent-border: #ddd6fe; --v-active: #ede9fe; --v-focus: #8b5cf6;
+  --v-shadow: rgb(36 27 48 / 10%); --v-shadow-soft: rgb(36 27 48 / 5%);
+  --v-logo-outline: rgba(0, 0, 0, .55);
 }
 html[data-theme="dark"] {
-  --fj-page: #0f1115; --fj-card: #16181d; --fj-ink: #f4f4f5; --fj-soft: #a1a1aa; --fj-muted: #8b8b95;
-  --fj-line: #2b2e36; --fj-border: #3f434d; --fj-subtle: #242832; --fj-hover: #252830; --fj-list: #1a1c22;
-  --fj-selected: #262832; --fj-violet: #a58bec; --fj-track: #2b2e36; --fj-action: #f4f4f5; --fj-action-hover: #d4d4d8; --fj-on-action: #0f1115;
-  --fj-logo-outline: rgba(255, 255, 255, .7);
+  --v-primary: #7c3aed; --v-primary-hover: #6d28d9; --v-primary-pressed: #5b21b6; --v-on-primary: #fff;
+  --v-text: #f5f3ff; --v-text-2: #b8b0c8; --v-text-3: #8e869e;
+  --v-page: #121019; --v-surface: #1d1926; --v-hover: #241f2f;
+  --v-border: #332b40; --v-border-strong: #463b57;
+  --v-selected: #2a2240; --v-accent: #a78bfa; --v-accent-border: #4c3d6b; --v-active: #2e2548; --v-focus: #a78bfa;
+  --v-shadow: rgb(0 0 0 / 40%); --v-shadow-soft: rgb(0 0 0 / 25%);
+  --v-logo-outline: rgba(255, 255, 255, .7);
 }
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) {
-    --fj-page: #0f1115; --fj-card: #16181d; --fj-ink: #f4f4f5; --fj-soft: #a1a1aa; --fj-muted: #8b8b95;
-    --fj-line: #2b2e36; --fj-border: #3f434d; --fj-subtle: #242832; --fj-hover: #252830; --fj-list: #1a1c22;
-    --fj-selected: #262832; --fj-violet: #a58bec; --fj-track: #2b2e36; --fj-action: #f4f4f5; --fj-action-hover: #d4d4d8; --fj-on-action: #0f1115;
-    --fj-logo-outline: rgba(255, 255, 255, .7);
+    --v-primary: #7c3aed; --v-primary-hover: #6d28d9; --v-primary-pressed: #5b21b6; --v-on-primary: #fff;
+    --v-text: #f5f3ff; --v-text-2: #b8b0c8; --v-text-3: #8e869e;
+    --v-page: #121019; --v-surface: #1d1926; --v-hover: #241f2f;
+    --v-border: #332b40; --v-border-strong: #463b57;
+    --v-selected: #2a2240; --v-accent: #a78bfa; --v-accent-border: #4c3d6b; --v-active: #2e2548; --v-focus: #a78bfa;
+    --v-shadow: rgb(0 0 0 / 40%); --v-shadow-soft: rgb(0 0 0 / 25%);
+    --v-logo-outline: rgba(255, 255, 255, .7);
   }
+}
+/* One mapping for every theme. Both selectors are (0,1,1) and come after the shared
+   stylesheet, so they win over its light, dark and system-dark blocks alike. */
+html:not([data-theme]), html[data-theme] {
+  --fj-page: var(--v-page); --fj-card: var(--v-page); --fj-list: var(--v-surface); --fj-subtle: var(--v-surface);
+  --fj-hover: var(--v-hover); --fj-selected: var(--v-selected); --fj-track: var(--v-active);
+  --fj-ink: var(--v-text); --fj-soft: var(--v-text-2); --fj-muted: var(--v-text-3);
+  --fj-line: var(--v-border); --fj-border: var(--v-border); --fj-border-strong: var(--v-border-strong);
+  --fj-violet: var(--v-accent); --fj-accent-border: var(--v-accent-border); --fj-active: var(--v-active); --fj-focus: var(--v-focus);
+  --fj-action: var(--v-primary); --fj-action-hover: var(--v-primary-hover); --fj-action-pressed: var(--v-primary-pressed); --fj-on-action: var(--v-on-primary);
+  --fj-shadow: var(--v-shadow); --fj-shadow-soft: var(--v-shadow-soft); --fj-logo-outline: var(--v-logo-outline);
+  /* Controls shared by the résumé selector and the sort menu. */
+  --rp-border: var(--v-border); --rp-border-hover: var(--v-accent-border); --rp-selected: var(--v-selected); --rp-hover: var(--v-surface);
+  /* The shared stylesheet's tokens. Its "faint" grey carries dates and labels, so it
+     takes secondary text rather than muted, for contrast. */
+  --bg: var(--v-page); --surface: var(--v-surface); --surface-hover: var(--v-hover); --surface-selected: var(--v-selected);
+  --ink: var(--v-text); --ink-soft: var(--v-text-2); --ink-faint: var(--v-text-2);
+  --rule: var(--v-border); --rule-strong: var(--v-border-strong);
+  --action: var(--v-primary); --on-action: var(--v-on-primary);
+  --accent: var(--v-accent); --accent-fill: var(--v-selected); --on-accent: var(--v-on-primary);
+  --chip-bg: var(--v-surface);
 }
 
 body { background: var(--fj-page); }
@@ -51,10 +96,22 @@ body { background: var(--fj-page); }
 .appbar .settings-popover .visitor-ask-label { color: var(--fj-soft); font-size: 14px; }
 .appbar .settings-popover .visitor-input { height: 39px; border-radius: 8px; }
 .appbar .settings-popover .visitor-save { width: 100%; min-height: 38px; border-radius: 8px; background: var(--fj-action); color: var(--fj-on-action); }
+/* Every filled action on the page steps the same way: primary, hover, pressed. */
+:is(.appbar .settings-popover .visitor-save, .drawer-apply, .btn-primary):hover { background: var(--fj-action-hover); border-color: var(--fj-action-hover); }
+:is(.appbar .settings-popover .visitor-save, .drawer-apply, .btn-primary, .job-detail .description-original):active { background: var(--fj-action-pressed); border-color: var(--fj-action-pressed); }
+/* Secondary actions: white, neutral border, dark text; violet only on hover. */
+.explore-card .job-score-check:hover, .explore-card #advanced-done:hover { border-color: var(--fj-accent-border); background: var(--fj-selected); color: var(--fj-ink); }
+/* One focus ring everywhere on the page, including controls styled by the shared
+   sheet, which draw theirs in its accent. Colour only — width and offset are each
+   control's own. */
+:focus-visible { outline-color: var(--fj-focus) !important; }
 .appbar .settings-popover .visitor-skip { justify-self: start; }
-.appbar .settings-popover .profile-note { margin: 9px 0 12px; color: var(--fj-muted); font-size: 12px; line-height: 1.45; }
+.appbar .settings-popover .profile-note { margin: 9px 0 12px; color: var(--fj-soft); font-size: 12px; line-height: 1.45; }
 #featured-slot { order: 3; margin-top: 24px; }
-footer { order: 4; }
+footer { order: 4; border-top-color: var(--fj-violet); }
+.featured { border-left-color: var(--fj-violet); background-color: var(--fj-list); }
+.fit-fill { background: var(--fj-violet); }
+.resume-result .resume-score { border-color: color-mix(in oklab, var(--fj-violet) 45%, transparent); }
 footer .footer-appreciation { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding: 12px 0 0; border-top: 1px solid var(--fj-line); color: var(--fj-soft); font-size: 13px; }
 footer .footer-appreciation .heart { width: 28px; height: 28px; }
 
@@ -78,7 +135,7 @@ footer .footer-appreciation .heart { width: 28px; height: 28px; }
 .explore-card .page-head .stats { margin-top: 6px; color: var(--fj-soft); font-size: 19px; line-height: 1.25; }
 .explore-card .page-head-aside { display: flex; align-items: center; gap: 14px; padding-top: 8px; }
 .resume-ready-state { display: inline-flex; align-items: center; gap: 8px; color: var(--fj-soft); font-size: 15px; white-space: nowrap; }
-.resume-ready-state svg { color: #00a73c; }
+.resume-ready-state svg { color: var(--fj-violet); }
 .resume-popover { text-align: left; }
 
 /* One search and filter line. Additional controls stay inside More filters. */
@@ -126,6 +183,12 @@ footer .footer-appreciation .heart { width: 28px; height: 28px; }
   font-weight: 450;
 }
 .explore-card .company-picker > summary::after { width: 9px; height: 9px; border-color: var(--fj-soft); border-width: 0 2px 2px 0; }
+/* A filter that is narrowing the list says so in restrained violet; an open one gets
+   the accent edge. Text stays the primary colour. */
+.explore-card .company-picker > summary:hover { border-color: var(--fj-border-strong); }
+.explore-card .company-picker[open] > summary { border-color: var(--fj-violet); }
+.explore-card .company-picker.has-selection > summary { border-color: var(--fj-accent-border); background: var(--fj-selected); color: var(--fj-ink); font-weight: 500; }
+.explore-card .company-picker.has-selection > summary::after { border-color: var(--fj-violet); }
 .explore-card .advanced-filters { position: relative; width: auto; padding: 0; border: 0; }
 .explore-card .advanced-filters > summary {
   display: grid;
@@ -154,8 +217,8 @@ footer .footer-appreciation .heart { width: 28px; height: 28px; }
   height: 16px;
   padding: 0 3px;
   border-radius: 9px;
-  background: var(--fj-ink);
-  color: var(--fj-card);
+  background: var(--fj-violet);
+  color: var(--fj-on-action);
   font-size: 9px;
   line-height: 1;
 }
@@ -178,37 +241,60 @@ footer .footer-appreciation .heart { width: 28px; height: 28px; }
 .explore-card .advanced-panel .company-picker > summary { width: 100%; }
 .explore-card .advanced-panel .company-picker > summary,
 .explore-card .advanced-panel .sort-wrap select { height: 42px; min-height: 42px; padding: 0 12px; border: 1px solid var(--fj-border); border-radius: 7px; background: var(--fj-card); color: var(--fj-ink); font: 500 14px/1 var(--sans); }
-.explore-card .advanced-panel .company-picker.has-selection > summary { border-color: var(--fj-border); background: var(--fj-card); color: var(--fj-ink); }
-.explore-card .advanced-panel .company-picker[open] > summary { border-color: var(--fj-soft); }
-.explore-card .advanced-panel .company-picker.has-selection > summary::after { border-color: var(--fj-soft); }
+.explore-card .advanced-panel .company-picker.has-selection > summary { border-color: var(--fj-accent-border); background: var(--fj-selected); color: var(--fj-ink); }
+.explore-card .advanced-panel .company-picker[open] > summary { border-color: var(--fj-violet); }
+.explore-card .advanced-panel .company-picker.has-selection > summary::after { border-color: var(--fj-violet); }
 .explore-card .advanced-panel .company-panel { border-color: var(--fj-border); border-radius: 7px; background: var(--fj-card); }
 .explore-card .advanced-panel .company-panel-top input[type="search"] { height: 42px; min-height: 42px; padding: 0 12px; border: 1px solid var(--fj-border); border-radius: 7px; background: var(--fj-card); color: var(--fj-ink); font: 400 14px/1 var(--sans); }
 .explore-card .advanced-panel .advanced-check-field .filter-toggle { display: flex; align-items: center; min-height: 42px; padding: 0 12px; border: 1px solid var(--fj-border); border-radius: 7px; background: var(--fj-card); color: var(--fj-ink); font: 500 13px/1.25 var(--sans); }
-.explore-card .advanced-panel .advanced-check-field input { flex: none; margin: 0 8px 0 0; accent-color: var(--fj-ink); }
+.explore-card .advanced-panel .advanced-check-field input { flex: none; margin: 0 8px 0 0; accent-color: var(--fj-violet); }
 @media (min-width: 721px) {
   .explore-card .controls { position: relative; z-index: 10; }
-  .explore-card .advanced-filters > .advanced-panel { width: min(670px, calc(100vw - 48px)); max-height: min(560px, calc(100dvh - 300px)); overflow-y: auto; overscroll-behavior: contain; padding: 18px; border: 1px solid var(--fj-border); border-radius: 9px; background: var(--fj-card); box-shadow: 0 16px 40px rgb(0 0 0 / 12%); }
+  .explore-card .advanced-filters > .advanced-panel { width: min(670px, calc(100vw - 48px)); max-height: min(560px, calc(100dvh - 300px)); overflow-y: auto; overscroll-behavior: contain; padding: 18px; border: 1px solid var(--fj-border); border-radius: 9px; background: var(--fj-card); box-shadow: 0 16px 40px var(--fj-shadow); }
 }
 
-/* A single split surface with its own list and inspector scroll areas. */
+/* The list is the page: it runs to its last row and the window scrolls it. The
+   inspector beside it is pinned to the viewport and scrolls on its own, so a role
+   stays readable however far down the list it was chosen from. */
 .explore-card .results-shell { display: flex; flex-direction: column; flex: 1; min-height: 0; width: 100%; margin: 0; }
 @media (min-width: 1280px) {
+  /* The card grows with the list instead of being a fixed-height box. overflow: clip,
+     not hidden, keeps the rounded corners without making the card a scroll container,
+     which is what lets the inspector stick to the window rather than to the card. */
+  .explore-card { height: auto; overflow: clip; }
+  /* The toolbar belongs to the list, so it spans the list and stops where the list
+     does: the heading and its controls on the left, the sort at the right end, in
+     line with the posting dates (the row's 20px padding plus the 12px gap kept for a
+     match score). */
+  .explore-card .results-shell > .results-bar { align-items: flex-start; gap: 8px 14px; padding-right: calc(100% - var(--list-width, 53%) + 32px); }
+  /* When the controls do not fit beside the heading — a saved filter and Undo on a
+     narrow list — they wrap as a block under themselves, while the heading and the
+     sort stay on the first line. Every line is the sort's 39px tall so all three
+     stay centred on it. */
+  .explore-card .results-shell > .results-bar > .results-heading { display: flex; align-items: center; min-height: 39px; }
+  .explore-card .results-shell > .results-bar > .results-toolbar { flex: 1 1 auto; justify-content: flex-start; align-items: center; gap: 0 8px; min-width: 0; }
+  .explore-card .results-shell > .results-bar > .results-toolbar > * { min-height: 39px; display: flex; align-items: center; }
+  /* Room is tight with the sort on the same row, so the saved-filter controls drop
+     their visible label (the picker's accessible name still says it) and a long
+     saved-filter name truncates rather than wrapping the bar. */
+  .explore-card .results-shell > .results-bar .results-toolbar-saved .preset-label { display: none; }
+  .explore-card .results-shell > .results-bar .preset-current { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .explore-card .results-split {
     display: grid;
     grid-template-columns: minmax(0, var(--list-width, 53%)) 12px minmax(0, 1fr);
-    flex: 1;
+    flex: none;
     height: auto;
     min-height: 0;
     border: 0;
     border-radius: 0;
-    overflow: hidden;
+    overflow: visible;
   }
-  .explore-card .results-main { min-width: 0; height: 100%; overflow-y: auto; border-right: 0; background: var(--fj-list); }
+  .explore-card .results-main { min-width: 0; height: auto; overflow: visible; border-right: 0; background: var(--fj-list); }
   .pane-resizer {
     position: relative;
     z-index: 3;
+    align-self: stretch;
     width: 12px;
-    height: 100%;
     cursor: col-resize;
     touch-action: none;
     outline: none;
@@ -220,23 +306,25 @@ footer .footer-appreciation .heart { width: 28px; height: 28px; }
     width: 1px;
     background: var(--fj-line);
   }
+  /* The divider runs the full length of the list, so its grip follows the window
+     rather than sitting halfway down a page nobody has scrolled to. */
   .pane-resizer::after {
     content: "";
-    position: absolute;
-    top: 50%;
-    left: 3px;
+    position: sticky;
+    top: calc(50vh - 22px);
+    display: block;
     width: 6px;
     height: 44px;
-    transform: translateY(-50%);
+    margin: min(240px, 30vh) 0 0 3px;
     border-radius: 999px;
     background: var(--fj-border);
   }
   .pane-resizer:hover::after,
   .pane-resizer:focus-visible::after,
   body.is-resizing-panes .pane-resizer::after { background: var(--fj-soft); }
-  .pane-resizer:focus-visible::after { outline: 2px solid var(--fj-ink); outline-offset: 3px; }
+  .pane-resizer:focus-visible::after { outline: 2px solid var(--fj-focus); outline-offset: 3px; }
   body.is-resizing-panes { cursor: col-resize; user-select: none; }
-  .explore-card .job-detail { display: block; position: static; height: 100%; max-height: none; overflow-y: auto; border: 0; background: var(--fj-card); }
+  .explore-card .job-detail { display: block; position: sticky; top: 0; align-self: start; height: 100vh; height: 100dvh; max-height: none; overflow-y: auto; overscroll-behavior: contain; border: 0; background: var(--fj-card); }
   .explore-card .job-detail-inner { max-height: none; overflow: visible; padding: 21px 24px 30px; }
 }
 .explore-card .results-bar {
@@ -254,19 +342,16 @@ footer .footer-appreciation .heart { width: 28px; height: 28px; }
   background: var(--fj-card);
 }
 .explore-card .results-toolbar { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 12px; min-width: 0; }
-.explore-card .results-toolbar .view-tabs { display: inline-flex; align-items: center; margin: 0; }
-.explore-card .results-toolbar .view-tabs .seg { height: 30px; }
-.explore-card .results-toolbar .group-actions { gap: 10px; }
 .explore-card .results-hide-opened { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; color: var(--fj-soft); font: 500 12px/1.2 var(--sans); white-space: nowrap; cursor: pointer; }
-.explore-card .results-hide-opened input { width: 14px; height: 14px; margin: 0; accent-color: var(--fj-ink); }
+.explore-card .results-hide-opened input { width: 14px; height: 14px; margin: 0; accent-color: var(--fj-violet); }
 .explore-card .results-toolbar-saved .preset-bar { flex-wrap: nowrap; margin: 0; gap: 6px; }
 .explore-card .results-toolbar-saved .preset-label { color: var(--fj-soft); font: 500 12px/1 var(--sans); letter-spacing: 0; text-transform: none; }
 .explore-card .results-toolbar-saved .preset-save,
 .explore-card .results-toolbar-saved .preset-picker > summary { min-height: 32px; border-color: var(--fj-border); border-radius: 7px; background: var(--fj-card); color: var(--fj-soft); }
-.explore-card .results-toolbar-saved .preset-picker.has-selection > summary { border-color: var(--fj-border); background: var(--fj-card); color: var(--fj-ink); }
+.explore-card .results-toolbar-saved .preset-picker.has-selection > summary { border-color: var(--fj-accent-border); background: var(--fj-selected); color: var(--fj-ink); }
 .explore-card .results-toolbar-saved .preset-picker.has-selection .preset-n,
 .explore-card .results-toolbar-saved .preset-picker.has-selection > summary::after { color: var(--fj-soft); }
-.explore-card .results-toolbar .undo-btn { min-height: 32px; padding: 0 8px; border: 0; background: transparent; color: var(--fj-soft); font: 500 12px/1 var(--sans); }
+.explore-card .results-toolbar .undo-btn { min-height: 32px; margin-left: 0; padding: 0 8px; border: 0; background: transparent; color: var(--fj-soft); font: 500 12px/1 var(--sans); }
 .explore-card .results-toolbar .undo-btn:hover { color: var(--fj-ink); }
 .explore-card .results-heading h2 {
   position: static;
@@ -286,17 +371,9 @@ footer .footer-appreciation .heart { width: 28px; height: 28px; }
 .explore-card .results-heading { margin-right: 0; }
 .explore-card .results-meta { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .explore-card .results-sort { display: inline-flex; align-items: center; justify-content: flex-end; width: auto; margin-left: 0; }
-.explore-card .results-sort select {
-  max-width: 170px;
-  height: 36px;
-  padding: 0 18px 0 0;
-  border: 0;
-  background: var(--fj-card);
-  color: var(--fj-soft);
-  font-size: 16px;
-  font-weight: 450;
-  cursor: pointer;
-}
+/* Last in the row wherever the row is in flow: it orders the list, so it ends the
+   toolbar, right-aligned over the list's posting dates. */
+.explore-card .results-bar > .results-sort { order: 3; flex: none; }
 .explore-card .job-list { display: flex; flex-direction: column; gap: 0; }
 .explore-card #job-list > .job { min-height: 0; border: 0; border-bottom: 1px solid var(--fj-line); background: var(--fj-list); box-shadow: none; }
 .explore-card #job-list > .job:last-child { border-bottom: 1px solid var(--fj-line); }
@@ -305,11 +382,11 @@ footer .footer-appreciation .heart { width: 28px; height: 28px; }
 .explore-card #job-list > .job.is-selected:hover { background: var(--fj-selected); transform: none; }
 .explore-card .job-card-open {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) 56px;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
   align-items: start;
   gap: 12px;
   min-height: 0;
-  padding: 9px 20px;
+  padding: 19px 20px;
   color: var(--fj-ink);
 }
 .explore-card .job-logo { display: grid; place-items: center; position: relative; width: 32px; height: 32px; border: 1px solid var(--fj-line); border-radius: 7px; background: var(--fj-subtle); overflow: hidden; }
@@ -317,16 +394,25 @@ footer .footer-appreciation .heart { width: 28px; height: 28px; }
 .explore-card #job-list > .job:hover .job-logo img,
 .explore-card #job-list > .job.is-selected .job-logo img { filter: drop-shadow(0 0 .7px var(--fj-logo-outline)); }
 .explore-card .job-logo-fallback { color: var(--fj-ink); font-size: 15px; font-weight: 600; line-height: 1; }
-.explore-card .job-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.explore-card .job .job-title { color: var(--fj-ink); font-size: 15px; font-weight: 600; letter-spacing: -.018em; line-height: 1.25; }
-.explore-card .job-keyline, .explore-card .job-keyline .job-company { color: var(--fj-soft); font-size: 13px; font-weight: 450; line-height: 1.35; }
-.explore-card .job-location-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px; color: var(--fj-soft); font-size: 12.5px; line-height: 1.4; }
-.explore-card .job-location-line .job-place,
-.explore-card .job-location-line .job-meta-plain { color: var(--fj-soft); font-size: inherit; }
-.explore-card .job-location-line .job-meta-sep { margin: 0 1px; color: var(--fj-muted); }
-.explore-card .job-location-line .job-tag { margin-left: 5px; }
+.explore-card .job-main { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; min-height: 32px; }
+/* Each line stays one line: the title and the company line truncate, and the age
+   and location at their ends never wrap or shrink. */
+.explore-card .job .job-title { overflow: hidden; color: var(--fj-ink); font-size: 15px; font-weight: 600; letter-spacing: -.018em; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.explore-card .job-posted { color: var(--fj-soft); font-size: 12.5px; font-weight: 450; line-height: 1.25; }
+.explore-card .job-opened { color: var(--fj-soft); font-size: 12.5px; font-weight: 500; line-height: 1.25; }
+/* The slot carries the small type itself, so its line box is no taller than the
+   date's and the row keeps its height. */
+.explore-card .job-status { font-size: 12.5px; line-height: 1.25; }
+.explore-card .job-opened .i { width: 12px; height: 12px; }
+.explore-card .job-keyline { display: block; overflow: hidden; color: var(--fj-soft); font-size: 13px; font-weight: 450; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.explore-card .job-keyline .job-company { color: var(--fj-soft); font-size: inherit; font-weight: 500; }
+.explore-card .job-keyline .job-meta-plain { color: var(--fj-soft); font-size: inherit; }
+.explore-card .job-keyline .job-meta-sep { margin: 0 5px; color: var(--fj-muted); }
+.explore-card .job-keyline .job-tag { margin-left: 8px; vertical-align: 1px; }
+.explore-card .job-line-meta > .job-place { max-width: 45%; overflow: hidden; color: var(--fj-soft); font-size: 13px; line-height: 1.35; text-overflow: ellipsis; }
 .explore-card .job-aside { align-items: flex-end; gap: 1px; padding: 1px 0 0; }
-.explore-card .job-posted, .explore-card .job-salary { display: none; }
+.explore-card .job-aside:not(:has(.job-fit:not([hidden]))) { display: none; }
+.explore-card .job-salary { display: none; }
 .explore-card .job-fit { display: flex; flex-direction: column; align-items: flex-end; gap: 0; }
 .explore-card .job-fit-score { color: var(--fj-ink); font-size: 13.5px; font-weight: 550; line-height: 1.2; }
 .explore-card .job-fit-word { color: var(--fj-soft); font-size: 12.75px; line-height: 1.2; }
@@ -338,6 +424,11 @@ footer .footer-appreciation .heart { width: 28px; height: 28px; }
 .explore-card .job-detail-head h2 { margin: 0; color: var(--fj-ink); font-size: 21px; font-weight: 650; line-height: 1.25; letter-spacing: -.025em; }
 .explore-card .job-detail-meta { margin: 8px 0 0; color: var(--fj-soft); font-size: 14px; line-height: 1.4; }
 .explore-card .job-detail-actions { margin: 16px 0 0; }
+/* Source, visa and roles: a quiet two-column list under the location line. */
+.explore-card .job-detail-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; margin: 12px 0 0; font-size: 13px; line-height: 1.45; }
+.explore-card .job-detail-facts[hidden] { display: none; }
+.explore-card .job-detail-facts dt { color: var(--fj-soft); font-weight: 450; }
+.explore-card .job-detail-facts dd { margin: 0; color: var(--fj-soft); overflow-wrap: anywhere; }
 .explore-card .job-detail .description-original {
   display: inline-flex;
   align-items: center;
@@ -354,19 +445,97 @@ footer .footer-appreciation .heart { width: 28px; height: 28px; }
   font-weight: 500;
 }
 .explore-card .job-detail .description-original:hover { background: var(--fj-action-hover); }
+.explore-card .job-detail .description-original:active { background: var(--fj-action-pressed); }
 .explore-card .job-detail .description-original .i { width: 15px; height: 15px; color: var(--fj-on-action); }
 .explore-card .job-score { margin: 0; padding: 20px 0 0; border: 0; border-top: 1px solid var(--fj-line); border-radius: 0; background: transparent; }
-.explore-card .job-score-title { margin: 0 0 12px; color: var(--fj-ink); font-size: 18px; font-weight: 600; }
+.explore-card .job-score-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 10px; }
+.explore-card .job-score-title { margin: 0; color: var(--fj-ink); font-size: 18px; font-weight: 600; }
+.explore-card .job-score-label { color: var(--fj-soft); font-size: 13px; }
 .explore-card .job-score:has(.resume-result) .job-score-controls { display: none; }
 .explore-card .job-score:has(.resume-result) .fit-head-label { display: none; }
-.explore-card .job-score-source:not([hidden]) { display: block; margin: 0 0 12px; color: var(--fj-soft); font-size: 13px; }
-.explore-card .job-score-active:not([hidden]) { display: inline; }
-.explore-card .job-score-pick:not([hidden]) { display: inline-flex; }
-.explore-card .job-score-pick select { max-width: 230px; height: 32px; padding: 0 8px; border: 1px solid var(--fj-border); border-radius: 6px; background: var(--fj-card); color: var(--fj-ink); font-size: 13px; }
-.explore-card .job-score-add { display: none; }
-.explore-card .job-score-check { min-height: 42px; padding: 0 16px; border: 1px solid var(--fj-border); border-radius: 999px; background: var(--fj-card); color: var(--fj-ink); font-size: 15px; }
+.explore-card .job-score:has(.resume-result) .job-score-source { margin-bottom: 18px; }
+.explore-card .job-score-source { margin: 0 0 10px; }
+.explore-card .job-score-source:empty,
+body:not(.matching-ready) .explore-card .job-score-source,
+body:not(.matching-ready) .explore-card .job-score-label { display: none; }
+/* A secondary control like the toolbar's, not a pill: the same height, radius and
+   border as the selector above it. */
+.explore-card .job-score-check { height: 34px; min-height: 0; padding: 0 12px; border: 1px solid var(--rp-border); border-radius: 7px; background: var(--fj-card); color: var(--fj-ink); font-size: 13.5px; font-weight: 500; }
+.explore-card .job-score-check:hover { border-color: var(--rp-border-hover); background: var(--fj-hover); }
+.explore-card .job-score-check:disabled { color: var(--fj-muted); background: var(--fj-card); border-color: var(--rp-border); }
 body:not(.matching-ready) .explore-card .job-score-check { display: none; }
-body:not(.matching-ready) .explore-card .job-score-controls::after { content: 'Résumé matching is unavailable right now.'; color: var(--fj-muted); font-size: 14px; }
+
+/* The résumé selector, and every select drawn as one (select-menu.js). Neutral
+   throughout; violet appears only as a focus ring. */
+.resume-picker { position: relative; }
+:is(.resume-picker-trigger, .select-menu-trigger) {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%; height: 39px; padding: 0 10px 0 11px;
+  border: 1px solid var(--rp-border); border-radius: 7px;
+  background: var(--fj-card); color: var(--fj-ink);
+  font: 500 14px/1 var(--sans); text-align: left; cursor: pointer;
+}
+:is(.resume-picker-trigger, .select-menu-trigger):hover { border-color: var(--rp-border-hover); }
+:is(.resume-picker-trigger, .select-menu-trigger)[aria-expanded="true"] { border-color: var(--rp-border-hover); }
+:is(.resume-picker-trigger, .select-menu-trigger) .i { flex: none; width: 16px; height: 16px; color: var(--fj-soft); }
+:is(.resume-picker-trigger, .select-menu-trigger) .i:last-child { margin-left: auto; transition: transform 150ms ease; }
+:is(.resume-picker-trigger, .select-menu-trigger)[aria-expanded="true"] .i:last-child { transform: rotate(180deg); }
+:is(.resume-picker-value, .select-menu-value) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:is(.resume-picker-value, .select-menu-value).is-placeholder { color: var(--fj-muted); font-weight: 450; }
+:is(.resume-picker-trigger, .select-menu-trigger):focus-visible,
+.resume-picker-add:focus-visible { outline: 2px solid var(--fj-focus); outline-offset: 1px; }
+
+:is(.resume-picker-pop, .select-menu-pop) {
+  position: fixed; z-index: 200;
+  display: flex; flex-direction: column;
+  box-sizing: border-box; padding: 6px;
+  overflow: hidden;
+  border: 1px solid var(--rp-border); border-radius: 8px;
+  background: var(--fj-card); color: var(--fj-ink);
+  box-shadow: 0 12px 32px var(--fj-shadow), 0 2px 6px var(--fj-shadow-soft);
+  font-family: var(--sans);
+}
+:is(.resume-picker-pop, .select-menu-pop)[hidden] { display: none; }
+:is(.resume-picker-heading, .select-menu-heading) { margin: 0; padding: 8px 10px 6px; color: var(--fj-soft); font-size: 12px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+:is(.resume-picker-list, .select-menu-list) { position: relative; flex: 1 1 auto; min-height: 0; margin: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; list-style: none; border-radius: 6px; }
+:is(.resume-picker-list, .select-menu-list):focus { outline: none; }
+:is(.resume-picker-list, .select-menu-list):focus-visible :is(.resume-picker-option, .select-menu-option).is-active { box-shadow: inset 0 0 0 2px var(--fj-focus); }
+:is(.resume-picker-option, .select-menu-option) {
+  display: flex; align-items: center; gap: 9px;
+  min-height: 34px; padding: 0 10px;
+  border-radius: 6px; color: var(--fj-ink);
+  font-size: 14px; cursor: pointer; user-select: none;
+}
+:is(.resume-picker-option, .select-menu-option) .i { flex: none; width: 15px; height: 15px; color: var(--fj-soft); }
+:is(.resume-picker-option, .select-menu-option) .i:last-child { margin-left: auto; color: var(--fj-violet); visibility: hidden; }
+:is(.resume-picker-option, .select-menu-option).is-active { background: var(--rp-hover); }
+:is(.resume-picker-option, .select-menu-option)[aria-selected="true"] { background: var(--rp-selected); font-weight: 500; }
+:is(.resume-picker-option, .select-menu-option)[aria-selected="true"] .i:last-child { visibility: visible; }
+:is(.resume-picker-name, .select-menu-name) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resume-picker-empty { margin: 0; padding: 6px 10px 10px; color: var(--fj-soft); font-size: 13px; line-height: 1.45; }
+.resume-picker-empty[hidden] { display: none; }
+.resume-picker-status { margin: 0; padding: 0 10px; color: var(--fj-soft); font-size: 12.5px; line-height: 1.45; }
+.resume-picker-status:not(:empty) { padding: 6px 10px 2px; }
+.resume-picker-foot { margin: 6px -6px 0; padding: 6px 6px 0; border-top: 1px solid var(--fj-line); }
+.resume-picker-add {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%; min-height: 34px; padding: 0 10px;
+  border: 0; border-radius: 6px; background: none; color: var(--fj-ink);
+  font: 500 14px/1.2 var(--sans); text-align: left; cursor: pointer;
+}
+.resume-picker-add span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resume-picker-add:hover:not(:disabled) { background: var(--rp-hover); }
+.resume-picker-add:disabled { color: var(--fj-soft); cursor: progress; }
+.resume-picker-add .i { flex: none; width: 15px; height: 15px; color: var(--fj-soft); }
+@media (prefers-reduced-motion: reduce) { :is(.resume-picker-trigger, .select-menu-trigger) .i:last-child { transition: none; } }
+/* The select behind a menu stays in the page as the source of truth, out of sight. */
+.select-menu-native { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; pointer-events: none; }
+.select-menu { position: relative; }
+/* A menu inherits nothing from wherever it is placed: the sort sits in a wrapper
+   whose older styles set monospace capitals. */
+.select-menu-trigger, .select-menu-pop { letter-spacing: normal; text-transform: none; }
+.select-menu-trigger { width: auto; }
+body:not(.matching-ready) .explore-card .job-score-controls::after { content: 'Résumé matching is unavailable right now.'; color: var(--fj-soft); font-size: 14px; }
 .explore-card .job-score .job-match-result { margin: 0; padding: 0; border: 0; background: none; }
 .explore-card .job-score .job-match-msg { color: var(--fj-soft); font-size: 14px; }
 .explore-card .resume-result { margin: 0; padding: 0; }
@@ -375,7 +544,7 @@ body:not(.matching-ready) .explore-card .job-score-controls::after { content: 'R
 .explore-card .fit-total-score { color: var(--fj-ink); font-size: 47px; font-weight: 600; letter-spacing: -.055em; }
 .explore-card .fit-total-max { color: var(--fj-muted); font-size: 22px; font-weight: 450; }
 .explore-card .fit-track-total { height: 8px; margin: 16px 0 0; border-radius: 999px; background: var(--fj-track); }
-.explore-card .fit-track-total .fit-fill { border-radius: inherit; background: var(--fj-ink); }
+.explore-card .fit-track-total .fit-fill { border-radius: inherit; background: var(--fj-violet); }
 .explore-card .fit-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 20px 0 0; padding: 0; border: 0; }
 .explore-card .fit-tile-label { color: var(--fj-soft); font-size: 16px; font-weight: 450; letter-spacing: 0; text-transform: none; }
 .explore-card .fit-tile-value { margin-top: 10px; color: var(--fj-ink); }
@@ -383,13 +552,16 @@ body:not(.matching-ready) .explore-card .job-score-controls::after { content: 'R
 .explore-card .fit-finding { margin: 20px 0 0; padding: 20px 0 0; border-top: 1px solid var(--fj-line); }
 .explore-card .fit-finding-label { margin-bottom: 15px; color: var(--fj-ink); font-size: 20px; font-weight: 550; letter-spacing: -.015em; text-transform: none; }
 .explore-card .fit-finding p, .explore-card .fit-finding blockquote { color: var(--fj-soft); font-size: 16px; line-height: 1.55; }
-.explore-card .resume-note { margin-top: 12px; color: var(--fj-muted); font-size: 13px; line-height: 1.45; }
+.explore-card .resume-note { margin-top: 12px; color: var(--fj-soft); font-size: 13px; line-height: 1.45; }
 .explore-card .description-section { margin-top: 24px; padding: 22px 0 0; border-top: 1px solid var(--fj-line); }
 .explore-card .description-section-title { font-size: 17px; }
 .explore-card .description-body { max-width: 68ch; color: var(--fj-soft); font-size: 15px; line-height: 1.65; }
 
 /* The same hierarchy on smaller screens, with a full-width detail sheet. */
 @media (max-width: 1279px) {
+  /* One column: the list is full width, so the sort lines up with the dates by
+     matching the row's inset (20px padding plus the 12px score gap). */
+  .explore-card .results-shell > .results-bar { padding-right: 32px; }
   .pane-resizer { display: none; }
   .explore-card { height: auto; min-height: calc(100dvh - 80px); overflow: visible; }
   .explore-card .results-shell { flex: none; }
@@ -441,22 +613,19 @@ body:not(.matching-ready) .explore-card .job-score-controls::after { content: 'R
   .explore-card .results-bar { display: block; height: auto; min-height: 0; padding: 10px 18px 12px; border-bottom: 1px solid var(--fj-line); }
   .explore-card .results-heading { display: flex; align-items: center; min-height: 32px; }
   .explore-card .results-toolbar { justify-content: flex-start; gap: 8px; }
-  .explore-card .results-toolbar .view-tabs { order: 0; }
   .explore-card .results-hide-opened { order: 1; }
   .explore-card .results-toolbar-saved { order: 2; }
   .explore-card .results-toolbar-saved .preset-label { display: none; }
   .explore-card .results-toolbar .undo-btn { order: 3; }
-  .explore-card .results-sort { position: absolute; top: 8px; right: 18px; }
+  .explore-card .results-sort { position: absolute; top: 8px; right: 28px; }
   .explore-card .results-heading h2 { font-size: 13px; }
-  .explore-card .results-sort select { width: 140px; max-width: 140px; height: 32px; font-size: 13px; }
   .explore-card #job-list > .job { min-height: 0; }
-  .explore-card .job-card-open { grid-template-columns: 32px minmax(0, 1fr) 53px; min-height: 0; gap: 10px; padding: 10px 18px; }
+  .explore-card .job-card-open { grid-template-columns: 32px minmax(0, 1fr) auto; min-height: 0; gap: 10px; padding: 20px 18px; }
   .explore-card .job-logo { width: 32px; height: 32px; border-radius: 7px; }
   .explore-card .job-logo-fallback { font-size: 15px; }
   .explore-card .job-aside { grid-column: 3; grid-row: 1; justify-self: end; }
   .explore-card .job .job-title { font-size: 16px; }
-  .explore-card .job-keyline, .explore-card .job-keyline .job-company { font-size: 13px; }
-  .explore-card .job-location-line { font-size: 12px; }
+  .explore-card .job-keyline { font-size: 13px; }
   .explore-card .job-fit-score { font-size: 14px; }
   .explore-card .job-fit-word { font-size: 12px; }
   .explore-card .job-detail-head { margin-bottom: 20px; }

@@ -24,18 +24,17 @@ test('Postgres catalogue integration', { skip: !process.env.TEST_DATABASE_URL },
     assert.equal((await importCatalogue(pool, data, metadata)).changed, 0);
     await assert.rejects(importCatalogue(pool, { ...data, scrapedAt: '2026-01-01' }, metadata), { status: 409 });
   });
-  await t.test('SQL filtering, facets, pagination and grouping agree with local development', async () => {
+  await t.test('SQL filtering, facets and pagination agree with local development', async () => {
     for (const query of [{}, { page: 2 }, { query: 'Backend' }, { selected: { city: ['Seattle'], company: ['Alpha'] } },
       { selected: { notcompany: ['Alpha'], industry: ['Developer Tools'], sponsorship: ['unknown'] } },
       { selected: { role: ['frontend'], firm: ['sequoia'], seniority: ['senior'], size: ['51-200'] } },
       { scopeFirm: 'accel', salary: '250' }, { hideOpenedCompanies: true, seenIds: ['job_99'] },
       { hideOpened: true, seenIds: ['job_99'] }, { query: "' OR 1=1 --" }, { page: 999 },
-      ...['newest', 'oldest', 'count', 'title', 'company', 'salary'].flatMap(sort => [{ sort }, { sort, view: 'grouped' }])]) {
+      ...['newest', 'oldest', 'count', 'title', 'company', 'salary'].map(sort => ({ sort }))]) {
       const sql = await store.search(query), local = await memory.search(query);
       assert.equal(sql.total, local.total, JSON.stringify(query));
       assert.equal(sql.page, local.page);
       assert.deepEqual(sql.jobs.map(j => j.job_id), local.jobs.map(j => j.job_id), JSON.stringify(query));
-      assert.deepEqual(sql.groups.map(g => [g.company, g.count]), local.groups.map(g => [g.company, g.count]));
       for (const key of Object.keys(local.facets)) assert.deepEqual(new Map(sql.facets[key]), new Map(local.facets[key]), key);
       assert.ok(!JSON.stringify(sql).includes('Five years'));
     }

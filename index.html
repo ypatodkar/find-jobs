@@ -161,22 +161,14 @@
       <section class="results-shell" aria-label="Job results">
         <div class="results-bar" id="job-results-bar" hidden>
           <div class="results-heading"><h2 id="results-title">All jobs</h2><p class="results-meta" id="job-count"></p></div>
+          <div class="sort-wrap results-sort"><span class="visually-hidden">Sort</span><select id="sort-select" aria-label="Sort roles" data-select-menu="Sort by"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="salary">Highest salary</option><option value="count">Most roles</option><option value="company">Company A–Z</option><option value="title">Title A–Z</option></select></div>
           <div class="results-toolbar">
-            <div class="view-tabs" id="job-view-tabs" role="group" aria-label="Browse results by" hidden>
-              <button type="button" class="seg" id="view-flat" aria-pressed="true">Job list<span class="seg-n" id="count-flat"></span></button>
-              <button type="button" class="seg" id="view-grouped" aria-pressed="false">Company directory<span class="seg-n" id="count-grouped"></span></button>
-            </div>
-            <div class="group-actions" id="group-actions">
-              <button type="button" class="linkish" id="expand-all">Expand visible</button>
-              <button type="button" class="linkish" id="collapse-all">Collapse all</button>
-            </div>
             <label class="toggle results-hide-opened" title="Roles you have already opened from this site">
               <input type="checkbox" id="hide-opened" />
-              <span>Hide viewed roles</span>
+              <span>Hide opened roles</span>
             </label>
             <div class="results-toolbar-saved" id="results-toolbar-saved"></div>
             <button type="button" class="undo-btn" id="undo-filters" hidden>↩ Undo</button>
-            <label class="sort-wrap results-sort"><span class="visually-hidden">Sort</span><select id="sort-select" aria-label="Sort roles"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="salary">Highest salary</option><option value="count">Most roles</option><option value="company">Company A–Z</option><option value="title">Title A–Z</option></select></label>
           </div>
         </div>
         <div class="results-split" id="results-split">
@@ -221,6 +213,7 @@
   <script src="shortcuts.js"></script>
   <script src="theme.js"></script>
   <script src="data.js"></script>
+  <script src="select-menu.js"></script>
   <script src="jobs-ui.js"></script>
   <script src="visitor.js"></script>
   <script src="settings.js"></script>
@@ -234,6 +227,7 @@
   <script src="pane-resizer.js"></script>
   <script src="resume-import.js"></script>
   <script src="resume-match.js"></script>
+  <script src="resume-picker.js"></script>
   <script src="track.js"></script>
   <script src="viewed.js"></script>
   <script src="counter.js"></script>

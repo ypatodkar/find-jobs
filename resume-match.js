@@ -109,6 +109,12 @@
   let resumeText = '', controller, version = 0, comparedFilters = null;
   let matchingReady = false;
   const rowScores = new Map();
+  // Scores this visit has already been given, per résumé. Switching back to a résumé
+  // shows what it scored rather than an empty panel, and switching to one that has not
+  // been compared shows nothing — never another résumé's number. Memory only, for the
+  // reason above: the server's cache is the durable one.
+  const assessed = new Map();
+  const scoreKey = (resumeId, jobId) => resumeId + '\n' + jobId;
   const singleJobControllers = new Set();
   const node = (tag, text, cls) => {
     const el = document.createElement(tag); if (text != null) el.textContent = text;
@@ -148,13 +154,44 @@
     paintChip();
     if (popover) popover.hidden = true;
   }
+  // Replays the active résumé's cached scores onto the rows and onto any open
+  // description pane. Called after anything that clears them, and by the pane when it
+  // renders a role.
+  function restoreScores() {
+    const active = store.read().active;
+    if (!active) return;
+    for (const [key, match] of assessed) {
+      const [resumeId, jobId] = key.split('\n');
+      if (resumeId === active) rowScores.set(jobId, match.assessment.score);
+    }
+    repaintRowFits();
+    for (const slot of document.querySelectorAll('[data-match-result]')) {
+      const match = assessed.get(scoreKey(active, slot.dataset.matchResult));
+      if (match && !slot.firstChild) slot.replaceChildren(card(match, { inPane: true }));
+    }
+  }
+  function forgetScores(resumeId) {
+    for (const key of assessed.keys()) if (key.startsWith(resumeId + '\n')) assessed.delete(key);
+  }
+  function useResume(id) {
+    store.select(id);
+    const current = store.activeItem();
+    if (!current) return;
+    resumeText = current.text;
+    fileName.textContent = current.label || current.name;
+    invalidate(); restoreScores();
+  }
+
   // The pane draws its own picker and needs the list; it does not need the storage,
-  // so only these four things cross the boundary.
+  // so only these things cross the boundary.
   window.Resumes = {
     list: () => store.read(),
-    select: id => { store.select(id); const c = store.activeItem(); if (c) { resumeText = c.text; fileName.textContent = c.label || c.name; invalidate(); } renderList(); announce(); },
+    select: id => { useResume(id); renderList(); announce(); },
     active: () => store.activeItem(),
-    addFile: file => { if (fileInput) { const dt = new DataTransfer(); dt.items.add(file); fileInput.files = dt.files; fileInput.dispatchEvent(new Event('change', { bubbles: true })); } },
+    // The same read path as the navigation's upload control. Resolves once the file is
+    // saved and active; rejects with the reason it was refused.
+    addFile: file => addResume(file, { promptNames: false }),
+    restore: () => restoreScores(),
   };
 
   // ---- the résumé menu --------------------------------------------------------
@@ -295,14 +332,8 @@
   listEl?.addEventListener('change', event => {
     const pick = event.target.closest('.resume-row-pick');
     if (!pick) return;
-    store.select(pick.value);
-    const current = store.activeItem();
-    if (current) {
-      resumeText = current.text;
-      fileName.textContent = current.label || current.name;
-      fileState.textContent = 'Ready \u00b7 open a role and press \u201cCheck r\u00e9sum\u00e9 score\u201d';
-      invalidate();
-    }
+    useResume(pick.value);
+    if (store.activeItem()) fileState.textContent = 'Ready \u00b7 open a role and press \u201cCheck r\u00e9sum\u00e9 score\u201d';
     renderList(); announce();
   });
 
@@ -311,11 +342,12 @@
     const remove = event.target.closest('[data-remove-resume]');
     if (!remove) return;
     store.remove(remove.dataset.removeResume);
+    forgetScores(remove.dataset.removeResume);
     const next = store.activeItem();
     resumeText = next ? next.text : '';
     if (!next) { document.body.classList.remove('resume-has-file'); selected.hidden = true; }
     else fileName.textContent = next.label || next.name;
-    invalidate(); showSaved(); renderList(); announce();
+    invalidate(); restoreScores(); showSaved(); renderList(); announce();
   });
 
   listEl?.addEventListener('keydown', event => {
@@ -352,11 +384,12 @@
 
   forget.addEventListener('click', () => {
     const current = store.activeItem();
-    if (current) store.remove(current.id);
+    if (current) { store.remove(current.id); forgetScores(current.id); }
     const next = store.activeItem();
     resumeText = next ? next.text : '';
     announce();
     if (next) {
+      invalidate(); restoreScores();
       showSaved(); renderList();
       fileName.textContent = next.label || next.name;
       status.textContent = 'Removed. Now using \u201c' + (next.label || next.name) + '\u201d.';
@@ -587,9 +620,12 @@
     }
   }
 
-  fileInput.addEventListener('change', async event => {
-    if (!matchingReady) { event.target.value = ''; return; }
-    const file = event.target.files[0]; if (!file) return;
+  // One read path for every way a file arrives: the navigation's upload control, a
+  // drop, and the picker in the description pane. Resolves with the new résumé's id,
+  // or null when a later file superseded it; rejects with the reason the file was
+  // refused, so a caller can show it beside its own control as well.
+  async function addResume(file, { promptNames = true } = {}) {
+    if (!matchingReady) throw new Error('Résumé matching is unavailable right now.');
     resumeText = '';
     document.body.classList.remove('resume-has-file');
     invalidate(); const current = version;
@@ -600,7 +636,7 @@
     status.textContent = '';
     try {
       const text = (await window.ResumeImport.extract(file)).trim();
-      if (current !== version) return;
+      if (current !== version) return null;
       if (text.length < 100) throw new Error('This résumé has too little readable text. Choose a file with at least 100 characters.');
       if (new TextEncoder().encode(text).length > 16000) throw new Error('This résumé is over 16 KB of text. Choose a shorter version to compare.');
       resumeText = text;
@@ -608,8 +644,9 @@
       announce();
       showSaved();
       // The first résumé is not named — there is nothing to tell it apart from yet.
-      // The second makes the first ambiguous, so both get asked for at once.
-      if (!added.isFirst) promptLabels(added.id);
+      // The second makes the first ambiguous, so both get asked for at once. The pane's
+      // picker lists filenames and has no naming step, so it skips the prompt.
+      if (!added.isFirst && promptNames) promptLabels(added.id);
       document.body.classList.add('resume-has-file');
       selected.dataset.state = 'ready'; selectedIcon.textContent = '✓';
       // Deliberately does not compare here. Reading a file is not the same as asking
@@ -618,8 +655,9 @@
       // to. showSaved() has already revealed the match button; pressing it is the ask.
       fileState.textContent = 'Ready \u00b7 open a role and press \u201cCheck r\u00e9sum\u00e9 score\u201d';
       status.textContent = '';
+      return added.id;
     } catch (err) {
-      if (current !== version) return;
+      if (current !== version) return null;
       // The specific reason goes in the zone, beside the control that caused it,
       // rather than on a line underneath where it reads as unrelated. Every failure
       // reachable here is a problem with the file — too short, too long, unreadable —
@@ -628,9 +666,18 @@
       selected.dataset.state = 'error'; selectedIcon.textContent = '!';
       fileState.textContent = (err && err.message) || 'This file could not be read. Choose another résumé file.';
       status.textContent = '';
-    } finally {
-      event.target.value = '';
+      // A refused file changes nothing that was saved, so the résumé that was active
+      // before it stays the one scores are asked for.
+      const kept = store.activeItem();
+      if (kept) { resumeText = kept.text; document.body.classList.add('resume-has-file'); restoreScores(); }
+      throw new Error(fileState.textContent);
     }
+  }
+  fileInput.addEventListener('change', async event => {
+    if (!matchingReady) { event.target.value = ''; return; }
+    const file = event.target.files[0]; if (!file) return;
+    try { await addResume(file); } catch { /* shown in the zone by addResume */ }
+    finally { event.target.value = ''; }
   });
   // ---- one job at a time ----
   //
@@ -646,6 +693,7 @@
     if (!slot) return;
 
     const resume = resumeText;
+    const resumeId = store.read().active;
     if (!resume) {
       slot.replaceChildren(node('p', 'Choose a r\u00e9sum\u00e9 file above to start matching jobs.', 'job-match-msg'));
       // Nothing to expand any more — the upload button is always on the page — so
@@ -669,6 +717,7 @@
       if (current !== version || ctrl.signal.aborted || !slot.isConnected) return;
       const match = data.matches && data.matches[0];
       if (!match) throw new Error(data.message || 'No assessment came back for this role.');
+      if (resumeId) assessed.set(scoreKey(resumeId, jobId), match);
       slot.replaceChildren(card(match, { inPane: true }));
       paintRowFit(jobId, match.assessment.score);
     } catch (error) {

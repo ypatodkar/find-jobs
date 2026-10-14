@@ -5,6 +5,9 @@
   const split = document.getElementById("results-split");
   const handle = document.getElementById("pane-resizer");
   if (!split || !handle) return;
+  // Set on the whole results section rather than the split alone, so the toolbar
+  // above the list can end where the list does.
+  const shell = split.closest(".results-shell") || split;
 
   const STORAGE_KEY = "find-jobs-list-width-v2";
   const DEFAULT_WIDTH = 53;
@@ -31,7 +34,7 @@
     if (!desktop.matches) return preferred;
     const { min, max } = limits();
     const width = Math.min(max, Math.max(min, requested));
-    split.style.setProperty("--list-width", `${width}%`);
+    shell.style.setProperty("--list-width", `${width}%`);
     handle.setAttribute("aria-valuemin", String(Math.round(min)));
     handle.setAttribute("aria-valuemax", String(Math.round(max)));
     handle.setAttribute("aria-valuenow", String(Math.round(width)));

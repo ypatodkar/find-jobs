@@ -5,8 +5,8 @@
 // made it, and the URL is how it travels.
 //
 // The view owns the filter state, so this file never touches it directly — it goes
-// through view.getFilters() / view.applyFilters(), which resync the selects and view
-// tabs as well as the results.
+// through view.getFilters() / view.applyFilters(), which resync the selects as well
+// as the results.
 (function (global) {
   "use strict";
 
@@ -123,13 +123,11 @@
     }
 
     // Nothing categorical selected — fall back to the numeric filters, then describe
-    // the view/sort and firm context so saved filters do not all become "All roles."
+    // the sort and firm context so saved filters do not all become "All roles."
     if (filters.salary && filters.salary !== "all") return clip(view.salaryLabel(filters.salary));
     if (filters.range && filters.range !== "all") return clip(view.rangeLabel(filters.range));
     var mode = "";
-    if (filters.view === "grouped" && filters.sort === "count") mode = "Most roles by company";
-    else if (filters.view === "grouped") mode = "By company";
-    else if (filters.sort === "count") mode = "Most roles";
+    if (filters.sort === "count") mode = "Most roles";
     else if (filters.sort === "company") mode = "Company A–Z";
     else if (filters.sort === "title") mode = "Title A–Z";
     else if (filters.sort === "salary") mode = "Highest salary";

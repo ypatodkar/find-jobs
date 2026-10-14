@@ -28,7 +28,6 @@ function normalize(input = {}) {
   const scopeFirm = typeof input.scopeFirm === 'string' ? input.scopeFirm : '';
   if (scopeFirm.length > 100) throw fail(400, 'Invalid investor.');
   return { selected, query: (input.query || '').trim(), page,
-    view: input.view === 'grouped' ? 'grouped' : 'flat',
     sort: ['newest', 'oldest', 'salary', 'count', 'company', 'title'].includes(input.sort) ? input.sort : 'newest',
     range: ['7', '30', '90'].includes(String(input.range)) ? Number(input.range) : 0,
     salary: ['150', '200', '250', '300'].includes(String(input.salary)) ? Number(input.salary) * 1000 : 0,
@@ -92,10 +91,14 @@ function comparator(sort, counts = new Map()) {
   };
 }
 function pageInfo(q, total, companies) {
-  const pageSize = q.view === 'grouped' ? 40 : 45;
-  const pageCount = Math.max(1, Math.ceil((q.view === 'grouped' ? companies : total) / pageSize));
+  const pageSize = 45;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
   return { total, companies, pageSize, pageCount, page: Math.min(q.page, pageCount) };
 }
+// The company directory is gone, but pages published before it went still read
+// `data.groups` and would throw without it. The API is updated before the new site is
+// published, so an empty array covers that window. Delete once that deploy is out.
+const LEGACY_GROUPS = Object.freeze([]);
 const STOP = new Set('the and for with that this from have has was are were your you our their they will can into over more work team experience skills years software engineer engineering development develop using used built building company responsibilities requirements resume education university degree bachelor master strong ability including across about them these those all also'.split(' '));
 function terms(resume) {
   const counts = new Map();
@@ -141,23 +144,8 @@ class MemoryCatalogue {
       for (const j of this.filter(q, key)) for (const v of new Set(values(j, key))) if (v) c.set(v, (c.get(v) || 0) + 1);
       facets[key] = [...c];
     }
-    const groups = [...counts.keys()].map(company => {
-      const js = jobs.filter(j => j.company === company); const cities = new Map();
-      for (const j of js) if (j.city) cities.set(j.city, (cities.get(j.city) || 0) + 1);
-      return { ...summary(js[0]), company, count: js.length, jobs: js.slice(0, 3).map(summary), cities: [...cities],
-        firms: [...new Set(js.flatMap(j => j.firms))], newest: Math.max(...js.map(time)),
-        oldest: Math.min(...js.map(time)), payMax: Math.max(...js.map(pay)),
-        titleFirst: js.map(j => j.title).sort(cmp)[0] };
-    });
-    groups.sort((a, b) => {
-      const n = q.sort === 'company' ? cmp(a.company, b.company) : q.sort === 'title' ? cmp(a.titleFirst, b.titleFirst) :
-        q.sort === 'salary' ? b.payMax - a.payMax : q.sort === 'count' ? b.count - a.count :
-        q.sort === 'oldest' ? a.oldest - b.oldest : b.newest - a.newest;
-      return n || cmp(a.company, b.company);
-    });
     return { ...info, metadata: this.metadata, facets,
-      jobs: q.view === 'flat' ? jobs.slice(start, start + info.pageSize).map(summary) : [],
-      groups: q.view === 'grouped' ? groups.slice(start, start + info.pageSize) : [] };
+      jobs: jobs.slice(start, start + info.pageSize).map(summary), groups: LEGACY_GROUPS };
   }
   async get(id) { return this.jobs.find(j => j.job_id === id) || null; }
   async history(ids) { const wanted = new Set(strings(ids, 5000)); return this.jobs.filter(j => wanted.has(j.job_id)).map(historySummary); }
@@ -227,4 +215,4 @@ class MemoryCatalogue {
     this.quotas.set(id, count + amount); return true;
   }
 }
-module.exports = { DIMENSIONS, ARRAYS, fail, strings, normalize, summary, historySummary, unpack, entries, hash, terms, pageInfo, MemoryCatalogue };
+module.exports = { DIMENSIONS, ARRAYS, fail, strings, normalize, summary, historySummary, unpack, entries, hash, terms, pageInfo, LEGACY_GROUPS, MemoryCatalogue };

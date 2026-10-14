@@ -636,41 +636,6 @@ footer code {
 .page-total { color: var(--ink-faint); }
 .pagination .page-go { padding: 9px 12px; }
 
-/* Switching between individual roles and companies changes the browsing model. */
-.view-tabs {
-  display: flex;
-  align-items: center;
-  width: fit-content;
-  gap: 4px;
-  margin: 0;
-  padding: 3px;
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: 7px;
-}
-.view-tabs-label { padding: 0 9px; color: var(--ink-faint); font: 600 .7rem/1 var(--sans); text-transform: uppercase; letter-spacing: .06em; }
-.view-tabs .seg {
-  display: inline-flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 8px;
-  font-family: var(--mono);
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: var(--ink-soft);
-  background: none;
-  border: none;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  padding: 7px 10px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.view-tabs .seg:hover { color: var(--ink); background: var(--accent-fill); }
-.view-tabs .seg.active { color: var(--accent); background: var(--bg); border-color: var(--rule-strong); box-shadow: var(--shadow); }
-.view-tabs .seg:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
-.seg-n { display: none; }
-
 .results-bar {
   display: flex;
   align-items: center;
@@ -682,200 +647,6 @@ footer code {
 .results-shell { max-width: 1020px; margin-inline: auto; }
 .results-heading h2 { margin: 0; font-size: clamp(1.24rem, 2vw, 1.55rem); line-height: 1.2; letter-spacing: -.025em; }
 .results-heading { margin-right: auto; }
-.group-actions { display: flex; gap: 14px; }
-
-/* ---- Company groups ---- */
-.cgroup {
-  /* One badge size drives the whole card: the badge box, the name's line-height,
-     the meta indent and the expanded-role indent all derive from these two. */
-  --cg-badge: 26px;
-  --cg-gap: 10px;
-  --cg-pad: 20px;
-  background: transparent;
-  margin: 0;
-}
-.cgroup + .cgroup {
-  border-top: 1px solid var(--rule);
-}
-
-.cg-head {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 18px var(--cg-pad);
-  background: var(--bg);
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  cursor: pointer;
-  text-align: left;
-  font: inherit;
-  color: inherit;
-}
-.cg-head:hover {
-  background: var(--accent-fill);
-}
-.cgroup:first-child .cg-head { border-radius: 5px 5px 0 0; }
-.cgroup:last-child:not(.is-open) .cg-head { border-radius: 0 0 5px 5px; }
-.cg-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.cgroup.is-open .cg-head {
-  background: var(--bg);
-}
-.cgroup.is-open .cg-head:hover {
-  background: var(--accent-fill);
-}
-
-/* Badge and name are one unit, so they live in one row and share one height:
-   --cg-badge sizes the badge and doubles as the name's line-height, which makes
-   the two exactly equal by construction rather than by a tuned offset. Top-aligned
-   so a company name long enough to wrap keeps its badge on the first line. */
-.cg-title {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--cg-gap);
-  min-width: 0;
-}
-
-/* Monogram and logo share one box so the onerror fallback swaps in place without
-   shifting the row. Only three of 816 companies still land here. */
-.cg-mono,
-.cg-logo {
-  flex: 0 0 auto;
-  width: var(--cg-badge);
-  height: var(--cg-badge);
-}
-.cg-mono {
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  font-family: var(--mono);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--accent);
-  background: transparent;
-}
-
-.cg-main { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.cg-kicker,
-.cg-label {
-  font-family: var(--mono);
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-.cg-label { margin-right: 8px; }
-.cg-name {
-  font-family: var(--serif);
-  font-size: 1.25rem;
-  font-weight: 650;
-  /* A length, not a ratio: the name's line box is the badge's height, which is what
-     makes the two the same height however either is restyled. */
-  line-height: var(--cg-badge);
-  color: var(--ink);
-  overflow-wrap: anywhere;
-  min-width: 0;
-}
-.cg-cities, .cg-facts {
-  font-family: var(--mono);
-  font-size: 0.73rem;
-  color: var(--ink-faint);
-}
-/* Whichever meta line follows the name directly gets the extra breathing room —
-   the blurb when there is one, otherwise the cities line. */
-.cg-title + * { margin-top: 3px; }
-/* A city name and its count wrap as one unit; only the separator between
-   cities is a break point (see the zero-width space in jobs-ui.js). */
-.cg-city { white-space: nowrap; }
-.cg-n { color: var(--ink-soft); }
-.cg-sep { margin: 0 6px; color: var(--rule-strong); }
-.cg-blurb, .cg-backers {
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  color: var(--ink-soft);
-}
-
-.cg-right {
-  flex: 0 1 45%;
-  min-width: 220px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 16px;
-}
-.cg-facts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
-.cg-fact {
-  display: inline-flex;
-  align-items: center;
-  min-height: 26px;
-  padding: 4px 9px;
-  border-radius: 5px;
-  color: var(--ink-soft);
-  background: var(--chip-bg);
-  white-space: nowrap;
-}
-.cg-action { flex: 0 0 auto; display: flex; align-items: center; gap: 9px; }
-.cg-count {
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  font-weight: 650;
-  color: var(--accent);
-  background: transparent;
-  border: 1px solid var(--accent);
-  border-radius: 5px;
-  padding: 6px 10px;
-  white-space: nowrap;
-}
-.cg-toggle {
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 9px;
-  display: grid;
-  place-items: center;
-  color: var(--accent);
-  background: var(--bg);
-  font-size: 1.2rem;
-  font-weight: 600;
-  line-height: 1;
-}
-.cg-toggle::before { content: "+"; transform: translateY(-1px); }
-.cgroup.is-open .cg-toggle {
-  color: var(--on-accent);
-  background: var(--accent);
-}
-.cgroup.is-open .cg-toggle::before { content: "−"; }
-
-.cg-body {
-  background: var(--bg);
-  margin-top: 3px;
-  padding: 0 var(--cg-pad);
-}
-/* Margin, not padding: keeps each row's own border-bottom scoped to the
-   indented content instead of trailing under the empty badge gutter. */
-.cg-body .job { margin-left: calc((var(--cg-badge) + var(--cg-gap)) / 2); }
-.cgroup:not(.is-open) .cg-body { display: none; }
-
-@media (prefers-reduced-motion: no-preference) {
-  .cg-head, .cg-toggle { transition: background 160ms ease, color 160ms ease; }
-  .cg-logo img { transition: filter 200ms ease; }
-}
-
-@media (max-width: 620px) {
-  /* Only the three inputs change; badge, name line box and both indents follow. */
-  .cgroup { --cg-badge: 23px; --cg-gap: 9px; --cg-pad: 15px; }
-  .cg-head { flex-wrap: wrap; align-items: flex-start; gap: 12px; padding: 15px; }
-  .cg-main { flex-basis: 100%; }
-  .cg-name { font-size: 1.12rem; }
-  .cg-right { min-width: 0; flex: 1 1 100%; justify-content: space-between; align-items: flex-end; }
-  .cg-facts { justify-content: flex-start; }
-  .cg-fact { min-height: 23px; padding: 3px 7px; font-size: 0.66rem; }
-  .cg-action { align-self: flex-end; }
-}
 
 .job-list { display: flex; flex-direction: column; gap: 10px; }
 .job {
@@ -942,9 +713,6 @@ footer code {
 .job-description-open:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-fill); }
 .job-description-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .job-card-open:not(button):not(a) { cursor: default; }
-.job.in-group { background: var(--bg); border-radius: 7px; box-shadow: none; }
-.job.in-group .job-card-open { grid-template-columns: minmax(0, 1fr) minmax(125px, auto); padding: 12px 16px; }
-.job.in-group.has-actions .job-card-open { padding-right: 250px; }
 .job-logo { display: grid; place-items: center; width: 46px; height: 46px; overflow: hidden; border: 1px solid var(--rule); border-radius: 9px; background: var(--bg); color: var(--ink-soft); }
 .job-logo img { display: block; width: 100%; height: 100%; padding: 5px; box-sizing: border-box; object-fit: contain; }
 .job-logo img[hidden] { display: none; }
@@ -1031,6 +799,7 @@ footer code {
 }
 /* Separator lives in CSS so refreshOpenedCounts can compare textContent against the
    label alone, and so a company you have never opened renders exactly as before. */
+.job-company-opened:not(:empty) { margin-left: .3em; }
 .job-company-opened:not(:empty)::before { content: "· "; }
 .job-company-opened:empty { display: none; }
 .job-salary {
@@ -1520,7 +1289,6 @@ footer code {
   .sort-wrap { width: 100%; justify-content: space-between; }
   .sort-wrap select { min-width: 170px; }
   .reset-btn { width: 100%; margin-left: 0; }
-  .view-tabs { margin-top: 0; }
   .results-bar { align-items: flex-start; }
   .job-card-open { grid-template-columns: 40px minmax(0, 1fr); gap: 10px 12px; padding: 14px; }
   .job.has-actions .job-card-open { padding-right: 20px; }
@@ -1543,9 +1311,6 @@ footer code {
   .job-description-open { color: var(--ink-faint); }
   .job-logo { width: 40px; height: 40px; }
   .job-aside { grid-column: 2; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 8px; padding-top: 0; text-align: left; }
-  .job.in-group .job-card-open { grid-template-columns: minmax(0, 1fr); padding: 12px; }
-  .job.in-group.has-actions .job-card-open { padding-right: 20px; }
-  .job.in-group .job-aside { grid-column: 1; }
   .job-title { font-size: 1rem; }
   .job-company-opened { display: none; }
   .pagination {
@@ -1756,7 +1521,7 @@ footer code {
    attribute's UA rule, so the row reappeared the moment the JS set actions.hidden to
    false. display:none here is unconditional for that reason. */
 .resume-actions { display: none; }
-.resume-actions button, .group-more { font: inherit; cursor: pointer; }
+.resume-actions button { font: inherit; cursor: pointer; }
 #resume-retry { padding: 10px 15px; border: 1px solid var(--accent); border-radius: 6px; color: var(--on-accent); background: var(--accent); font-size: .81rem; font-weight: 600; }
 #resume-retry::after { content: "↻"; margin-left: 10px; font-size: 1rem; line-height: 0; }
 #resume-retry:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); }
@@ -1780,7 +1545,6 @@ footer code {
 .resume-evidence-label { margin: 14px 0 5px; font-size: .73rem; font-weight: 600; }
 .resume-result blockquote { margin: 0 0 10px; border-left: 2px solid var(--rule-strong); padding-left: 11px; color: var(--ink-soft); font-size: .78rem; line-height: 1.6; }
 .job-description-link { display: inline-block; margin-top: 6px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: .72rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.group-more { margin: 12px 0; padding: 8px 12px; border: 1px solid var(--rule-strong); border-radius: 4px; color: var(--ink); background: var(--bg); font-size: .78rem; }
 
 /* ---- Résumé drop zone ---------------------------------------------------------
    One zone, three states — empty, reading, ready — following the loading/uploaded/
@@ -1980,25 +1744,6 @@ body.resume-saved-ready .resume-drop .resume-selected { border: 0; padding: 0; b
 }
 
 .job-score-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.job-score-pick[hidden] { display: none; }
-.job-score-select {
-  max-width: 190px;
-  padding: 6px 9px;
-  border: 1px solid var(--rule-strong);
-  border-radius: 7px;
-  background: var(--bg);
-  color: var(--ink);
-  font: 500 .74rem/1.2 var(--sans);
-}
-.job-score-add {
-  display: grid; place-items: center;
-  width: 30px; height: 30px;
-  border: 1px solid var(--rule-strong); border-radius: 7px;
-  background: var(--bg); color: var(--ink-soft);
-  font-size: 1.05rem; line-height: 1; cursor: pointer;
-}
-.job-score-add:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-fill); }
-.job-score-add input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 
 /* ---- Match result: the score as something you can read at a glance --------------
    A bare "23/100" makes the reader do the work of deciding whether 23 is good. The
@@ -2224,7 +1969,7 @@ body.detail-open { overflow: hidden; }
   .description-body { font-size: .88rem; }
   .description-original { text-align: center; }
 }
-.resume-match :focus-visible, .job-detail :focus-visible, .job-description-link:focus-visible, .group-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.resume-match :focus-visible, .job-detail :focus-visible, .job-description-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .job-list[aria-busy="true"] { opacity: .55; }
 @media (max-width: 650px) {
   .resume-match > details > summary { align-items: flex-start; flex-direction: column; gap: 17px; padding: 21px 20px 21px 23px; }
@@ -2492,28 +2237,6 @@ html[data-theme="dark"] .heart:hover { color: #fb5c7d; }
   100% { transform: scale(1); }
 }
 
-/* Company logo in the grouped view. Sized with .cg-mono up where the card is laid
-   out — repeating width/height here would silently win on specificity, since this
-   rule sits after the mobile block and media queries add none. Contained rather
-   than cropped: these are wordmarks and squares alike, and cropping would
-   decapitate half of them. */
-.cg-logo {
-  border-radius: 6px;
-  overflow: hidden;
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  display: grid;
-  place-items: center;
-}
-.cg-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
-/* Muted by default so a row of arbitrary brand colors doesn't fight the
-   site's single-accent palette; full color rewards a closer look. */
-.cg-logo img { filter: grayscale(1) opacity(0.82); }
-.cg-head:hover .cg-logo img,
-.cgroup.is-open .cg-logo img {
-  filter: none;
-}
-
 /* ---- Feedback widget ---------------------------------------------------------
    Lives in the masthead under the theme toggle, right-aligned, so it stays inside
    the page's own margins rather than floating over a corner of the viewport. The
@@ -2667,7 +2390,6 @@ body:not(.resume-has-file) .job-match-link { display: none; }
 }
 @media (max-width: 720px) {
   .job-match-link { padding: 0 14px 14px 66px; }
-  .job.in-group .job-match-link { padding-left: 12px; }
   .job-match-result { margin-inline: 14px; }
 }
 .job-match-msg { margin: 0; font-size: 0.8rem; color: var(--ink-soft); }
@@ -3088,6 +2810,18 @@ body.resume-saved-ready .resume-file-btn::before { content: none; }
 .job-tag { border: 1px solid var(--rule); border-radius: 5px; background: transparent; padding: 1px 6px; font-size: var(--t-label); font-weight: 500; color: var(--ink-faint); }
 .job-aside { align-items: flex-end; gap: 3px; }
 .job-posted { color: var(--ink-faint); font-size: var(--t-meta); }
+/* A row is two lines, each with something pinned to its far end: the posting's age
+   after the title, the location after the company. */
+.job-line { display: flex; align-self: stretch; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; }
+.job-line > .job-title, .job-line > .job-keyline { min-width: 0; }
+.job-line > .job-status, .job-line > .job-place { flex: none; white-space: nowrap; }
+/* The status slot: the posting date, or "Opened" for a posting you have followed. One
+   at a time, in the same place and the same line height, so the row never grows. */
+.job-status { font-size: var(--t-meta); line-height: 1.3; }
+.job-opened { display: none; align-items: center; gap: 4px; color: var(--ink-soft); }
+.job-opened .i { flex: none; color: inherit; }
+.job.row-seen .job-opened { display: inline-flex; }
+.job.row-seen .job-posted { display: none; }
 .job-fit[hidden] { display: none; }
 .job-fit { display: flex; align-items: baseline; gap: 4px; }
 .job-fit-score { color: var(--ink); font-size: var(--t-company); font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -3099,12 +2833,14 @@ body.resume-saved-ready .resume-file-btn::before { content: none; }
 .job-detail-head h2 { margin: 3px 0 0; font-size: var(--t-detail-title); font-weight: 650; letter-spacing: -.02em; line-height: 1.3; }
 .job-detail-meta { margin: 5px 0 0; color: var(--ink-soft); font-size: var(--t-company); }
 .job-detail-actions { margin: var(--space-4) 0 0; }
+.job-detail-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; margin: 10px 0 0; font-size: var(--t-meta); line-height: 1.45; }
+.job-detail-facts[hidden] { display: none; }
+.job-detail-facts dt { color: var(--ink-faint); }
+.job-detail-facts dd { margin: 0; color: var(--ink-soft); overflow-wrap: anywhere; }
 .job-detail .description-original { width: auto; min-height: var(--control-h); }
 .job-score { margin: 0; padding: var(--space-4) 0 0; border-top: 1px solid var(--rule); }
 .job-score-controls { gap: var(--space-2); }
 .job-score-check { height: var(--control-h-sm); padding: 0 var(--space-3); font-size: var(--t-meta); }
-.job-score-select { height: var(--control-h-sm); border-radius: 6px; font-size: var(--t-meta); max-width: 160px; }
-.job-score-add { width: var(--control-h-sm); height: var(--control-h-sm); border-radius: 6px; }
 .description-body { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--rule); font-size: var(--t-body); line-height: 1.68; color: var(--ink-soft); }
 .description-body h3 { font-size: var(--t-body); font-weight: 600; color: var(--ink); }
 .description-section { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--rule); }
@@ -3184,20 +2920,6 @@ body.resume-saved-ready .resume-file-btn::before { content: none; }
 .results-heading { display: flex; align-items: baseline; gap: var(--space-2); }
 .results-heading h2 { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .results-meta { margin: 0; color: var(--ink-soft); font-size: var(--t-company); }
-.view-tabs { border: 1px solid var(--rule); border-radius: var(--radius); padding: 2px; gap: 2px; background: var(--bg); }
-.view-tabs .seg {
-  height: 26px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 5px;
-  background: none;
-  color: var(--ink-faint);
-  font-size: var(--t-meta);
-  font-weight: 500;
-}
-.view-tabs .seg[aria-pressed="true"] { background: var(--surface-selected); color: var(--ink); }
-.view-tabs .seg-n { color: var(--ink-faint); }
-
 /* The one-time name prompt: a single quiet line, not a form that reserves a block. */
 #onboard-slot { padding: var(--space-2) 0 0; }
 #onboard-slot .visitor-prompt,

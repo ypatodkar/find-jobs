@@ -157,7 +157,6 @@
   const SIZE_ORDER = ["1-10", "11-50", "51-200", "201-1000", "1000+"];
   const DAY_MS = 86400000;
   const JOBS_PER_PAGE = 45;
-  const COMPANIES_PER_PAGE = 40;
 
   const $ = (id) => document.getElementById(id);
   const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
@@ -309,37 +308,7 @@
     };
   }
 
-  /**
-   * A fresh running order on every page load, applied within a single day.
-   *
-   * Only the grouped view uses this now — the flat list orders a day's roles by title
-   * instead. Companies whose newest role landed on the same day would otherwise sit in
-   * a fixed order forever, and the first few would take every visitor's attention.
-   *
-   * Each company draws its number once and keeps it for the life of the page. Drawing
-   * inside the comparator instead would give different answers for the same pair on
-   * different comparisons, which is not a valid ordering and can make Array.sort
-   * throw; re-drawing between renders would reshuffle the list under someone who is
-   * paging through it, or make a company appear on two pages and on neither.
-   *
-   * Keyed by name rather than by object, because the grouped view rebuilds its group
-   * objects on every render.
-   */
-  const companyShuffle = new Map();
-
-  function companyShuffleOf(name) {
-    let v = companyShuffle.get(name);
-    if (v === undefined) {
-      v = Math.random();
-      companyShuffle.set(name, v);
-    }
-    return v;
-  }
-
   const dayOf = (j) => (j.posted ? startOfDay(new Date(j.posted)) : 0);
-  // Groups seed `newest` at 0 and `oldest` at Infinity, and startOfDay(Infinity) is
-  // NaN — which a comparator reads as 0 and silently scrambles the order around it.
-  const dayOfTs = (ts) => (ts && isFinite(ts) ? startOfDay(ts) : 0);
 
   function createJobsView(config) {
     const cfg = Object.assign({ showFirms: false, firmLabel: (id) => id, contextLabel: null }, config);
@@ -390,8 +359,6 @@
       hideOpenedCompanies: false,
       selected: {}, // dimension key -> Set of chosen values
       jobs: [], page: 1,
-      view: "flat",               // "flat" (every role) | "grouped" (by company)
-      expanded: new Set(),        // company names currently open
     };
     DIMENSIONS.forEach((d) => (state.selected[d.key] = new Set()));
     let booted = false;
@@ -412,17 +379,9 @@
       count: $("job-count"),
       list: $("job-list"),
       pagination: $("job-pagination"),
-      viewGrouped: $("view-grouped"),
-      viewFlat: $("view-flat"),
-      countGrouped: $("count-grouped"),
-      countFlat: $("count-flat"),
-      groupActions: $("group-actions"),
-      expandAll: $("expand-all"),
-      collapseAll: $("collapse-all"),
       mobileFilterToggle: $("mobile-filter-toggle"),
     };
 
-    if (el.expandAll) el.expandAll.textContent = "Expand visible";
     el.list?.addEventListener("error", (event) => {
       if (event.target.matches?.("img[data-job-logo]")) event.target.remove();
     }, true);
@@ -491,9 +450,8 @@
       else if (state.sort === "oldest") arr.sort((a, b) => dayOf(a) - dayOf(b) || byTitle(a, b));
       else if (state.sort === "salary") arr.sort((a, b) => pay(b) - pay(a) || t(b) - t(a) || byTitle(a, b));
       else if (state.sort === "count") {
-        // In a flat list, "Most roles" means roles from companies with the most
-        // matches under the current filters. It is therefore useful without having
-        // to switch to the grouped view.
+        // "Most roles" means roles from companies with the most matches under the
+        // current filters.
         const counts = new Map();
         arr.forEach((j) => counts.set(j.company, (counts.get(j.company) || 0) + 1));
         arr.sort((a, b) =>
@@ -661,9 +619,8 @@
         : `${k(j.salaryMin)}+`;
     }
 
-    // Grouped results already show the company and logo in their header.
-    function jobHtml(j, inGroup) {
-      const logo = inGroup ? "" : `<span class="job-logo" aria-hidden="true"><span class="job-logo-fallback">${escapeHtml((j.company || "?").trim().charAt(0).toUpperCase())}</span>${j.logo ? `<img data-job-logo src="${escapeHtml(j.logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : ""}</span>`;
+    function jobHtml(j) {
+      const logo = `<span class="job-logo" aria-hidden="true"><span class="job-logo-fallback">${escapeHtml((j.company || "?").trim().charAt(0).toUpperCase())}</span>${j.logo ? `<img data-job-logo src="${escapeHtml(j.logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : ""}</span>`;
       const sponsorStatus = j.sponsorship || "unknown";
       const sponsorLabel = { yes: "Visa: Available", no: "Visa: Unavailable", unknown: "Visa: Not mentioned" }[sponsorStatus] || "Visa: Not mentioned";
       const sponsorEvidence = j.sponsorshipEvidence ? ` — ${j.sponsorshipEvidence}` : "";
@@ -679,37 +636,45 @@
       const payBit = pay
         ? `<span class="job-salary"${j.salary ? ` title="${escapeHtml(j.salary)}"` : ""}>${escapeHtml(pay)}</span>`
         : "";
-      const title = `<span class="job-title">${escapeHtml(j.title)}</span>`;
+      const title = `<span class="job-title" title="${escapeHtml(j.title)}">${escapeHtml(j.title)}</span>`;
       // Investors are deliberately absent from the row: they repeat on every job at a
       // company and crowd the title. The company card's header still lists them, and
       // the Investor filter still works.
       // How many roles at this company you have opened, in brackets after the name.
       // Always emitted, empty at zero: refreshOpenedCounts() then only has to set
       // text on a click, and CSS :empty keeps a company you've never opened looking
-      // exactly as it did before. Inside a company card the header carries the count
-      // instead, so the rows don't repeat it on every line.
-      const openedN = inGroup ? 0 : openedCountFor(j.company);
-      const openedBit = inGroup
-        ? ""
-        : ` <span class="job-company-opened" data-opened-for="${escapeHtml(j.company)}">` +
-          `${escapeHtml(openedLabel(openedN))}</span>`;
-      const companyBit = inGroup ? "" : `<span class="job-company">${escapeHtml(j.company)}${acquiredNote(j.company)}${openedBit}</span>`;
+      // exactly as it did before.
+      const openedBit = `<span class="job-company-opened" data-opened-for="${escapeHtml(j.company)}">` +
+        `${escapeHtml(openedLabel(openedCountFor(j.company)))}</span>`;
+      const companyBit = `<span class="job-company">${escapeHtml(j.company)}${acquiredNote(j.company)}${openedBit}</span>`;
+      const sep = `<span class="job-meta-sep" aria-hidden="true">·</span>`;
+      const keyline = [companyBit, rowMeta].filter(Boolean).join(sep) + sponsor;
       const cardTag = j.url ? "a" : "div";
+      // track.js appends ". Opened before" to the label once the posting has been
+      // opened, so the status a sighted reader gets from the row is spoken too.
+      const label = `Open posting for ${j.title} at ${j.company}`;
+      const opened = !!(j.job_id && global.Seen && global.Seen.has(j.job_id));
       const cardProps = j.url
-        ? `href="${escapeHtml(j.url)}" target="_blank" rel="noopener noreferrer" data-job-id="${escapeHtml(j.job_id || "")}" data-company="${escapeHtml(j.company)}" data-city="${escapeHtml(j.city || "")}" data-title="${escapeHtml(j.title)}" aria-label="Open posting for ${escapeHtml(j.title)} at ${escapeHtml(j.company)}"`
+        ? `href="${escapeHtml(j.url)}" target="_blank" rel="noopener noreferrer" data-job-id="${escapeHtml(j.job_id || "")}" data-company="${escapeHtml(j.company)}" data-city="${escapeHtml(j.city || "")}" data-title="${escapeHtml(j.title)}" data-label="${escapeHtml(label)}" aria-label="${escapeHtml(label + (opened ? ". Opened before" : ""))}"`
         : "";
       return `
-        <article class="job${inGroup ? " in-group" : ""}" data-job-id="${escapeHtml(j.job_id || "")}">
+        <article class="job" data-job-id="${escapeHtml(j.job_id || "")}">
           <${cardTag} class="job-card-open" ${cardProps}>
             ${logo}
+            ${/* Two lines. The title with how long ago it was posted; then who, how and
+                 how senior, with where at the far end. Seniority and work mode read as
+                 plain text after the company — they were pills competing with the title
+                 for the eye. Visa status keeps its pill: it is the one that changes
+                 whether you can apply.
+
+                 The far end of the first line is the row's status: the posting date, or
+                 "Opened" once you have followed the link to the employer's posting. Both
+                 are written and CSS shows one, keyed off the row-seen class track.js
+                 sets — so opening a posting updates the row without re-rendering it.
+                 "Opened", not "Applied": following a link is all that is known. */ ""}
             <span class="job-main">
-              ${title}
-              ${companyBit ? `<span class="job-keyline">${companyBit}</span>` : ""}
-              ${location || rowMeta || sponsor ? `<span class="job-location-line">${location}${location && (rowMeta || sponsor) ? `<span class="job-meta-sep" aria-hidden="true">·</span>` : ""}${rowMeta}${sponsor}</span>` : ""}
-              ${/* Seniority and work mode read as plain text beside the location. They
-                   were four pills competing with the title for the eye, which is a lot
-                   of decoration for facts a sentence states more quietly. Visa status
-                   keeps its pill: it is the one that changes whether you can apply. */ ""}
+              <span class="job-line job-line-head">${title}<span class="job-status">${posted ? `<span class="job-posted">${escapeHtml(posted)}</span>` : ""}<span class="job-opened"><svg class="i" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Opened</span></span></span>
+              ${keyline || location ? `<span class="job-line job-line-meta">${keyline ? `<span class="job-keyline">${keyline}</span>` : ""}${location}</span>` : ""}
             </span>
             ${/* The score sits where the eye ends up after the title, and is filled in
                  by the matcher for roles it has already judged — the list carries no
@@ -717,152 +682,13 @@
                  forty-five provider calls before anyone had clicked anything. */ ""}
             <span class="job-aside">
               <span class="job-fit" data-fit-for="${escapeHtml(j.job_id || "")}" hidden></span>
-              ${payBit}${posted ? `<span class="job-posted">${escapeHtml(posted)}</span>` : ""}
+              ${payBit}
             </span>
           </${cardTag}>
           ${/* No buttons on the row. Selecting it opens the description, and the one
                action that leaves the site lives in the panel beside it — a list of 45
                rows carrying two buttons each is 90 things competing with the titles. */ ""}
         </article>`;
-    }
-
-    // ---- company grouping ----
-    // Keep fallback initials stable across renders and pages when a logo is missing.
-    const MONOGRAM_TINTS = 6;
-    function monogram(name) {
-      let h = 0;
-      for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 100000;
-      const words = name.replace(/[^A-Za-z0-9 ]/g, " ").trim().split(/\s+/).filter(Boolean);
-      // One-word names take two letters ("OpenAI" → "OP"), multi-word take initials.
-      const initials = (
-        words.length === 0 ? "?"
-        : words.length === 1 ? words[0].slice(0, 2)
-        : words.slice(0, 2).map((w) => w[0]).join("")
-      ).toUpperCase();
-      return { initials, tint: h % MONOGRAM_TINTS };
-    }
-
-    function buildGroups(jobs) {
-      const map = new Map();
-      for (const j of jobs) {
-        let g = map.get(j.company);
-        if (!g) {
-          g = { company: j.company, jobs: [], cities: new Map(), newest: 0, oldest: Infinity,
-                titleFirst: j.title, payMax: 0,
-                size: j.size, stage: j.stage, markets: j.markets || [], logo: j.logo || null };
-          map.set(j.company, g);
-        }
-        g.jobs.push(j);
-        g.cities.set(j.city, (g.cities.get(j.city) || 0) + 1);
-        const t = j.posted ? new Date(j.posted).getTime() : 0;
-        if (t > g.newest) g.newest = t;
-        if (t && t < g.oldest) g.oldest = t;
-        if (j.title.localeCompare(g.titleFirst) < 0) g.titleFirst = j.title;
-        const pay = j.salaryMax || j.salaryMin || 0;
-        if (pay > g.payMax) g.payMax = pay;
-        if (!g.size && j.size) g.size = j.size;
-        if (!g.stage && j.stage) g.stage = j.stage;
-        if (!g.logo && j.logo) g.logo = j.logo;
-      }
-      const groups = [...map.values()];
-      if (state.sort === "company") {
-        groups.sort((a, b) => a.company.localeCompare(b.company));
-      } else if (state.sort === "title") {
-        // Alphabetize companies by the first job title they contain. This keeps
-        // Title A–Z genuinely title-based instead of duplicating Company A–Z.
-        groups.sort((a, b) => a.titleFirst.localeCompare(b.titleFirst) || a.company.localeCompare(b.company));
-      } else if (state.sort === "salary") {
-        groups.sort((a, b) => b.payMax - a.payMax || b.jobs.length - a.jobs.length || a.company.localeCompare(b.company));
-      } else if (state.sort === "count") {
-        groups.sort((a, b) => b.jobs.length - a.jobs.length || a.company.localeCompare(b.company));
-      } else if (state.sort === "oldest") {
-        // Same rule as the flat list: companies whose oldest role landed on the same
-        // day are one bucket, ordered at random rather than alphabetically.
-        groups.sort((a, b) =>
-          dayOfTs(a.oldest) - dayOfTs(b.oldest) ||
-          companyShuffleOf(a.company) - companyShuffleOf(b.company));
-      } else {
-        groups.sort((a, b) =>
-          dayOfTs(b.newest) - dayOfTs(a.newest) ||
-          companyShuffleOf(a.company) - companyShuffleOf(b.company));
-      }
-      return groups;
-    }
-
-    function groupHtml(g, index) {
-      const open = state.expanded.has(g.company);
-      const m = monogram(g.company);
-      const n = g.count ?? g.jobs.length;
-      const directoryNumber = String(index + 1).padStart(2, "0");
-
-      const cities = [...g.cities.entries()].sort((a, b) => b[1] - a[1])
-        .map(([c, k]) => `<span class="cg-city">${escapeHtml(c)}${n > 1 ? `&nbsp;<span class="cg-n">${k}</span>` : ""}</span>`)
-        .join("&#8203;<span class=\"cg-sep\">·</span>");
-
-      const facts = [
-        g.size ? (SIZE_LABELS[g.size] || g.size) + " staff" : null,
-        g.stage,
-        g.payMax ? "up to $" + Math.round(g.payMax / 1000) + "k" : null,
-        relativeDate(new Date(g.newest).toISOString()),
-      ].filter(Boolean).map((fact) => `<span class="cg-fact">${escapeHtml(fact)}</span>`).join("");
-
-      const rows = open ? g.jobs.map((j) => jobHtml(j, true)).join("") +
-        (n > g.jobs.length ? `<button type="button" class="group-more" data-company-more="${escapeHtml(g.company)}">See all ${n} roles at ${escapeHtml(g.company)}</button>` : "") : "";
-
-      // No company descriptions exist in any scraped source, so the closest thing to
-      // "what this company does" is the industry tags it already carries. Every source
-      // returns those alphabetically rather than by relevance, so a plain slice(0, 3)
-      // leads with whatever happens to start with "A" ("Aerospace Engineering" for an
-      // AI company). Shorter tags tend to be the broad, recognizable category ("AI",
-      // "Fintech") rather than a narrow compound one ("Agriculture and Farming"), so
-      // rank by length instead — a cheap proxy, not a real relevance signal.
-      let blurb = "";
-      if (g.markets && g.markets.length) {
-        const seen = new Set();
-        const ranked = g.markets
-          .filter((mk) => (seen.has(mk.toLowerCase()) ? false : seen.add(mk.toLowerCase())))
-          .sort((a, b) => a.length - b.length);
-        const shown = ranked.slice(0, 3).map((mk) => escapeHtml(mk));
-        const extra = ranked.length > 3 ? ` +${ranked.length - 3}` : "";
-        blurb = `<span class="cg-blurb">${shown.join("<span class=\"cg-sep\">·</span>")}${extra}</span>`;
-      }
-
-      // Investors are a company fact, so they belong here rather than on every row.
-      let backers = "";
-      if (cfg.showFirms) {
-        const all = g.firms || [...new Set(g.jobs.flatMap((j) => j.firms || []))];
-        if (all.length) {
-          const names = all.slice(0, 3).map((f) => escapeHtml(cfg.firmLabel(f)));
-          const extra = all.length > 3 ? ` +${all.length - 3}` : "";
-          backers = `<span class="cg-backers"><span class="cg-label">Backed by</span>${names.join("<span class=\"cg-sep\">·</span>")}${extra}</span>`;
-        }
-      }
-
-      return `
-        <section class="cgroup${open ? " is-open" : ""}">
-          <button class="cg-head" type="button" data-company="${escapeHtml(g.company)}" aria-expanded="${open}">
-            <span class="cg-main">
-              <span class="cg-title">
-                ${g.logo
-                  ? `<span class="cg-logo"><img src="${escapeHtml(g.logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
-                       onerror="this.closest('.cg-logo').outerHTML='<span class=\\'cg-mono t${m.tint}\\' aria-hidden=\\'true\\'>${escapeHtml(m.initials)}</span>'" /></span>`
-                  : `<span class="cg-mono t${m.tint}" aria-hidden="true">${escapeHtml(m.initials)}</span>`}
-                <span class="cg-name">${escapeHtml(g.company)}${acquiredNote(g.company)}</span>
-              </span>
-              ${blurb}
-              <span class="cg-cities"><span class="cg-label">Hiring in</span>${cities}</span>
-              ${backers}
-            </span>
-            <span class="cg-right">
-              <span class="cg-facts">${facts}</span>
-              <span class="cg-action">
-                <span class="cg-count">${n} role${n === 1 ? "" : "s"}</span>
-                <span class="cg-toggle" aria-hidden="true"></span>
-              </span>
-            </span>
-          </button>
-          <div class="cg-body">${rows}</div>
-        </section>`;
     }
 
     let currentPageCount = 1;
@@ -924,51 +750,21 @@
       });
     }
 
-    function resultsLabel(total, companies, grouped) {
-      if (!total) return grouped ? "No companies match your filters." : "No jobs match your filters.";
-      return grouped
-        ? `${companies.toLocaleString()} companies with ${total.toLocaleString()} open roles`
-        : `${total.toLocaleString()} ${activeCount() ? "matching" : "open"} roles`;
+    function resultsLabel(total) {
+      if (!total) return "No jobs match your filters.";
+      return `${total.toLocaleString()} ${activeCount() ? "matching" : "open"} roles`;
     }
+    const EMPTY = `<p class="empty">No jobs match your search. Try a broader role, location, or date range.</p>`;
 
     function renderResults() {
       if (cfg.loadPage) { scheduleRemote(); return; }
       const results = sortJobs(filtered());
-
-      const grouped = state.view === "grouped";
-      const resultsTitle = $("results-title");
-      if (resultsTitle) resultsTitle.textContent = grouped ? "Companies" : "All jobs";
-      if (el.groupActions) el.groupActions.hidden = !grouped;
-
-      // Each tab advertises what it would show, so the choice is informed before the
-      // click: companies on one side, individual roles on the other.
-      if (el.countFlat) el.countFlat.textContent = results.length.toLocaleString();
-      if (el.countGrouped) {
-        el.countGrouped.textContent = new Set(results.map((j) => j.company)).size.toLocaleString();
-      }
-
-      if (!grouped) {
-        const pageCount = Math.max(1, Math.ceil(results.length / JOBS_PER_PAGE));
-        state.page = Math.min(Math.max(1, state.page), pageCount);
-        const start = (state.page - 1) * JOBS_PER_PAGE;
-        const slice = results.slice(start, start + JOBS_PER_PAGE);
-        el.count.textContent = resultsLabel(results.length, 0, false);
-        // Must be an arrow, not `.map(jobHtml)`: map passes the index as the second
-        // argument, which would read as `inGroup` for every row after the first.
-        el.list.innerHTML = slice.length ? slice.map((j) => jobHtml(j, false)).join("") : `<p class="empty">No jobs match your search. Try a broader role, location, or date range.</p>`;
-        renderPagination(pageCount);
-        return;
-      }
-
-      const groups = buildGroups(results);
-      const pageCount = Math.max(1, Math.ceil(groups.length / COMPANIES_PER_PAGE));
+      const pageCount = Math.max(1, Math.ceil(results.length / JOBS_PER_PAGE));
       state.page = Math.min(Math.max(1, state.page), pageCount);
-      const start = (state.page - 1) * COMPANIES_PER_PAGE;
-      const slice = groups.slice(start, start + COMPANIES_PER_PAGE);
-      el.count.textContent = resultsLabel(results.length, groups.length, true);
-      el.list.innerHTML = slice.length
-        ? slice.map((group, index) => groupHtml(group, start + index)).join("")
-        : `<p class="empty">No jobs match your search. Try a broader role, location, or date range.</p>`;
+      const start = (state.page - 1) * JOBS_PER_PAGE;
+      const slice = results.slice(start, start + JOBS_PER_PAGE);
+      el.count.textContent = resultsLabel(results.length);
+      el.list.innerHTML = slice.length ? slice.map((j) => jobHtml(j)).join("") : EMPTY;
       renderPagination(pageCount);
     }
 
@@ -978,20 +774,10 @@
       return { ...view.getFilters(), page: state.page, scopeFirm: cfg.scopeFirm || '' };
     }
     function paintRemote(data) {
-      const grouped = state.view === 'grouped';
       state.page = data.page;
-      state.jobs = grouped ? data.groups.flatMap(g => g.jobs) : data.jobs;
-      if (el.groupActions) el.groupActions.hidden = !grouped;
-      if (el.countFlat) el.countFlat.textContent = data.total.toLocaleString();
-      if (el.countGrouped) el.countGrouped.textContent = data.companies.toLocaleString();
-      const start = (data.page - 1) * data.pageSize;
-      const count = grouped ? data.groups.length : data.jobs.length;
-      el.count.textContent = resultsLabel(data.total, data.companies, grouped);
-      const resultsTitle = $("results-title");
-      if (resultsTitle) resultsTitle.textContent = grouped ? "Companies" : "All jobs";
-      el.list.innerHTML = count ? (grouped
-        ? data.groups.map((g, i) => groupHtml({ ...g, cities: new Map(g.cities) }, start + i)).join('')
-        : data.jobs.map(j => jobHtml(j, false)).join('')) : '<p class="empty">No jobs match your search. Try a broader role, location, or date range.</p>';
+      state.jobs = data.jobs;
+      el.count.textContent = resultsLabel(data.total);
+      el.list.innerHTML = data.jobs.length ? data.jobs.map(j => jobHtml(j)).join('') : EMPTY;
       renderPagination(data.pageCount);
       el.list.removeAttribute('aria-busy');
       refreshAllPickers();
@@ -1168,7 +954,6 @@
       if (state.sort !== "newest") p.set("sort", state.sort);
       if (state.hideOpened) p.set("unseen", "1");
       if (state.hideOpenedCompanies) p.set("unopened", "1");
-      if (state.view === "grouped") p.set("view", "grouped");
       if (state.page > 1) p.set("page", String(state.page));
       const qs = p.toString();
       return location.pathname + (qs ? "?" + qs : "") + location.hash;
@@ -1188,7 +973,6 @@
           range: p.get("posted") || "all",
           salary: p.get("salary") || "all",
           sort: p.get("sort") || "newest",
-          view: p.get("view") === "grouped" ? "grouped" : "flat",
           hideOpened: p.get("unseen") === "1",
           hideOpenedCompanies: p.get("unopened") === "1",
         },
@@ -1206,14 +990,14 @@
     function syncUrl() {
       if (syncing || !global.history || !global.history.replaceState) return;
       const url = stateToUrl();
-      const snapshot = { page: state.page, view: state.view };
+      const snapshot = { page: state.page };
       if (pushNext) global.history.pushState(snapshot, "", url);
       else global.history.replaceState(snapshot, "", url);
       pushNext = false;
     }
 
     // Shared by the URL, the popstate handler and presets.js, so all three go through
-    // the same resync of the selects and the view tabs.
+    // the same resync of the selects.
     function applyFilterState(f) {
       if (!f) return;
       DIMENSIONS.forEach((d) => {
@@ -1239,7 +1023,7 @@
       if (el.hideOpened) el.hideOpened.checked = state.hideOpened;
       if (el.hideOpenedCompanies) el.hideOpenedCompanies.checked = state.hideOpenedCompanies;
 
-      setView(f.view === "grouped" ? "grouped" : "flat");
+      render();
     }
 
     // Captured before anything renders. The first render() replaceStates the current
@@ -1353,62 +1137,9 @@
       });
     }
 
-    // Expanding one company re-renders only that section, so the rest of the list
-    // (and the reader's scroll position) stays put.
     el.list.addEventListener("click", (e) => {
-      if (e.target.closest('[data-retry-jobs]')) { scheduleRemote(); return; }
-      const more = e.target.closest('[data-company-more]');
-      if (more) {
-        state.selected.company.clear(); state.selected.company.add(more.dataset.companyMore);
-        setView('flat', true); return;
-      }
-      const head = e.target.closest(".cg-head");
-      if (!head) return;
-      const company = head.dataset.company;
-      if (state.expanded.has(company)) state.expanded.delete(company);
-      else state.expanded.add(company);
-
-      const hadFocus = document.activeElement === head;
-      renderResults();
-      // The re-render replaces the button that was just activated, which would drop
-      // keyboard focus to the top of the page and make collapsing impossible.
-      if (hadFocus) {
-        const again = el.list.querySelector(`.cg-head[data-company="${CSS.escape(company)}"]`);
-        if (again) again.focus();
-      }
+      if (e.target.closest('[data-retry-jobs]')) scheduleRemote();
     });
-
-    // `isNav` is set only by the tab buttons themselves. Restoring a URL or applying a
-    // saved filter also moves the tab, and neither should leave a history entry behind.
-    function setView(view, isNav) {
-      if (isNav && view !== state.view) pushNext = true;
-      state.view = view;
-      const resultsTitle = $("results-title");
-      if (resultsTitle) resultsTitle.textContent = view === "grouped" ? "Companies" : "All jobs";
-      if (el.viewGrouped) {
-        el.viewGrouped.classList.toggle("active", view === "grouped");
-        el.viewGrouped.setAttribute("aria-pressed", String(view === "grouped"));
-      }
-      if (el.viewFlat) {
-        el.viewFlat.classList.toggle("active", view === "flat");
-        el.viewFlat.setAttribute("aria-pressed", String(view === "flat"));
-      }
-      render();
-    }
-    if (el.viewGrouped) el.viewGrouped.addEventListener("click", () => setView("grouped", true));
-    if (el.viewFlat) el.viewFlat.addEventListener("click", () => setView("flat", true));
-
-    if (el.expandAll) {
-      el.expandAll.addEventListener("click", () => {
-        const start = (state.page - 1) * COMPANIES_PER_PAGE;
-        (cfg.loadPage ? (remoteData?.groups || []) : buildGroups(sortJobs(filtered())).slice(start, start + COMPANIES_PER_PAGE))
-          .forEach((g) => state.expanded.add(g.company));
-        renderResults();
-      });
-    }
-    if (el.collapseAll) {
-      el.collapseAll.addEventListener("click", () => { state.expanded.clear(); renderResults(); });
-    }
 
     if (el.dateSelect) {
       el.dateSelect.innerHTML = DATE_RANGES.map((r) => `<option value="${r.k}">${escapeHtml(r.label)}</option>`).join("");
@@ -1433,8 +1164,6 @@
       });
     }
 
-    if (el.viewFlat) el.viewFlat.classList.add("active");
-
     const view = {
       load() {
         booted = true;
@@ -1457,7 +1186,7 @@
 
       // ---- saved filters ----
       // presets.js goes through these rather than poking at `state`, because applying
-      // a set of filters also has to resync the selects and the view tabs — exactly
+      // a set of filters also has to resync the selects — exactly
       // what the Reset button does. Skip that and the controls silently disagree with
       // the results being shown.
 
@@ -1473,7 +1202,6 @@
           range: state.range,
           salary: state.salary,
           sort: state.sort,
-          view: state.view,
           hideOpened: state.hideOpened,
           hideOpenedCompanies: state.hideOpenedCompanies,
         };

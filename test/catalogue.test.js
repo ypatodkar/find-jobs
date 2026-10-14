@@ -23,11 +23,12 @@ test('facets cover the complete result set and omit only their own filter', asyn
   assert.equal((await c.search({ selected: { notcompany: ['Alpha'] } })).total, 73);
   assert.equal((await c.search({ scopeFirm: 'accel' })).total, 55);
 });
-test('company previews are bounded and counts include roles beyond the current page', async () => {
-  const r = await new MemoryCatalogue(fixture()).search({ view: 'grouped', sort: 'company' });
-  assert.equal(r.groups.length, 3); assert.equal(r.jobs.length, 0);
-  assert.equal(r.groups[0].count, 37); assert.equal(r.groups[0].jobs.length, 3);
-  assert.equal(r.groups.reduce((sum, g) => sum + g.count, 0), r.total);
+test('search always lists roles; a request for the retired company view gets the same list', async () => {
+  const c = new MemoryCatalogue(fixture());
+  const plain = await c.search({ sort: 'company' }), legacy = await c.search({ view: 'grouped', sort: 'company' });
+  assert.equal(plain.jobs.length, 45);
+  assert.deepEqual(legacy.jobs.map(j => j.job_id), plain.jobs.map(j => j.job_id));
+  assert.deepEqual(legacy.groups, []);
 });
 test('opened-company filtering finds history outside the requested page', async () => {
   const c = new MemoryCatalogue(fixture());

@@ -72,12 +72,17 @@
   // The result list is replaced wholesale on every filter change, sort, page change,
   // and view toggle, so marking is re-applied from a MutationObserver rather than
   // done once. That also keeps this file independent of jobs-ui.js's render path.
+  // The row shows the status itself (see jobHtml in jobs-ui.js); this keeps the class
+  // and the card's spoken label in step with it.
   function paint(root) {
     var scope = root && root.querySelectorAll ? root : document;
     var nodes = scope.querySelectorAll(".job[data-job-id]");
     for (var i = 0; i < nodes.length; i++) {
       var row = nodes[i];
-      row.classList.toggle("row-seen", !!seen[row.getAttribute("data-job-id")]);
+      var opened = !!seen[row.getAttribute("data-job-id")];
+      row.classList.toggle("row-seen", opened);
+      var link = row.querySelector("[data-label]");
+      if (link) link.setAttribute("aria-label", link.getAttribute("data-label") + (opened ? ". Opened before" : ""));
     }
   }
 
@@ -91,20 +96,8 @@
     });
   }
 
-  function injectCss() {
-    var css =
-      ".job.row-seen{border-color:var(--rule-strong)}" +
-      ".job.row-seen .job-title{color:var(--ink-soft)}" +
-      ".job.row-seen .job-aside::after{content:'Viewed';font:600 .68rem/1.2 var(--sans);color:var(--ink-faint)}";
-    var el = document.createElement("style");
-    el.setAttribute("data-seen-styles", "");
-    el.textContent = css;
-    document.head.appendChild(el);
-  }
-
   // ---- wiring -----------------------------------------------------------------
   function init() {
-    injectCss();
     paint(document);
 
     var target = document.getElementById("job-list") || document.body;

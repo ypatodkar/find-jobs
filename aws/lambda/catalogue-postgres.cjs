@@ -1,4 +1,4 @@
-const { DIMENSIONS, ARRAYS, normalize, pageInfo, strings, terms, fail, historySummary } = require('./catalogue.cjs');
+const { DIMENSIONS, ARRAYS, normalize, pageInfo, strings, terms, fail, historySummary, LEGACY_GROUPS } = require('./catalogue.cjs');
 function builder() {
   const params = [];
   return { params, bind(value) { params.push(value); return `$${params.length}`; } };
@@ -39,38 +39,10 @@ class PostgresCatalogue {
       if (!meta.rows.length) throw fail(503, 'The job catalogue is being prepared. Please try again shortly.');
       const page = builder(); const condition = where(q, page);
       const limit = page.bind(info.pageSize); const offset = page.bind((info.page - 1) * info.pageSize);
-      let jobs = [], groups = [];
-      if (q.view === 'flat') {
-        const result = await c.query(`WITH filtered AS (
-          SELECT j.*, count(*) OVER (PARTITION BY company) AS company_count FROM job_catalogue j WHERE ${condition}
-        ) SELECT payload FROM filtered ORDER BY ${order(q.sort)} LIMIT ${limit} OFFSET ${offset}`, page.params);
-        jobs = result.rows.map(r => r.payload);
-      } else {
-        const groupOrder = { newest: 'newest DESC', oldest: 'oldest', count: 'count DESC',
-          salary: '"payMax" DESC', title: '"titleFirst"', company: 'company' }[q.sort] + ', company';
-        const result = await c.query(`WITH filtered AS (
-          SELECT j.*, count(*) OVER (PARTITION BY company) AS company_count FROM job_catalogue j WHERE ${condition}
-        ), numbered AS (
-          SELECT *, row_number() OVER (PARTITION BY company ORDER BY ${order(q.sort)}) AS rn FROM filtered
-        ), cities AS (
-          SELECT company, jsonb_agg(jsonb_build_array(city, n)) AS cities FROM (
-            SELECT company, payload->>'city' AS city, count(*)::int AS n FROM filtered GROUP BY company, payload->>'city'
-          ) x GROUP BY company
-        ), backers AS (
-          SELECT company, jsonb_agg(DISTINCT firm) AS firms FROM filtered,
-            LATERAL jsonb_array_elements_text(payload->'firms') firm GROUP BY company
-        ), grouped AS (
-          SELECT company, count(*)::int AS count,
-            jsonb_agg(payload ORDER BY rn) FILTER (WHERE rn <= 3) AS jobs,
-            COALESCE(extract(epoch FROM max(posted_at)) * 1000, 0)::double precision AS newest,
-            COALESCE(extract(epoch FROM min(posted_at)) * 1000, 0)::double precision AS oldest,
-            max(salary_top) AS "payMax", min(title) AS "titleFirst"
-          FROM numbered GROUP BY company
-        ) SELECT grouped.*, cities.cities, COALESCE(backers.firms, '[]'::jsonb) AS firms
-          FROM grouped JOIN cities USING (company) LEFT JOIN backers USING (company)
-          ORDER BY ${groupOrder} LIMIT ${limit} OFFSET ${offset}`, page.params);
-        groups = result.rows.map(r => ({ ...r.jobs[0], ...r }));
-      }
+      const listed = await c.query(`WITH filtered AS (
+        SELECT j.*, count(*) OVER (PARTITION BY company) AS company_count FROM job_catalogue j WHERE ${condition}
+      ) SELECT payload FROM filtered ORDER BY ${order(q.sort)} LIMIT ${limit} OFFSET ${offset}`, page.params);
+      const jobs = listed.rows.map(r => r.payload);
       const f = builder();
       const parts = Object.entries(DIMENSIONS).map(([key, field]) => {
         const condition = where(q, f, key);
@@ -83,7 +55,7 @@ class PostgresCatalogue {
       const result = await c.query(parts.join(' UNION ALL '), f.params);
       for (const r of result.rows) if (r.value) facets[r.key].push([r.value, r.n]);
       await c.query('COMMIT');
-      return { ...info, jobs, groups, facets, metadata: meta.rows[0].metadata };
+      return { ...info, jobs, groups: LEGACY_GROUPS, facets, metadata: meta.rows[0].metadata };
     } catch (error) { await c.query('ROLLBACK'); throw error; }
     finally { c.release(); }
   }
