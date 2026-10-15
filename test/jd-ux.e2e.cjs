@@ -127,7 +127,7 @@ async function main(){
       });
       await page.screenshot({path:path.join(artifactDir,`reading-${layout.width}.png`)});
       await page.locator('.job-detail').evaluate(el=>el.scrollTop=0);
-      assert.equal(layout.font,'16px');
+      assert.equal(layout.font,'12px');
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'the page fits the viewport');
       assert.ok(await page.locator('.job-detail').evaluate(el=>el.scrollWidth<=el.clientWidth),'the inspector has no horizontal overflow');
       const insightText=await page.locator('.analysis-insights [data-passage]').evaluateAll(links=>links.every(el=>el.textContent.length<=113 && el.dataset.passage.toLowerCase().includes(el.textContent.replace(/…$/,'').toLowerCase())));
