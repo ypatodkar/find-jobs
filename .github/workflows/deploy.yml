@@ -49,7 +49,7 @@ jobs:
 
       # Jev's answers from earlier runs (job-labels.json, see classify.js), so only
       # postings new since the last run are put to it. Each run saves under its own key
-      # and restores the newest by prefix; an evicted cache costs one full pass, ~$0.50.
+      # and restores the newest by prefix; an evicted cache triggers reclassification.
       - name: Restore job classifications
         uses: actions/cache/restore@v4
         with:
