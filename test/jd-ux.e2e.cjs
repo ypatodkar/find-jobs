@@ -93,10 +93,6 @@ async function main(){
     // The resume dropdown in the description pane: a resume's own button, and the one chosen.
     const pick=(name)=>page.locator('#detail-match .resume-picker').getByRole('button',{name,exact:true});
     const activeResume=()=>page.locator('#detail-match .resume-picker [data-act="choose"][aria-pressed="true"]').getAttribute('data-resume-id');
-    // The Resumes section beside the filters: open its dropdown, then act on a row.
-    const libraryOpen=async()=>{const p=page.locator('#resume-library .resume-picker');if(!await p.evaluate(el=>el.open))await p.locator('summary').click();};
-    const libraryChoose=async(id)=>{await libraryOpen();await page.locator(`#resume-library [data-library-act="choose"][data-resume-id="${id}"]`).click();};
-    const libraryDelete=async(name)=>{await libraryOpen();await page.locator('#resume-library').getByRole('button',{name:'Delete '+name,exact:true}).click();};
     page.setDefaultTimeout(8000);
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/*',route=>route.request().url().startsWith(base)?route.continue():route.abort());
@@ -258,7 +254,7 @@ async function main(){
       const a=document.querySelector('.results-main'),b=document.querySelector('.job-detail');
       return {ratio:a.clientWidth/(a.clientWidth+b.clientWidth),leftOverflow:getComputedStyle(a).overflowY,rightOverflow:getComputedStyle(b).overflowY,analysis:document.querySelector('#detail-match').offsetHeight};
     });
-    assert.ok(Math.abs(layout.ratio-0.42)<0.025);assert.equal(layout.leftOverflow,'visible','the list scrolls with the page, footer after it');assert.equal(layout.rightOverflow,'auto');assert.ok(layout.analysis<540,'analysis is bounded without oversized cards');
+    assert.ok(Math.abs(layout.ratio-0.6)<0.025,"the list takes 60% by default");assert.equal(layout.leftOverflow,'visible','the list scrolls with the page, footer after it');assert.equal(layout.rightOverflow,'auto');assert.ok(layout.analysis<540,'analysis is bounded without oversized cards');
     await checkReadingLayout();
     await page.evaluate(()=>window.scrollTo(0,document.querySelector('#results-split').offsetTop));
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
@@ -269,15 +265,25 @@ async function main(){
     const beforeResize=await widths(),resizeCalls=postCalls,resizeGets=getCalls;
     const handle=await separator.boundingBox();
     await page.mouse.move(handle.x+handle.width/2,handle.y+80);await page.mouse.down();
-    await page.mouse.move(handle.x+handle.width/2+160,handle.y+80,{steps:6});await page.mouse.up();
+    // Leftward: at the 60% default the list is already near its widest.
+    await page.mouse.move(handle.x+handle.width/2-160,handle.y+80,{steps:6});await page.mouse.up();
     const afterResize=await widths();
-    assert.ok(afterResize.list>beforeResize.list+150 && afterResize.detail<beforeResize.detail-150,'dragging adjusts both column widths');
+    assert.ok(afterResize.list<beforeResize.list-150 && afterResize.detail>beforeResize.detail+150,'dragging adjusts both column widths');
     assert.equal(postCalls,resizeCalls);assert.equal(getCalls,resizeGets,'resizing does not reload analysis');
     assert.equal(await page.locator('#detail-title').textContent(),'Senior Software Engineer');
     assert.equal(await page.locator('.job-detail').evaluate(el=>el.scrollTop),0);
     await page.screenshot({path:path.join(artifactDir,'desktop-resized.png')});
     await separator.press('ArrowLeft');assert.ok((await widths()).list<afterResize.list-20);
-    await separator.press('Home');assert.ok(Math.abs((await widths()).list-350)<1);
+    // Home is the narrowest the list goes: no closer than its header needs, and never
+    // so narrow that Sort runs into the tabs.
+    await separator.press('Home');
+    const headFit=await page.evaluate(()=>{const t=document.querySelector('#job-view-tabs').getBoundingClientRect(),s=document.querySelector('#list-sort').getBoundingClientRect();return {sameLine:Math.abs(t.top-s.top)<12||Math.abs(t.bottom-s.bottom)<12,clear:t.right<=s.left+1};});
+    assert.ok((await widths()).list>=349,'the list stays at least 350px wide');
+    assert.ok(headFit.sameLine&&headFit.clear,'at its narrowest the list still fits the tabs and Sort on one line');
+    const dragFloor=(await widths()).list,floorHandle=await separator.boundingBox();
+    await page.mouse.move(floorHandle.x+floorHandle.width/2,floorHandle.y+80);await page.mouse.down();
+    await page.mouse.move(floorHandle.x-300,floorHandle.y+80,{steps:6});await page.mouse.up();
+    assert.ok(Math.abs((await widths()).list-dragFloor)<1,'dragging further left stops at the same point');
     await separator.press('End');assert.ok(Math.abs((await widths()).detail-440)<1);
     const filled=await page.locator('#results-split').evaluate(el=>Math.abs(el.clientWidth-el.querySelector('.results-main').getBoundingClientRect().width-el.querySelector('.job-detail').getBoundingClientRect().width-el.querySelector('.column-resizer').offsetWidth-2*parseFloat(getComputedStyle(el).columnGap))<1);
     assert.equal(filled,true,'the columns fill the available width even at the drag limits');
@@ -288,7 +294,7 @@ async function main(){
     assert.equal(await page.evaluate(()=>localStorage.getItem('find-jobs-column-ratio')),persisted);
     assert.ok(Math.abs((await widths()).detail-440)<1,'preferred width survives a reload');
     await separator.dblclick();
-    assert.ok(Math.abs((await widths()).list/((await widths()).list+(await widths()).detail)-0.42)<0.005,'double-click restores the default width');
+    assert.ok(Math.abs((await widths()).list/((await widths()).list+(await widths()).detail)-0.6)<0.005,'double-click restores the default width');
     const resetWidths=await widths(),resetHandle=await separator.boundingBox();
     await page.mouse.move(resetHandle.x+resetHandle.width/2,resetHandle.y+80);await page.mouse.down();
     await page.mouse.move(resetHandle.x+resetHandle.width/2+100,resetHandle.y+80);
@@ -498,67 +504,96 @@ async function main(){
     await page.mouse.click(2,2);
     assert.equal(await page.locator('.requirement-breakdown').isVisible(),false,'clicking the backdrop closes the modal');
     mode='normal';await page.setViewportSize({width:1440,height:900});await page.goto(base);
-    const library=page.locator('#resume-library');
-    await library.locator('.resume-picker > summary').waitFor();
-    assert.equal(await library.locator('[data-library-act="choose"]').count(),3,'the resume library is available before opening a job');
-    await libraryOpen();
-    assert.equal(await library.locator('.resume-picker-delete').count(),3,'every resume in the Resumes dropdown has a delete button');
-    assert.equal(await library.locator('.resume-picker-panel > :last-child').textContent(),'Add resume','Add resume is the last item');
-    await page.screenshot({path:path.join(artifactDir,'resume-library-dropdown.png')});
-    await library.locator('.resume-picker-panel button').first().press('Escape');
-    assert.equal(await library.locator('.resume-picker').evaluate(el=>el.open),false,'Escape closes the Resumes dropdown');
-    const toolbarLayout=await page.evaluate(()=>{
-      const filters=document.querySelector('.filter-primary').getBoundingClientRect();
-      const library=document.querySelector('#resume-library').getBoundingClientRect();
-      return {sideBySide:filters.right<library.left,search:document.querySelector('.search-wrap').getBoundingClientRect().width,toolbar:document.querySelector('#job-controls').clientWidth};
-    });
-    assert.equal(toolbarLayout.sideBySide,true,'filters sit to the left of the resume column');
-    assert.ok(toolbarLayout.search<toolbarLayout.toolbar*.3,'the search field is narrower');
-    await page.screenshot({path:path.join(artifactDir,'resume-library-1440.png')});
-    const beforeLibraryPosts=postCalls;
-    await libraryChoose('r_data');
-    await page.locator('.job[data-job-id="job_0"]').click();await waitScore(60);
-    assert.equal(await activeResume(),'r_data','library selection is used by the inspector');
-    await libraryChoose('r_systems');await waitScore(20);
-    assert.equal(postCalls,beforeLibraryPosts,'choosing a resume reuses its saved analysis');
-    const fixtureFile={name:'library-fixture.txt',mimeType:'text/plain',buffer:Buffer.from('Built and operated backend services, improved reliability and maintained automated tests. Collaborated with engineering teams to deliver production APIs.')};
-    const uploadInput=library.locator('input[type="file"]');
-    const beforeUploads=resumePostCalls;
-    await uploadInput.setInputFiles(fixtureFile);
-    await page.getByRole('button',{name:'Analyze resume',exact:true}).waitFor();
-    await page.waitForFunction(()=>!document.querySelector('#resume-library .resume-picker-add').disabled);
-    assert.equal(await library.locator('[data-library-act="choose"]').count(),4,'adding a resume updates the library');
-    assert.equal(await activeResume(),'r_uploaded','a new upload becomes the active resume');
-    assert.equal(resumePostCalls,beforeUploads+1);assert.equal(postCalls,beforeLibraryPosts,'library uploads do not trigger paid analysis');
-    assert.equal(await page.locator('#detail-title').textContent(),'Senior Software Engineer');
-    const beforeDeletes=resumeDeleteCalls;
-    page.once('dialog',dialog=>dialog.dismiss());await libraryDelete('Uploaded resume');
-    assert.equal(resumeDeleteCalls,beforeDeletes,'cancelled removal makes no request');
-    resumeWriteError=true;page.once('dialog',dialog=>dialog.accept());await libraryDelete('Uploaded resume');
-    await library.getByText('Resume removal temporarily unavailable.',{exact:true}).waitFor();
-    assert.equal(await library.locator('[data-library-act="choose"]').count(),4,'a failed removal retains the resume');
-    resumeWriteError=false;page.once('dialog',dialog=>dialog.accept());await libraryDelete('Uploaded resume');
-    await waitScore(20);await page.waitForFunction(()=>!document.querySelector('#resume-library .resume-picker-add').disabled);
-    assert.equal(await library.locator('[data-library-act="choose"]').count(),3);
-    assert.equal(await activeResume(),'r_systems','removing the active resume selects a remaining resume');
-    for(const width of [1280,800]){
-      await page.setViewportSize({width,height:900});await page.goto(base);await library.locator('.resume-picker > summary').waitFor();
-      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-      await page.screenshot({path:path.join(artifactDir,'resume-library-'+width+'.png')});
+    // Beside the list, the first role on screen is always selected.
+    const firstSelected=async(why)=>{
+      await page.waitForFunction(()=>{const r=document.querySelector('#job-list .job[data-job-id]');return r&&r.classList.contains('is-selected')&&document.querySelector('#detail-title')?.textContent===r.querySelector('.job-title').textContent;},null,{timeout:3000}).catch(()=>assert.fail(why));
+    };
+    await firstSelected('the first role is selected on arrival');
+    assert.equal(await page.evaluate(()=>scrollY),0,'arriving does not scroll the page');
+    await page.locator('#job-search').fill('Platform 7');
+    await firstSelected('the first role is selected after a filter change');
+    assert.equal(await page.locator('#detail-title').textContent(),'Software Engineer, Platform 7');
+    await page.locator('#job-search').fill('');await firstSelected('clearing the search selects the new first role');
+    await page.locator('#job-pagination .page-next').click();
+    await firstSelected('the first role on the next page is selected');
+    assert.equal(new URL(page.url()).searchParams.get('page'),'2');
+    await page.goto(base);await firstSelected('the first role is selected on arrival again');
+    // All jobs / Companies tabs.
+    await page.locator('#view-grouped').waitFor();
+    assert.equal(await page.locator('#count-flat').textContent(),'140');
+    assert.equal(await page.locator('#count-grouped').textContent(),'3','the Companies tab counts companies');
+    await page.locator('#view-grouped').click();
+    assert.equal(await page.locator('#view-grouped').getAttribute('aria-pressed'),'true');
+    assert.equal(await page.locator('.cgroup').count(),3);
+    assert.ok(new URL(page.url()).searchParams.get('view')==='grouped','the Companies tab is in the URL');
+    assert.ok((await page.locator('#job-count').textContent()).includes('of 3 companies · 140 roles'));
+    await firstSelected('the Companies tab selects the first role of the first company');
+    assert.equal(await page.locator('.cgroup').first().evaluate(el=>el.classList.contains('is-open')),true,'the first company opens by itself');
+    assert.equal(await page.locator('.cgroup.is-open').count(),1);
+    const bigCo=page.locator('.cg-head[data-company="Engineering Company"]');
+    assert.ok((await bigCo.textContent()).includes('138 roles'));
+    // Companies on the same day are shuffled per visit, so it may be the one already open.
+    if (await bigCo.getAttribute('aria-expanded')!=='true') await bigCo.click();
+    else { await bigCo.click(); await bigCo.click(); }
+    assert.equal(await page.locator('.cgroup:has(.cg-head[data-company="Engineering Company"]) .job[data-job-id]').count(),138,'opening a company lists its roles');
+    assert.equal(await page.locator('.cgroup.is-open .job-company').count(),0,'rows in a card do not repeat the company');
+    assert.equal(await bigCo.evaluate(el=>el===document.activeElement),true,'focus stays on the company after it opens');
+    await page.screenshot({path:path.join(artifactDir,'companies-1440.png')});
+    await page.locator('.cgroup.is-open .job[data-job-id="job_2"] .job-title').click();
+    assert.equal(await page.locator('#detail-title').textContent(),'Software Engineer, Platform 3','a role in a card opens in the pane');
+    await page.reload();await page.locator('.cgroup').first().waitFor();
+    assert.equal(await page.locator('#view-grouped').getAttribute('aria-pressed'),'true','a reload keeps the Companies tab');
+    await page.goto(base);await page.locator('#view-flat').waitFor();
+    assert.equal(await page.locator('.cgroup').count(),0);
+    await page.locator('#view-grouped').click();await page.goBack();
+    await page.waitForFunction(()=>document.querySelector('#view-flat').getAttribute('aria-pressed')==='true');
+    assert.equal(await page.locator('.cgroup').count(),0,'Back returns to All jobs');
+    // Two tabs and Sort, with a hairline between each.
+    assert.equal(await page.locator('#saved-toggle').count(),0,'there is no Saved tab');
+    assert.equal(await page.locator('#job-view-tabs .seg').count(),2);
+    const hairlines=await page.evaluate(()=>[document.querySelector('#view-grouped'),document.querySelector('#list-sort')].map(n=>{const b=getComputedStyle(n,'::before');return b.content!=='none'&&parseFloat(b.width)===1;}));
+    assert.deepEqual(hairlines,[true,true],'a hairline sits before Companies and before Sort');
+    // Toolbar: Sort and Saved left it; Save this filter joined the Hide checkboxes.
+    assert.equal(await page.locator('#job-controls #sort-select').count(),0,'Sort is not in the filter toolbar');
+    const tailRow=await page.evaluate(()=>{const c=(n)=>{const r=n.getBoundingClientRect();return r.top+r.height/2;};return Math.abs(c(document.querySelector('.preset-save'))-c(document.querySelector('#hide-opened').closest('label')));});
+    assert.ok(tailRow<6,'Save this filter sits in the row with the Hide checkboxes');
+    await page.setViewportSize({width:390,height:844});await page.goto(base);await page.locator('.job').first().waitFor();await page.waitForTimeout(400);
+    assert.equal(await page.locator('#job-detail').evaluate(el=>el.classList.contains('is-open')),false,'on a phone nothing opens over the list by itself');
+    for(const width of [800,390]){
+      await page.setViewportSize({width,height:900});await page.goto(base+'?view=grouped');await page.locator('.cgroup').first().waitFor();
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal scroll at '+width);
+      await page.screenshot({path:path.join(artifactDir,'companies-'+width+'.png')});
     }
-    await page.setViewportSize({width:390,height:844});await page.goto(base);
-    await page.locator('#mobile-filter-toggle').click();await library.locator('.resume-picker > summary').waitFor();
-    await library.scrollIntoViewIfNeeded();
-    assert.ok(await page.locator('#job-controls').evaluate(el=>el.scrollWidth<=el.clientWidth),'the mobile drawer has no horizontal overflow');
-    await page.screenshot({path:path.join(artifactDir,'resume-library-mobile.png')});
-    await libraryOpen();await library.locator('.resume-picker-add').scrollIntoViewIfNeeded();
-    const drawerBox=await page.locator('#job-controls').boundingBox(),addBox=await library.locator('.resume-picker-add').boundingBox();
-    assert.ok(addBox.y+addBox.height<=drawerBox.y+drawerBox.height+1,'the open Resumes dropdown is not cut off by the drawer');
-    await page.screenshot({path:path.join(artifactDir,'resume-library-mobile-open.png')});
-    await libraryChoose('r_data');
-    await page.locator('#filter-drawer-close').click();await page.locator('.job[data-job-id="job_0"]').click();await waitScore(60);
-    assert.equal(await activeResume(),'r_data','mobile library selection reaches the JD');
-    console.log('Resume library passed: independent management, synced selection, upload, cancellation, failure retry, removal and responsive layout.');
+    await page.setViewportSize({width:1440,height:900});await page.goto(base);await page.locator('.job').first().waitFor();
+    assert.equal(await page.locator('#resume-library').count(),0,'no Resumes section beside the filters');
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await page.screenshot({path:path.join(artifactDir,'toolbar-1440.png')});
+    await page.locator('.job[data-job-id="job_0"]').click();await waitScore(20);
+    const paneOpen=async()=>{const p=page.locator('#detail-match .resume-picker');if(!await p.evaluate(el=>el.open))await p.locator('summary').click();};
+    const paneDelete=async(name)=>{await paneOpen();await page.locator('#detail-match').getByRole('button',{name:'Delete '+name,exact:true}).click();};
+    const fixtureFile={name:'pane-fixture.txt',mimeType:'text/plain',buffer:Buffer.from('Built and operated backend services, improved reliability and maintained automated tests. Collaborated with engineering teams to deliver production APIs.')};
+    const beforeUploads=resumePostCalls;
+    await page.locator('#detail-match input[type="file"]').setInputFiles(fixtureFile);
+    await waitScore(postScore);
+    assert.equal(resumePostCalls,beforeUploads+1);
+    assert.equal(await activeResume(),'r_uploaded','a new upload becomes the active resume');
+    assert.equal(await page.locator('#detail-match [data-act="choose"]').count(),4,'adding a resume updates the dropdown');
+    const beforeDeletes=resumeDeleteCalls;
+    page.once('dialog',dialog=>dialog.dismiss());await paneDelete('Uploaded resume');
+    assert.equal(resumeDeleteCalls,beforeDeletes,'cancelled removal makes no request');
+    resumeWriteError=true;page.once('dialog',dialog=>dialog.accept());await paneDelete('Uploaded resume');
+    await page.locator('#detail-match').getByText('Resume removal temporarily unavailable.',{exact:true}).waitFor();
+    assert.equal(await page.locator('#detail-match [data-act="choose"]').count(),4,'a failed removal retains the resume');
+    resumeWriteError=false;page.once('dialog',dialog=>dialog.accept());await paneDelete('Uploaded resume');
+    await page.waitForFunction(()=>document.querySelectorAll('#detail-match [data-act="choose"]').length===3);
+    assert.notEqual(await activeResume(),'r_uploaded','removing the active resume selects a remaining resume');
+    for(const width of [1280,800,390]){
+      await page.setViewportSize({width,height:900});await page.goto(base);await page.locator('.job').first().waitFor();
+      assert.equal(await page.locator('#resume-library').count(),0);
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      await page.screenshot({path:path.join(artifactDir,'toolbar-'+width+'.png')});
+    }
+    console.log('Pane-only resumes passed: no Resumes section, upload, cancellation, failure retry and removal from the description pane.');
     assert.deepEqual(errors,[]);
     console.log('Reading layout:',JSON.stringify(readingMeasurements));
     console.log('One-click JD UX passed: cached/automatic results, request counts, retained updates, resume switching, zero demonstrated, mapping, scrolling, pagination, management, states and mobile.');

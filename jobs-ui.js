@@ -162,6 +162,7 @@
   const SIZE_ORDER = ["1-10", "11-50", "51-200", "201-1000", "1000+"];
   const DAY_MS = 86400000;
   const JOBS_PER_PAGE = 45;
+  const COMPANIES_PER_PAGE = 40;
 
   const $ = (id) => document.getElementById(id);
   const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
@@ -311,6 +312,21 @@
   }
 
   const dayOf = (j) => (j.posted ? startOfDay(new Date(j.posted)) : 0);
+  // Groups seed `newest` at 0 and `oldest` at Infinity, and startOfDay(Infinity) is
+  // NaN — which a comparator reads as 0 and silently scrambles the order around it.
+  const dayOfTs = (ts) => (ts && isFinite(ts) ? startOfDay(ts) : 0);
+
+  // The Companies view orders companies whose newest role landed on the same day at
+  // random, so the first few do not take every visitor's attention forever. Each
+  // company draws once per page load: drawing inside the comparator would not be a
+  // valid ordering, and redrawing between renders would reshuffle the list under
+  // someone paging through it. Keyed by name, since groups are rebuilt each render.
+  const companyShuffle = new Map();
+  function companyShuffleOf(name) {
+    let v = companyShuffle.get(name);
+    if (v === undefined) companyShuffle.set(name, (v = Math.random()));
+    return v;
+  }
 
   function createJobsView(config) {
     const cfg = Object.assign({ showFirms: false, firmLabel: (id) => id, contextLabel: null }, config);
@@ -323,18 +339,17 @@
     // presentation only: filtering, saved views, the counts and the reset button all
     // still treat DIMENSIONS as one flat list, so moving a filter between groups
     // changes where it sits on screen and nothing else.
-    // Primary filters sit in the row beside the search; the rest live in the advanced
-    // panel. Array order is the order they appear in each.
+    // Primary filters sit in the row beside the search; the rest in the grid under
+    // it. Array order is the order they appear in each.
     const GROUPS = [
-      { id: "primary", target: "picker-row" },
       { id: "advanced", target: "advanced-grid" },
     ];
 
     const DIMENSIONS = [
-      { key: "role", label: "Role", group: "primary", values: (j) => j.roles || [], labelFor: (v) => ROLE_LABELS[v] || v },
-      { key: "city", label: "Location", group: "primary", values: (j) => [j.city] },
-      { key: "seniority", label: "Experience", group: "primary", values: (j) => (j.seniority ? [j.seniority] : []), labelFor: (v) => SENIORITY_LABELS[v] || v, order: SENIORITY_ORDER },
-      { key: "career", label: "Career stage", group: "primary", values: (j) => [j.career || "unclear"], labelFor: (v) => CAREER_LABELS[v] || v, order: CAREER_ORDER },
+      { key: "role", label: "Role", group: "advanced", values: (j) => j.roles || [], labelFor: (v) => ROLE_LABELS[v] || v },
+      { key: "city", label: "Location", group: "advanced", values: (j) => [j.city] },
+      { key: "seniority", label: "Experience", group: "advanced", values: (j) => (j.seniority ? [j.seniority] : []), labelFor: (v) => SENIORITY_LABELS[v] || v, order: SENIORITY_ORDER },
+      { key: "career", label: "Career stage", group: "advanced", values: (j) => [j.career || "unclear"], labelFor: (v) => CAREER_LABELS[v] || v, order: CAREER_ORDER },
       { key: "company", label: "Company", group: "advanced", values: (j) => [j.company] },
       // The only subtractive filter here. Everything else narrows to what you picked;
       // this one removes it, which is the difference between "show me these six
@@ -365,13 +380,13 @@
       hideOpenedCompanies: false,
       selected: {}, // dimension key -> Set of chosen values
       jobs: [], page: 1,
-      listView: "results",        // "results" | "saved" — what the left column lists
+      view: "flat",               // "flat" (every role) | "grouped" (by company)
+      expanded: new Set(),        // company names open in the grouped view
     };
     DIMENSIONS.forEach((d) => (state.selected[d.key] = new Set()));
 
     const el = {
       search: $("job-search"),
-      pickerRow: $("picker-row"),
       dateSelect: $("date-select"),
       salarySelect: $("salary-select"),
       resetBtn: $("reset-filters"),
@@ -384,13 +399,13 @@
       pagination: $("job-pagination"),
       mobileFilterToggle: $("mobile-filter-toggle"),
       detail: $("job-detail"),
-      savedToggle: $("saved-toggle"),
-      savedCount: $("saved-count"),
-      advancedToggle: $("advanced-toggle"),
-      advancedPanel: $("advanced-filters"),
-      advancedCount: $("advanced-count"),
-      advancedReset: $("advanced-reset"),
-      advancedClose: $("advanced-close"),
+      viewTabs: $("job-view-tabs"),
+      listHead: $("list-head"),
+      sortWrap: $("list-sort"),
+      viewFlat: $("view-flat"),
+      viewGrouped: $("view-grouped"),
+      countFlat: $("count-flat"),
+      countGrouped: $("count-grouped"),
     };
 
     // ---- filtering ----
@@ -475,7 +490,7 @@
     // One picker per dimension, built into the markup up front so ids stay stable.
     // A primary picker has no visible label: it sits in a row of controls the size of
     // the search box, so its name doubles as the placeholder until something is picked.
-    // An advanced one keeps its label above it, as the panel is a form to read down.
+    // One in the grid under it keeps its label above it.
     const pickerMarkup = (d) => `
       <div class="picker-wrap">
         ${d.group === "primary" ? "" : `<span class="picker-label">${escapeHtml(d.label)}</span>`}
@@ -494,7 +509,7 @@
         </details>
       </div>`;
 
-    // Prepended, not assigned: the advanced grid already holds Posted and Salary in
+    // Prepended, not assigned: the grid already holds Posted and Salary in
     // the page markup, with their options and listeners, and they
     // belong after the pickers. Both containers are filled once at init and never rebuilt.
     GROUPS.forEach((g) => {
@@ -605,7 +620,8 @@
       return { roleTags, src, meta, payBit, place, when };
     }
 
-    function jobHtml(j) {
+    // `inGroup` drops the company line: inside a company card the name is the header.
+    function jobHtml(j, inGroup) {
       const { payBit, place, when } = jobParts(j);
       // With a description pane, a plain click on the title selects the row instead of
       // leaving the page; data-selects tells track.js that click is not an "opened".
@@ -620,16 +636,16 @@
         : `<span class="job-title">${escapeHtml(j.title)}</span>`;
       // Investors are deliberately absent from the row: they repeat on every job at a
       // company and crowd the title. The Investor filter still works.
-      // How many roles at this company you have opened, in brackets after the name.
+      // How many roles at this company you have opened, under the date at the right.
       // Always emitted, empty at zero: refreshOpenedCounts() then only has to set
       // text on a click, and CSS :empty keeps a company you've never opened looking
       // exactly as it did before.
-      const openedBit =
-        ` <span class="job-company-opened" data-opened-for="${escapeHtml(j.company)}">` +
+      const openedBit = inGroup ? "" :
+        `<span class="job-company-opened" data-opened-for="${escapeHtml(j.company)}">` +
         `${escapeHtml(openedLabel(openedCountFor(j.company)))}</span>`;
-      const companyBit = `<span class="job-company">${escapeHtml(j.company)}${acquiredNote(j.company)}${openedBit}</span>`;
-      // Company and salary share one line.
-      const subLine = `<p class="job-sub">${companyBit}${payBit}</p>`;
+      const companyBit = inGroup ? "" : `<span class="job-company">${escapeHtml(j.company)}${acquiredNote(j.company)}</span>`;
+      // Company and salary share one line; in a company card, the salary alone, or none.
+      const subLine = companyBit || payBit ? `<p class="job-sub">${companyBit}${payBit}</p>` : "";
       return `
         <article class="job${j.job_id && j.job_id === selectedId ? " is-selected" : ""}"${j.job_id ? ` data-job-id="${escapeHtml(j.job_id)}"` : ""}>
           <div class="job-main">
@@ -637,7 +653,10 @@
             ${subLine}
             ${place ? `<p class="job-meta job-place">${place}</p>` : ""}
           </div>
-          ${when ? `<p class="job-meta job-when">${when}</p>` : ""}
+          <div class="job-side">
+            ${when ? `<p class="job-meta job-when">${when}</p>` : ""}
+            ${openedBit}
+          </div>
         </article>`;
     }
 
@@ -863,7 +882,7 @@
     const split = $("results-split");
     const WIDE = global.matchMedia ? global.matchMedia("(min-width: 1100px)") : null;
     const COLUMN_KEY = 'find-jobs-column-ratio';
-    const DEFAULT_COLUMN_RATIO = 0.42;
+    const DEFAULT_COLUMN_RATIO = 0.6; // the list's share; the description has the rest
     let columnRatio = DEFAULT_COLUMN_RATIO, columnDrag = null;
     try {
       const saved = Number(localStorage.getItem(COLUMN_KEY));
@@ -881,11 +900,29 @@
       divider.title = 'Drag to resize · Arrow keys to adjust · Double-click to reset';
       el.detail.before(divider);
     }
+    // The list's header at its natural width: every tab and Sort at their content
+    // size, plus the gap between them. The divider stops there, so dragging it left
+    // never pushes Sort into the tabs.
+    function listHeadWidth() {
+      const head = el.listHead;
+      if (!head || !head.offsetParent) return 0;
+      const natural = (node) => {
+        if (!node) return 0;
+        const { flex, width } = node.style;
+        node.style.flex = "none"; node.style.width = "max-content";
+        const w = node.getBoundingClientRect().width;
+        node.style.flex = flex; node.style.width = width;
+        return w;
+      };
+      const gap = parseFloat(getComputedStyle(head).columnGap) || 0;
+      return natural(el.viewTabs) + (el.sortWrap ? gap + natural(el.sortWrap) : 0);
+    }
     function columnBounds() {
       if (!divider || !WIDE?.matches) return null;
       const gap = parseFloat(getComputedStyle(split).columnGap) || 0;
       const available = split.clientWidth - gap * 2 - divider.offsetWidth;
-      return available > 790 ? { available, gap, min: 350 / available, max: 1 - 440 / available } : null;
+      const minList = Math.max(350, Math.ceil(listHeadWidth()));
+      return available > minList + 440 ? { available, gap, min: minList / available, max: 1 - 440 / available } : null;
     }
     function updateColumns(requested = columnRatio, remember = false) {
       if (!divider) return;
@@ -966,29 +1003,33 @@
       updateDock();
     }
 
-    // ---- Saved jobs toggle ----
-    // A button in the toolbar switches the list between the filtered results and the
-    // saved jobs; pressed while the saved jobs are showing.
+    // ---- the first role, selected ----
+    // Beside the list the pane is never left empty: on arrival, after the filters
+    // change, on a new page, and on switching tabs, the first role on screen is selected
+    // — in the Companies tab, the first company opens and its first role is taken. Not
+    // under 1100px, where selecting opens a sheet over the list the reader came to see.
+    // Not scrolled to, and not counted as opening the role: only Apply is.
+    let firstTimer = null;
+    function selectFirst(delay = 0) {
+      clearTimeout(firstTimer);
+      firstTimer = setTimeout(() => {
+        if (!el.detail || !(WIDE && WIDE.matches)) return;
+        if (state.view === "grouped") {
+          const head = el.list.querySelector(".cg-head");
+          if (head && !state.expanded.has(head.dataset.company)) {
+            state.expanded.add(head.dataset.company);
+            renderResults();
+          }
+        }
+        const row = el.list.querySelector(".job[data-job-id]");
+        if (row && row.dataset.jobId !== selectedId) selectJob(row.dataset.jobId, { revealWorkspace: false });
+      }, delay);
+    }
+
+    // ---- All jobs / Companies tabs ----
     function updateListTabs() {
-      if (el.savedToggle) {
-        const on = state.listView === "saved";
-        el.savedToggle.setAttribute("aria-pressed", String(on));
-        el.savedToggle.classList.toggle("is-on", on);
-      }
-      if (el.savedCount) {
-        const n = global.Saved ? global.Saved.count() : 0;
-        el.savedCount.textContent = n ? String(n) : "";
-      }
-    }
-    function showList(view) {
-      if (state.listView === view) return;
-      state.listView = view;
-      renderResults();
-      const anchor = el.count ? el.count.parentElement : el.list;
-      if (anchor && anchor.getBoundingClientRect().top < 0) anchor.scrollIntoView({ block: "start" });
-    }
-    if (el.savedToggle) {
-      el.savedToggle.addEventListener("click", () => showList(state.listView === "saved" ? "results" : "saved"));
+      if (el.viewFlat) el.viewFlat.setAttribute("aria-pressed", String(state.view === "flat"));
+      if (el.viewGrouped) el.viewGrouped.setAttribute("aria-pressed", String(state.view === "grouped"));
     }
 
     // Bookmarks, on a row or in the pane: save or unsave without selecting anything.
@@ -1004,7 +1045,7 @@
       el.detail.addEventListener("click", onSaveClick);
     }
     // Any change — here, in another tab of the site, or the account's list arriving —
-    // repaints every bookmark on screen, and the Saved list itself when it is showing.
+    // repaints every bookmark on screen.
     function refreshSaved() {
       document.querySelectorAll("[data-save]").forEach((b) => {
         const on = isSaved(b.dataset.save);
@@ -1013,8 +1054,6 @@
         b.title = on ? "Saved" : "Save job";
         b.setAttribute("aria-label", (on ? "Remove from saved jobs" : "Save job") + b.getAttribute("aria-label").replace(/^[^:]*/, ""));
       });
-      if (state.listView === "saved") renderResults();
-      else updateListTabs();
     }
     global.addEventListener("saved-change", refreshSaved);
     global.addEventListener("saved-sync", refreshSaved);
@@ -1126,23 +1165,143 @@
       });
     }
 
-    // Which list the left column shows: the filtered results, or the saved jobs.
-    function renderSaved() {
-      const saved = global.Saved ? global.Saved.all() : [];
-      const byId = new Map(state.jobs.map((j) => [j.job_id, j]));
-      const rows = saved.map((s) => byId.get(s.id) || { ...s.job, job_id: s.id, roles: [], unlisted: true });
-      el.count.dataset.total = rows.length.toLocaleString();
-      el.count.textContent = rows.length ? `${rows.length} saved job${rows.length === 1 ? "" : "s"}, newest first` : "No saved jobs yet";
-      el.list.innerHTML = rows.length
-        ? rows.map(jobHtml).join("")
-        : `<p class="empty">Save a job with its bookmark ${BOOKMARK} to keep it here.</p>`;
-      if (el.pagination) el.pagination.hidden = true;
+    // ---- Companies view ----
+    // The same filtered roles, one card per company; a card opens to its roles, and a
+    // role opens in the description pane like any other row. A monogram tint stands in
+    // where a company has no logo, derived from the name so it keeps its colour.
+    const MONOGRAM_TINTS = 6;
+    function monogram(name) {
+      let h = 0;
+      for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 100000;
+      const words = name.replace(/[^A-Za-z0-9 ]/g, " ").trim().split(/\s+/).filter(Boolean);
+      // One-word names take two letters ("OpenAI" → "OP"), multi-word take initials.
+      const initials = (
+        words.length === 0 ? "?"
+        : words.length === 1 ? words[0].slice(0, 2)
+        : words.slice(0, 2).map((w) => w[0]).join("")
+      ).toUpperCase();
+      return { initials, tint: h % MONOGRAM_TINTS };
     }
+
+    function buildGroups(jobs) {
+      const map = new Map();
+      for (const j of jobs) {
+        let g = map.get(j.company);
+        if (!g) {
+          g = { company: j.company, jobs: [], cities: new Map(), newest: 0, oldest: Infinity,
+                titleFirst: j.title, payMax: 0, size: j.size, stage: j.stage, logo: j.logo || null };
+          map.set(j.company, g);
+        }
+        g.jobs.push(j);
+        g.cities.set(j.city, (g.cities.get(j.city) || 0) + 1);
+        const t = j.posted ? new Date(j.posted).getTime() : 0;
+        if (t > g.newest) g.newest = t;
+        if (t && t < g.oldest) g.oldest = t;
+        if (j.title.localeCompare(g.titleFirst) < 0) g.titleFirst = j.title;
+        const pay = j.salaryMax || j.salaryMin || 0;
+        if (pay > g.payMax) g.payMax = pay;
+        if (!g.size && j.size) g.size = j.size;
+        if (!g.stage && j.stage) g.stage = j.stage;
+        if (!g.logo && j.logo) g.logo = j.logo;
+      }
+      const groups = [...map.values()];
+      const byName = (a, b) => a.company.localeCompare(b.company);
+      if (state.sort === "company") groups.sort(byName);
+      // Title A–Z orders companies by the first title they hold, so it stays about titles.
+      else if (state.sort === "title") groups.sort((a, b) => a.titleFirst.localeCompare(b.titleFirst) || byName(a, b));
+      else if (state.sort === "salary") groups.sort((a, b) => b.payMax - a.payMax || b.jobs.length - a.jobs.length || byName(a, b));
+      else if (state.sort === "count") groups.sort((a, b) => b.jobs.length - a.jobs.length || byName(a, b));
+      else if (state.sort === "oldest") groups.sort((a, b) => dayOfTs(a.oldest) - dayOfTs(b.oldest) || companyShuffleOf(a.company) - companyShuffleOf(b.company));
+      else groups.sort((a, b) => dayOfTs(b.newest) - dayOfTs(a.newest) || companyShuffleOf(a.company) - companyShuffleOf(b.company));
+      return groups;
+    }
+
+    function groupHtml(g) {
+      const open = state.expanded.has(g.company);
+      const m = monogram(g.company);
+      const n = g.jobs.length;
+      const badge = `<span class="cg-mono t${m.tint}" aria-hidden="true">${escapeHtml(m.initials)}</span>`;
+      // A logo that fails to load gives way to the monogram, in the same box.
+      const logo = g.logo
+        ? `<span class="cg-logo"><img src="${escapeHtml(g.logo)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"` +
+          ` onerror="this.parentNode.replaceWith(Object.assign(document.createElement('span'),{className:'cg-mono t${m.tint}',textContent:'${escapeHtml(m.initials)}'}))" /></span>`
+        : badge;
+      const cities = [...g.cities.entries()].sort((a, b) => b[1] - a[1])
+        .map(([c, k]) => `<span class="cg-city">${escapeHtml(c)}${n > 1 ? `&nbsp;<span class="cg-n">${k}</span>` : ""}</span>`)
+        .join(`&#8203;<span class="cg-sep">·</span>`);
+      const facts = [
+        g.size ? (SIZE_LABELS[g.size] || g.size) + " staff" : null,
+        g.stage,
+        g.payMax ? "up to $" + Math.round(g.payMax / 1000) + "k" : null,
+        g.newest ? relativeDate(new Date(g.newest).toISOString()) : null,
+      ].filter(Boolean).map((f) => `<span class="cg-fact">${escapeHtml(f)}</span>`).join("");
+      const opened = openedCountFor(g.company);
+      return `
+        <section class="cgroup${open ? " is-open" : ""}">
+          <button class="cg-head" type="button" data-company="${escapeHtml(g.company)}" aria-expanded="${open}">
+            <span class="cg-top">
+              ${logo}
+              <span class="cg-heading">
+                <span class="cg-name">${escapeHtml(g.company)}${acquiredNote(g.company)}${opened ? ` <span class="job-company-opened">${escapeHtml(openedLabel(opened))}</span>` : ""}</span>
+                ${facts ? `<span class="cg-facts">${facts}</span>` : ""}
+              </span>
+              <span class="cg-count">${n} role${n === 1 ? "" : "s"}</span>
+              <span class="cg-toggle" aria-hidden="true"></span>
+            </span>
+            <span class="cg-cities"><span class="cg-label">Hiring in</span>${cities}</span>
+          </button>
+          ${open ? `<div class="cg-body">${g.jobs.map((j) => jobHtml(j, true)).join("")}</div>` : ""}
+        </section>`;
+    }
+
+    function renderGroups(results) {
+      const groups = buildGroups(results);
+      const pageCount = Math.max(1, Math.ceil(groups.length / COMPANIES_PER_PAGE));
+      state.page = Math.min(Math.max(1, state.page), pageCount);
+      const start = (state.page - 1) * COMPANIES_PER_PAGE;
+      const slice = groups.slice(start, start + COMPANIES_PER_PAGE);
+      el.count.dataset.total = groups.length.toLocaleString();
+      el.count.textContent = groups.length
+        ? `Showing ${start + 1}–${start + slice.length} of ${groups.length} companies · ${results.length} roles`
+        : "0 companies · 0 roles";
+      el.list.innerHTML = slice.length ? slice.map(groupHtml).join("") : `<p class="empty">No roles match those filters.</p>`;
+      renderPagination(pageCount);
+    }
+
+    // Opening or closing a company redraws the list in place and keeps focus on its
+    // header, which the redraw replaces.
+    el.list.addEventListener("click", (e) => {
+      const head = e.target.closest(".cg-head");
+      if (!head) return;
+      const company = head.dataset.company;
+      if (state.expanded.has(company)) state.expanded.delete(company);
+      else state.expanded.add(company);
+      const hadFocus = document.activeElement === head;
+      renderResults();
+      if (hadFocus) el.list.querySelector(`.cg-head[data-company="${CSS.escape(company)}"]`)?.focus();
+    });
+
+    // `isNav` is set only by the tabs themselves: restoring a URL also moves the tab,
+    // and that should not leave a history entry behind.
+    function setView(view, isNav) {
+      view = view === "grouped" ? "grouped" : "flat";
+      if (isNav && view !== state.view) pushNext = true;
+      state.view = view;
+      state.page = 1;
+      renderResults();
+      syncUrl();
+      selectFirst();
+    }
+    if (el.viewFlat) el.viewFlat.addEventListener("click", () => setView("flat", true));
+    if (el.viewGrouped) el.viewGrouped.addEventListener("click", () => setView("grouped", true));
 
     function renderResults() {
       updateListTabs();
-      if (state.listView === "saved") { renderSaved(); return; }
       const results = sortJobs(filtered());
+      // Each tab says what it would show, so the choice is informed before the click.
+      if (el.countFlat) el.countFlat.textContent = results.length.toLocaleString();
+      if (el.countGrouped) el.countGrouped.textContent = new Set(results.map((j) => j.company)).size.toLocaleString();
+      if (state.view === "grouped") { renderGroups(results); return; }
       const pageCount = Math.max(1, Math.ceil(results.length / JOBS_PER_PAGE));
       state.page = Math.min(Math.max(1, state.page), pageCount);
       const start = (state.page - 1) * JOBS_PER_PAGE;
@@ -1151,7 +1310,7 @@
       el.count.textContent = results.length
         ? `Showing ${start + 1}–${start + slice.length} of ${results.length} matching roles`
         : "0 matching roles";
-      el.list.innerHTML = slice.length ? slice.map(jobHtml).join("") : `<p class="empty">No roles match those filters.</p>`;
+      el.list.innerHTML = slice.length ? slice.map((j) => jobHtml(j)).join("") : `<p class="empty">No roles match those filters.</p>`;
       renderPagination(pageCount);
     }
 
@@ -1165,30 +1324,9 @@
       return n;
     }
 
-    // What the advanced panel is holding. Shown on its button, because a filter set in
-    // a closed panel is otherwise invisible from the row it narrows.
-    function advancedActiveCount() {
-      let n = DIMENSIONS.reduce((a, d) => a + (d.group === "advanced" && state.selected[d.key].size ? 1 : 0), 0);
-      if (state.range !== "all") n++;
-      if (state.salary !== "all") n++;
-      return n;
-    }
-
     function updateResetBtn() {
       const n = activeCount();
-      if (el.advancedToggle) {
-        const a = advancedActiveCount();
-        el.advancedToggle.classList.toggle("has-selection", a > 0);
-        el.advancedToggle.setAttribute("aria-label", `Advanced filters${a ? `, ${a} active` : ""}`);
-        if (el.advancedCount) {
-          el.advancedCount.hidden = a === 0;
-          el.advancedCount.textContent = a ? String(a) : "";
-        }
-      }
-      if (el.undoBtn) {
-        el.undoBtn.addEventListener("click", undo);
-        updateUndoBtn();
-      }
+      if (el.undoBtn) updateUndoBtn();
 
       if (el.resetBtn) {
         el.resetBtn.hidden = n === 0;
@@ -1285,9 +1423,9 @@
     //
     // Everything is written as repeated params (?city=A&city=B) rather than a joined
     // string, because company names and markets contain commas of their own.
-    // "view" and "sponsorship" are no longer written — the company view and the visa
-    // filter are gone — but stay listed so an old link's value is dropped from the
-    // address bar rather than carried along as someone else's param.
+    // "view" is written only for the Companies tab. "sponsorship" is no longer written
+    // — the visa filter is gone — but stays listed so an old link's value is dropped
+    // from the address bar rather than carried along as someone else's param.
     const OURS = ["q", "posted", "salary", "sort", "view", "sponsorship", "page", "unseen", "unopened"];
     let syncing = false;      // guard: applying a URL must not write one straight back
     let pushNext = false;     // set immediately before a navigation-like render
@@ -1306,6 +1444,7 @@
       if (state.sort !== "newest") p.set("sort", state.sort);
       if (state.hideOpened) p.set("unseen", "1");
       if (state.hideOpenedCompanies) p.set("unopened", "1");
+      if (state.view === "grouped") p.set("view", "grouped");
       if (state.page > 1) p.set("page", String(state.page));
       const qs = p.toString();
       return location.pathname + (qs ? "?" + qs : "") + location.hash;
@@ -1329,6 +1468,7 @@
           hideOpenedCompanies: p.get("unopened") === "1",
         },
         page: Math.max(1, Math.floor(Number(p.get("page"))) || 1),
+        view: p.get("view") === "grouped" ? "grouped" : "flat",
       };
     }
 
@@ -1389,10 +1529,11 @@
       applyUrlState(urlToState());
     }
 
-    function applyUrlState({ filters, page }) {
+    function applyUrlState({ filters, page, view: tab }) {
       syncing = true;
       restoring = true;
       applyFilterState(filters);   // resets page to 1 by way of render()
+      setView(tab);
       state.page = page;
       renderResults();             // clamps an out-of-range page against the real count
       restoring = false;
@@ -1401,6 +1542,7 @@
       updateUndoBtn();
       listeners.forEach((fn) => fn());
       syncUrl();                   // normalise, in case the page was clamped
+      selectFirst();
     }
 
     function render() {
@@ -1411,6 +1553,8 @@
       if (!restoring) recordHistory();
       syncUrl();
       listeners.forEach((fn) => fn());
+      // A quarter second, so typing in the search box selects once it pauses, not per key.
+      selectFirst(250);
     }
 
     // ---- events ----
@@ -1438,6 +1582,7 @@
         pushNext = true; // paging is navigation: Back should return to the page you left
         renderResults();
         syncUrl();
+        selectFirst();
         if (focusNumber) {
           const active = el.pagination.querySelector('.page-number[aria-current="page"]');
           if (active) {
@@ -1485,10 +1630,13 @@
 
     if (el.dateSelect) {
       el.dateSelect.innerHTML = DATE_RANGES.map((r) => `<option value="${r.k}">${escapeHtml(r.label)}</option>`).join("");
+      // Assigned, not left to default: the setter is what repaints a select-menu.js picker.
+      el.dateSelect.value = state.range;
       el.dateSelect.addEventListener("change", (e) => { state.range = e.target.value; render(); });
     }
     if (el.salarySelect) {
       el.salarySelect.innerHTML = SALARY_FLOORS.map((s) => `<option value="${s.k}">${escapeHtml(s.label)}</option>`).join("");
+      el.salarySelect.value = state.salary;
       el.salarySelect.addEventListener("change", (e) => { state.salary = e.target.value; render(); });
     }
     if (el.resetBtn) {
@@ -1505,55 +1653,7 @@
       });
     }
 
-    // ---- advanced panel ----
-    // A popover on desktop. Under 720px the CSS shows it inline in the filter drawer and
-    // hides the button, so none of this is reachable there.
-    if (el.advancedToggle && el.advancedPanel) {
-      const setAdvanced = (open, returnFocus) => {
-        el.advancedPanel.classList.toggle("is-open", open);
-        el.advancedToggle.setAttribute("aria-expanded", String(open));
-        if (!open) {
-          // A picker left open inside would reappear open next time.
-          el.advancedPanel.querySelectorAll("details[open]").forEach((d) => (d.open = false));
-          if (returnFocus) el.advancedToggle.focus();
-        }
-      };
-      const isOpen = () => el.advancedPanel.classList.contains("is-open");
-      el.advancedToggle.addEventListener("click", () => setAdvanced(!isOpen(), false));
-      if (el.advancedClose) el.advancedClose.addEventListener("click", () => setAdvanced(false, true));
-      document.addEventListener("click", (e) => {
-        if (!isOpen()) return;
-        // The path, not contains(): the saved-filters bar re-renders inside its own click
-        // handler, so by the time this runs the clicked button can already be detached.
-        const path = e.composedPath();
-        if (path.includes(el.advancedPanel) || path.includes(el.advancedToggle)) return;
-        setAdvanced(false, false);
-      });
-      document.addEventListener("keydown", (e) => {
-        // defaultPrevented: Escape already spent, e.g. cancelling a saved filter's name.
-        if (e.key !== "Escape" || e.defaultPrevented || !isOpen()) return;
-        // Escape inside an open picker closes that picker first, not the whole panel.
-        const openPicker = el.advancedPanel.querySelector("details[open]");
-        if (openPicker) {
-          openPicker.open = false;
-          const s = openPicker.querySelector("summary");
-          if (s) s.focus();
-          return;
-        }
-        setAdvanced(false, true);
-      });
-    }
-
-    // Clears only what lives in the panel; the search and primary row stay as they are.
-    if (el.advancedReset) {
-      el.advancedReset.addEventListener("click", () => {
-        DIMENSIONS.forEach((d) => { if (d.group === "advanced") state.selected[d.key].clear(); });
-        state.range = "all"; state.salary = "all";
-        if (el.dateSelect) el.dateSelect.value = "all";
-        if (el.salarySelect) el.salarySelect.value = "all";
-        render();
-      });
-    }
+    if (el.undoBtn) el.undoBtn.addEventListener("click", undo);
 
     let booted = false;
 
@@ -1567,6 +1667,7 @@
         if (!booted) {
           booted = true;
           if (openedWith) applyUrlState(openedWith);
+          selectFirst();
         }
       },
       state,
