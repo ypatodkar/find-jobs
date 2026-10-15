@@ -118,3 +118,11 @@ test("a scrape where most postings would be dropped keeps them all", async () =>
   assert.match(logs.join(" "), /Not dropping 3 of 4/);
   assert.equal(results.firms.a.jobs[3].career, "early", "labels are still applied");
 });
+
+test("a job listed under two firms is not reported as cached on a first run", async () => {
+  const shared = job("Acme", "SWE");
+  const s = await labelJobs({ firms: { a: { jobs: [shared] }, b: { jobs: [shared] } } }, {}, { apiKey: "k", fetch: fakeJev(() => ({ field: "cs", level: "early" })) });
+  assert.equal(s.jobs, 2);
+  assert.equal(s.cached, 0);
+  assert.equal(s.asked, 1);
+});

@@ -81,10 +81,7 @@
           <button type="button" class="drawer-close" id="filter-drawer-close">Done</button>
         </div>
 
-        <!-- The three filters people reach for on every visit sit in one row with the
-             search. Everything else is a click away in the advanced panel, so the
-             list starts near the top of the page instead of below two grids of
-             dropdowns. jobs-ui.js renders the pickers into both. -->
+        <!-- The search on its own line; every filter is in the grid under it. -->
         <div class="filter-primary" id="filter-primary">
           <div class="search-wrap">
             <svg class="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
@@ -93,27 +90,14 @@
             </svg>
             <input id="job-search" type="search" placeholder="Search title or company…" aria-label="Search roles" autocomplete="off" />
           </div>
-          <div class="primary-pickers" id="picker-row"></div>
-          <button type="button" class="advanced-toggle" id="advanced-toggle" aria-expanded="false" aria-controls="advanced-filters" aria-label="Advanced filters" title="Advanced filters">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
-              <path d="M3 6h7M14 6h7M3 12h3M10 12h11M3 18h11M18 18h3"/>
-            </svg>
-            <span class="advanced-n" id="advanced-count" hidden></span>
-          </button>
+        </div>
 
-          <!-- Desktop: a popover under the row. Mobile: shown inline in the drawer,
-               where everything is already one scrolling sheet. -->
-          <div class="advanced-panel" id="advanced-filters" role="group" aria-labelledby="advanced-title">
-            <div class="advanced-head">
-              <h2 class="advanced-title" id="advanced-title">Advanced filters</h2>
-              <button type="button" class="linkish advanced-reset" id="advanced-reset">Reset all</button>
-              <button type="button" class="advanced-close" id="advanced-close">Close</button>
-            </div>
-            <div class="filter-grid" id="advanced-grid">
-              <label class="sort-wrap"><span>Posted</span><select id="date-select" aria-label="Filter by date posted"></select></label>
-              <label class="sort-wrap"><span>Salary</span><select id="salary-select" aria-label="Filter by minimum salary"></select></label>
-            </div>
-            <div class="advanced-foot" id="preset-slot"></div>
+        <!-- Every filter, always in view, each under its label. jobs-ui.js renders
+             the pickers in ahead of Posted and Salary. -->
+        <div class="filter-more" id="advanced-filters" role="group" aria-label="More filters">
+          <div class="filter-grid" id="advanced-grid">
+            <label class="sort-wrap"><span>Posted</span><select id="date-select" aria-label="Filter by date posted" data-select-menu></select></label>
+            <label class="sort-wrap"><span>Salary</span><select id="salary-select" aria-label="Filter by minimum salary" data-select-menu></select></label>
           </div>
         </div>
 
@@ -127,22 +111,11 @@
             <input type="checkbox" id="hide-opened-companies" />
             <span>Hide companies I&rsquo;ve opened</span>
           </label>
+          <!-- presets.js puts the saved-filters bar here, beside the other ways of
+               shaping the list. -->
+          <div class="tail-presets" id="preset-slot"></div>
           <button type="button" class="undo-btn" id="undo-filters" hidden>↩ Undo</button>
           <button type="button" class="reset-btn" id="reset-filters" hidden>Reset filters</button>
-          <button type="button" class="saved-toggle" id="saved-toggle" aria-pressed="false">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-            Saved jobs <span class="tab-n" id="saved-count"></span>
-          </button>
-          <div class="sort-wrap tail-sort"><span aria-hidden="true">Sort</span>
-            <select id="sort-select" aria-label="Sort roles" data-select-menu>
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="salary">Highest salary</option>
-              <option value="count">Most roles</option>
-              <option value="company">Company A–Z</option>
-              <option value="title">Title A–Z</option>
-            </select>
-          </div>
         </div>
 
         <!-- Mobile only. The list is behind the drawer, so without this you filter
@@ -158,6 +131,24 @@
       <div class="results-split" id="results-split">
         <div class="results-main">
           <div class="results-bar" id="job-results-bar" hidden>
+            <!-- The list's own header: how it is organised, and its order. Sort sits at the
+                 column's right end, so it moves with the divider. -->
+            <div class="list-head" id="list-head">
+              <div class="view-tabs" id="job-view-tabs" role="group" aria-label="List view">
+                <button type="button" class="seg" id="view-flat" aria-pressed="true">All jobs<span class="seg-n" id="count-flat"></span></button>
+                <button type="button" class="seg" id="view-grouped" aria-pressed="false">Companies<span class="seg-n" id="count-grouped"></span></button>
+              </div>
+              <div class="sort-wrap list-sort" id="list-sort"><span aria-hidden="true">Sort</span>
+                <select id="sort-select" aria-label="Sort roles" data-select-menu>
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                  <option value="salary">Highest salary</option>
+                  <option value="count">Most roles</option>
+                  <option value="company">Company A–Z</option>
+                  <option value="title">Title A–Z</option>
+                </select>
+              </div>
+            </div>
             <p class="results-meta" id="job-count"></p>
             <p class="results-hint" aria-hidden="true"><kbd>↑</kbd><kbd>↓</kbd> to move between jobs</p>
           </div>

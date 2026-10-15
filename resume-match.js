@@ -41,7 +41,6 @@
   }
   function setActive(id) {
     try { if (id) localStorage.setItem(ACTIVE, id); else localStorage.removeItem(ACTIVE); } catch { /* fine */ }
-    renderLibrary();
   }
 
   // A static host answers 404 or 405 for these paths: the endpoints simply are not
@@ -69,15 +68,13 @@
   // flicker through "loading" on each click.
   let listing = null;
   let items = [];
-  let libraryHost = null, libraryInput = null, libraryReady = false, libraryBusy = false;
-  let libraryError = '';
   function loadList(force) {
     if (!listing || force) {
       const identity = accountVersion;
       listing = call("/resumes")
         .then((d) => {
           if (identity !== accountVersion) throw new Error("The signed-in account changed.");
-          items = d.resumes || []; renderLibrary(); return items;
+          items = d.resumes || []; return items;
         })
         .catch((err) => { if (identity === accountVersion) listing = null; throw err; });
     }
@@ -118,7 +115,6 @@
   const stale = new Map();  // "resumeId|jobId" -> "description" | "rubric": checked before a change
   const key = (r, j) => r + "|" + j;
 
-  // Both the library and the job inspector use this same list and mutation path.
   async function addResume(file) {
     if (!global.ResumeImport) throw new Error('Resume upload could not load. Refresh and try again.');
     const identity = accountVersion;
@@ -136,14 +132,14 @@
     if (identity !== accountVersion) return;
     items = items.filter((resume) => resume.id !== id); listing = Promise.resolve(items);
     [...scores.keys()].forEach((cacheKey) => { if (cacheKey.startsWith(id + '|')) { scores.delete(cacheKey); stale.delete(cacheKey); } });
-    if (wasActive) setActive(items[0]?.id || null); else renderLibrary();
+    if (wasActive) setActive(items[0]?.id || null);
   }
-  // One dropdown for everything about resumes, in the Resumes section beside the
-  // filters and in the description pane: pick one, delete any of them from its own
-  // row, or add another from the foot of the list. Drawn like the select-menu.js
-  // pickers, but by hand, since a <select> cannot hold the buttons. `act` is the data
-  // attribute each host's click handler reads.
-  function pickerHtml(act, selected, disabled) {
+  // One dropdown for everything about resumes, in the description pane: pick one,
+  // delete any of them from its own row, or add another from the foot of the list.
+  // Drawn like the select-menu.js pickers, but by hand, since a <select> cannot hold
+  // the buttons.
+  function pickerHtml(selected, disabled) {
+    const act = "data-act";
     const off = disabled ? " disabled" : "";
     const active = items.find((r) => r.id === selected);
     const label = active ? active.label : items.length ? "Select resume" : "No resumes yet";
@@ -185,90 +181,6 @@
       : list[Math.max(0, Math.min(list.length - 1, at + (event.key === "ArrowDown" ? 1 : -1)))];
     event.preventDefault(); next?.focus();
     return true;
-  }
-
-  function renderLibrary() {
-    if (!libraryHost?.isConnected) return;
-    const focused = libraryHost.contains(document.activeElement) ? document.activeElement : null;
-    const focusAction = focused?.dataset.libraryAct, focusId = focused?.dataset.resumeId;
-    const focusSummary = !!focused?.matches('.resume-picker > summary');
-    const signedOut = libraryReady && global.Auth && !global.Auth.account();
-    const locked = libraryBusy || !!(current_mount?.host.isConnected && current_mount.isBusy());
-    // A list that never loaded has nothing to pick from: the error and Retry stand alone.
-    const failed = libraryError && !listing;
-    libraryHost.innerHTML = `<div class="resume-library-head"><h2 id="resume-library-title">Resumes${libraryReady && !signedOut ? `<span class="resume-library-count">${items.length}</span>` : ''}</h2></div>
-      ${!libraryReady ? '<p class="resume-library-note">Loading resumes…</p>' : signedOut ? `<p class="resume-library-note">Sign in to manage your resumes.</p>${global.Auth.enabled() ? '<div class="resume-library-signin"></div>' : ''}` : failed ? '' : pickerHtml('data-library-act', activeId(items), locked) + (items.length ? '' : '<p class="resume-library-note">Add a resume to check your fit for a job.</p>')}
-      <p class="resume-library-status${libraryError ? ' is-error' : ''}" role="status" aria-live="polite"${libraryError || libraryBusy ? '' : ' hidden'}>${esc(libraryError || (libraryBusy ? 'Saving resume changes…' : ''))}</p>${failed ? '<button type="button" class="resume-library-retry" data-library-act="retry">Retry</button>' : ''}`;
-    if (libraryInput) libraryHost.append(libraryInput);
-    wirePickers(libraryHost);
-    if (signedOut && global.Auth.enabled()) global.Auth.renderButton(libraryHost.querySelector('.resume-library-signin'), { size: 'medium' });
-    if (focusAction || focusSummary) {
-      // A row inside the closed dropdown cannot take focus; its summary stands in.
-      const target = [...libraryHost.querySelectorAll('[data-library-act]')].find((button) => button.dataset.libraryAct === focusAction && button.dataset.resumeId === focusId);
-      (target && !target.closest('details:not([open])') ? target : libraryHost.querySelector('.resume-picker > summary, .resume-library-retry'))?.focus({ preventScroll: true });
-    }
-  }
-  async function startLibrary() {
-    if (!libraryHost) return;
-    const identity = accountVersion;
-    libraryReady = false; libraryError = ''; renderLibrary();
-    if (global.Auth) await global.Auth.ready;
-    if (identity !== accountVersion) return;
-    libraryReady = true;
-    if (!global.Auth || global.Auth.account()) {
-      try { await loadList(); }
-      catch (err) { if (identity === accountVersion) libraryError = err.message; }
-    }
-    if (identity === accountVersion) renderLibrary();
-  }
-  async function changeLibrary(action, id, file) {
-    if (libraryBusy || (current_mount?.host.isConnected && current_mount.isBusy())) return;
-    const resume = items.find((item) => item.id === id);
-    if (action === 'remove' && (!resume || !global.confirm(`Remove “${resume.label}”?`))) return;
-    const identity = accountVersion;
-    libraryBusy = true; libraryError = ''; renderLibrary();
-    if (current_mount?.host.isConnected) current_mount.refresh();
-    let changed = false;
-    try {
-      if (action === 'upload') changed = !!await addResume(file);
-      else { await deleteResume(id); changed = true; }
-    } catch (err) { if (identity === accountVersion) libraryError = err.message; }
-    finally {
-      libraryBusy = false;
-      if (identity === accountVersion) {
-        renderLibrary();
-        if (current_mount?.host.isConnected) {
-          if (changed) await current_mount.start(); else current_mount.refresh();
-        }
-        libraryHost?.querySelector('.resume-picker > summary')?.focus({ preventScroll: true });
-      }
-    }
-  }
-  function mountLibrary(host) {
-    if (!host || libraryHost) return;
-    libraryHost = host;
-    libraryInput = document.createElement('input');
-    libraryInput.type = 'file'; libraryInput.hidden = true;
-    libraryInput.accept = global.ResumeImport?.ACCEPT || '.pdf,.docx,.txt,.md';
-    libraryInput.addEventListener('change', () => {
-      const file = libraryInput.files?.[0]; libraryInput.value = '';
-      if (file) changeLibrary('upload', null, file);
-    });
-    host.addEventListener('click', (event) => {
-      const button = event.target.closest('[data-library-act]');
-      if (!button || button.disabled) return;
-      const { libraryAct: action, resumeId: id } = button.dataset;
-      if (action === 'upload') { button.closest('.resume-picker')?.removeAttribute('open'); libraryInput.click(); }
-      else if (action === 'remove') changeLibrary(action, id);
-      else if (action === 'retry') startLibrary();
-      else if (action === 'choose') {
-        button.closest('.resume-picker')?.removeAttribute('open');
-        if (current_mount?.host.isConnected) current_mount.chooseResume(id, false);
-        else setActive(id);
-      }
-    });
-    host.addEventListener('keydown', pickerKeydown);
-    startLibrary();
   }
 
   function ago(ts) {
@@ -600,9 +512,9 @@
       if (result) showResumeToolbar = true;
       const rows = ranked(findings(result));
       const hasBreakdown = Array.isArray(result?.findings);
-      const controlsBusy = !!busy || libraryBusy;
+      const controlsBusy = !!busy;
       const canCheck = loaded && !signedOut && items.length && hasDescription !== false && !controlsBusy;
-      const select = pickerHtml("data-act", current(), controlsBusy);
+      const select = pickerHtml(current(), controlsBusy);
       const controls = `<div class="analysis-resume-controls"><div class="analysis-entry-picker">${select}</div></div>`;
       const action = `<button type="button" class="match-run${result ? " analysis-reanalyze" : " analysis-primary"}${busy === "checking" ? " is-busy" : ""}" data-act="run"${canCheck ? "" : " disabled"}>${SPARKLE}<span>${busy === "checking" ? result ? "Updating…" : "Analyzing resume…" : result ? "Reanalyze" : "Analyze resume"}</span></button>`;
       // Analyzed: the dropdown with when it was analyzed, and Reanalyze to the side. Not
@@ -680,7 +592,6 @@
         });
         if (dialog && breakdownOpen) dialog.showModal();
       });
-      renderLibrary();
       if (focusAct) host.querySelector(`[data-act="${focusAct}"]`)?.focus({ preventScroll: true });
     }
     function remark() {
@@ -741,7 +652,7 @@
     }
     async function run() {
       const id = current();
-      if (!id || busy || libraryBusy) return;
+      if (!id || busy) return;
       const version = ++revision, identity = accountVersion, again = !!stored();
       const restoreFocus = host.contains(document.activeElement);
       busy = "checking"; message = null; remark(); render();
@@ -828,7 +739,7 @@
       }
     });
     async function chooseResume(id, focusPicker = true) {
-      if (busy || libraryBusy || !items.some((resume) => resume.id === id)) return;
+      if (busy || !items.some((resume) => resume.id === id)) return;
       const version = ++revision;
       setActive(id); busy = scores.has(key(id, job.job_id)) ? null : "loading"; message = null; breakdownOpen = false; breakdownFilter = 'all'; expandedRows.clear(); remark(); render();
       try { await fetchStored(id, version); } catch (err) { if (version === revision) message = { kind: "error", text: err.message }; }
@@ -867,8 +778,6 @@
       items = [];
       scores.clear();
       stale.clear();
-      libraryBusy = false;
-      startLibrary();
       if (current_mount && current_mount.host.isConnected) current_mount.start();
     });
     global.addEventListener("auth-error", (e) => {
@@ -880,5 +789,4 @@
   }
 
   global.ResumeMatch = { mount };
-  mountLibrary(document.getElementById('resume-library'));
 })(window);

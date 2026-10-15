@@ -607,6 +607,126 @@ footer code {
   flex-wrap: wrap;
 }
 
+/* ---- The list's header: All jobs / Companies / Saved, then Sort ----
+   The first line of the results bar, across the list column, so how the list is
+   organised and ordered reads as the list's own controls. jobs-ui.js stops the divider
+   before the column is too narrow for them; wrapping is only the fallback. */
+.list-head { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: center; column-gap: 16px; border-bottom: 1px solid var(--rule); }
+.view-tabs { display: flex; flex: 1 1 auto; }
+.list-sort { position: relative; flex: none; margin-left: auto; padding: 4px 0 4px 16px; }
+/* A hairline of the accent between All jobs, Companies and Sort. */
+.view-tabs .seg { position: relative; }
+.view-tabs .seg + .seg::before,
+.list-sort::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 1px;
+  height: 18px;
+  transform: translateY(-50%);
+  background: color-mix(in oklab, var(--accent) 55%, transparent);
+}
+.list-sort .select-picker { text-transform: none; letter-spacing: 0; }
+.view-tabs .seg {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: -1px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.view-tabs .seg:hover { color: var(--ink); background: var(--accent-fill); }
+.view-tabs .seg[aria-pressed="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.view-tabs .seg:focus-visible { outline: 2px solid var(--accent2); outline-offset: -3px; }
+.seg-n { font-size: 0.72rem; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.view-tabs .seg[aria-pressed="true"] .seg-n { color: var(--accent); opacity: 0.8; }
+
+/* ---- Company cards (the Companies tab) ----
+   Company facts sit beside the name, with hiring locations underneath.
+   --cg-badge sizes the badge and is the name's line height. */
+.cgroup {
+  --cg-badge: 24px;
+  --cg-gap: 10px;
+  margin-bottom: 0;
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.cg-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cg-head:hover { background: var(--chip-bg); }
+.cgroup.is-open > .cg-head { border-bottom: 1px solid var(--rule); }
+.cg-head:focus-visible { outline: 2px solid var(--accent2); outline-offset: -2px; }
+.cg-top { display: flex; align-items: flex-start; gap: var(--cg-gap); width: 100%; }
+.cg-heading { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.cg-mono, .cg-logo { flex: none; width: var(--cg-badge); height: var(--cg-badge); }
+.cg-mono {
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  background: var(--accent-fill);
+}
+/* Contained, not cropped: these are wordmarks and squares alike. Muted so a column of
+   brand colours does not fight the single accent; full colour on a closer look. */
+.cg-logo { display: grid; place-items: center; overflow: hidden; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+.cg-logo img { display: block; width: 100%; height: 100%; object-fit: contain; filter: grayscale(1) opacity(0.82); }
+.cg-head:hover .cg-logo img, .cgroup.is-open .cg-logo img { filter: none; }
+.cg-name { flex: 0 1 auto; min-width: 0; font-family: var(--serif); font-size: 1.08rem; font-weight: 650; line-height: var(--cg-badge); color: var(--ink); overflow-wrap: anywhere; }
+.cg-name .job-company-opened { font-family: var(--sans); font-size: 0.78rem; font-weight: 400; }
+.cg-count { flex: none; padding: 3px 8px; border: 1px solid var(--accent); border-radius: 5px; font-family: var(--mono); font-size: 0.7rem; font-weight: 650; line-height: 16px; color: var(--accent); white-space: nowrap; }
+.cg-toggle { flex: none; display: grid; place-items: center; width: var(--cg-badge); height: var(--cg-badge); border-radius: 7px; font-size: 1.1rem; font-weight: 600; line-height: 1; color: var(--accent); }
+.cg-toggle::before { content: "+"; }
+.cgroup.is-open .cg-toggle { color: var(--on-accent); background: var(--accent); }
+.cgroup.is-open .cg-toggle::before { content: "−"; }
+.cg-cities { padding-left: calc(var(--cg-badge) + var(--cg-gap)); font-family: var(--mono); font-size: 0.72rem; color: var(--ink-faint); }
+.cg-label { margin-right: 8px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--accent); }
+/* A city and its count wrap as one; only the separators are break points. */
+.cg-city { white-space: nowrap; }
+.cg-n { color: var(--ink-soft); }
+.cg-sep { margin: 0 6px; color: var(--rule-strong); }
+.cg-facts { display: contents; font-family: var(--mono); }
+.cg-fact { padding: 2px 7px; border-radius: 5px; font-size: 0.66rem; color: var(--ink-soft); background: var(--chip-bg); white-space: nowrap; }
+/* Indent content with padding so a selected role's tint spans the company width. */
+.cg-body { padding-top: 0; }
+.page-split .cgroup .cg-body .job {
+  margin: 0;
+  padding-left: calc(var(--cg-badge) + var(--cg-gap) + 30px);
+  padding-right: 12px;
+}
+.cg-body .job.is-selected { background: var(--accent-fill); box-shadow: inset 3px 0 0 var(--accent); }
+.cg-body .job:last-child { border-bottom: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .cg-head, .cg-toggle { transition: background 160ms ease, color 160ms ease; }
+}
+
 /* ---- Split results ----
    The jobs page uses the whole window: the list on the left, the selected job's
    description on the right. The pane is sticky, so scrolling the list never takes
@@ -650,35 +770,6 @@ footer code {
   scrollbar-gutter: stable;
 }
 
-/* ---- Saved jobs toggle (toolbar) ---- */
-.saved-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--sans);
-  font-size: 0.82rem;
-  color: var(--ink-soft);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: 5px;
-  padding: 6px 10px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.saved-toggle:hover { border-color: var(--rule-strong); color: var(--ink); }
-.saved-toggle:focus-visible { outline: 2px solid var(--accent2); outline-offset: 1px; }
-.saved-toggle.is-on { color: var(--accent); background: var(--accent-fill); border-color: var(--accent); }
-.saved-toggle.is-on svg path { fill: currentColor; }
-.tab-n:empty { display: none; }
-.tab-n {
-  font-family: var(--mono);
-  font-size: 0.68rem;
-  font-weight: 500;
-  color: var(--accent);
-  background: var(--accent-fill);
-  border-radius: 999px;
-  padding: 1px 7px;
-}
 .empty svg { vertical-align: -3px; }
 
 /* The bookmark on a row and in the pane: an outline until saved, then filled. */
@@ -1334,102 +1425,16 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   gap: 10px;
   width: 100%;
 }
-.filter-primary .search-wrap { flex: 1.6 1 0; min-width: 0; }
+.filter-primary .search-wrap { flex: 1 1 auto; min-width: 0; }
 .filter-primary .search-wrap input[type="search"] { height: 38px; }
-.primary-pickers {
-  flex: 3 1 0;
-  min-width: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-  gap: 10px;
-}
-.primary-pickers .picker-wrap { align-items: stretch; }
-/* main's dropdown type at the search input's 38px, so the row reads as one band
-   without anything in it growing. */
-.primary-pickers .company-picker > summary {
-  height: 38px;
-  min-width: 0;
-  padding: 0 10px;
-}
-.primary-pickers .company-picker:not(.has-selection) > summary { color: var(--ink-soft); }
 
-.advanced-toggle {
-  position: relative;
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-width: 40px;
-  padding: 0 10px;
-  color: var(--ink-soft);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: 6px;
-  cursor: pointer;
-}
-.advanced-toggle:hover { border-color: var(--rule-strong); color: var(--ink); }
-.advanced-toggle:focus-visible { outline: 2px solid var(--accent2); outline-offset: 1px; }
-.advanced-toggle[aria-expanded="true"] { border-color: var(--accent2); }
-.advanced-toggle.has-selection {
-  background: var(--accent-fill);
-  color: var(--accent);
-  border-color: var(--accent);
-}
-.advanced-n {
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ---- Advanced panel ----
-   Same card as a picker's dropdown, a size up. Not overflow-clipped, so a picker opened
-   inside it can hang past its bottom edge. */
-.advanced-panel {
-  position: absolute;
-  z-index: 10;
-  top: calc(100% + 8px);
-  right: 0;
-  width: min(660px, 100%);
-  background: var(--surface);
-  border: 1px solid var(--rule-strong);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
-  padding: 16px 20px 20px;
-}
-.advanced-panel:not(.is-open) { display: none; }
-.advanced-head {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding-bottom: 12px;
-  margin-bottom: 14px;
-  border-bottom: 1px solid var(--rule);
-}
-.advanced-title {
-  margin: 0 auto 0 0;
-  font-family: var(--sans);
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--ink);
-}
-.advanced-close {
-  font-family: var(--sans);
-  font-size: 0.82rem;
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: 5px;
-  padding: 6px 12px;
-  cursor: pointer;
-}
-.advanced-close:hover { border-color: var(--rule-strong); }
-.advanced-close:focus-visible { outline: 2px solid var(--accent2); outline-offset: 1px; }
-
-/* Two columns, each control under its label. */
+/* ---- The rest of the filters ----
+   Always in view, in a grid under the main row, each control under its label. */
+.filter-more { width: 100%; margin-top: 12px; }
+/* Four across on a wide screen, each control under its label. */
 .filter-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px 20px;
   width: 100%;
 }
@@ -1444,14 +1449,14 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 .filter-grid .company-picker > summary,
 .filter-grid .sort-wrap > select { width: 100%; min-width: 0; }
 .filter-grid .sort-wrap > select { height: 34px; }
+/* Posted and Salary are select-menu.js pickers: the same box as the pickers beside them. */
+.filter-grid .sort-wrap > .select-picker,
+.filter-grid .sort-wrap > .select-picker > summary { width: 100%; min-width: 0; }
 
-/* Saved filters close the panel: they save and recall everything above them. */
-.advanced-foot {
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--rule);
+/* Saved filters follow the grid: they save and recall everything above them. */
+@media (min-width: 721px) and (max-width: 1099px) {
+  .filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-.advanced-foot .preset-bar { margin: 0; }
 
 /* ---- Toolbar ----
    What to hide, and how to order what remains. Sort sits at the far end. */
@@ -1469,7 +1474,9 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   height: 16px;
   background: var(--rule-strong);
 }
-.filter-tail .tail-sort { margin-left: auto; }
+/* The saved-filters bar sits in the row with the Hide checkboxes. */
+.tail-presets { display: contents; }
+.tail-presets .preset-bar { width: auto; margin: 0; }
 .reset-btn {
   font-family: var(--mono);
   font-size: 0.74rem;
@@ -1860,29 +1867,10 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   #job-controls input[type="text"] { font-size: 16px; }
   #job-controls.controls .preset-bar { width: 100%; }
   .search-wrap { flex-basis: 100%; }
-  /* The drawer is already one scrolling sheet, so the row stacks and the advanced
-     filters follow it inline rather than behind a second popover. */
+  /* The drawer is already one scrolling sheet, so the row stacks and the rest of the
+     filters follow it. */
   .filter-primary { flex-direction: column; gap: 12px; }
   .filter-primary .search-wrap { flex: none; }
-  .primary-pickers { grid-template-columns: 1fr; gap: 12px; }
-  .primary-pickers .company-picker > summary { height: auto; }
-  .advanced-toggle,
-  .advanced-close { display: none; }
-  .advanced-panel,
-  .advanced-panel:not(.is-open) {
-    display: block;
-    position: static;
-    /* Still a flex item here, where z-index applies even unpositioned, and 10 would
-       lift the panel over the drawer's sticky footer. */
-    z-index: auto;
-    width: 100%;
-    padding: 0;
-    background: none;
-    border: 0;
-    box-shadow: none;
-  }
-  .advanced-head { margin: 4px 0 12px; padding-bottom: 8px; }
-  .filter-tail .tail-sort { margin-left: 0; }
   .tail-sep { display: none; }
   .filter-grid { grid-template-columns: 1fr; gap: 12px; }
   .picker-wrap {
@@ -2030,73 +2018,8 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
 .match-signin { margin-top: 12px; min-height: 40px; }
 .auth-off { margin: 0; font-size: 0.8rem; color: var(--ink-faint); }
 
-/* ---- Visitor greeting ----
-   A name typed once on the first visit, sitting in the masthead. Deliberately small:
-   it is a courtesy, not an account, and skipping must feel as normal as answering. */
-#visitor-slot { display: flex; align-items: center; }
-
-.visitor-greet {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  font-family: var(--mono);
-  font-size: 0.74rem;
-  color: var(--ink-faint);
-  white-space: nowrap;
-}
-.visitor-edit {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  font: inherit;
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.visitor-edit:hover { opacity: 0.8; }
-.visitor-edit:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
-
-.visitor-ask {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.visitor-ask-label {
-  font-family: var(--mono);
-  font-size: 0.74rem;
-  color: var(--ink-soft);
-  white-space: nowrap;
-}
-.visitor-input {
-  font-family: var(--sans);
-  font-size: 0.82rem;
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: 5px;
-  padding: 5px 9px;
-  width: 130px;
-}
-.visitor-input:focus-visible { outline: 2px solid var(--accent2); outline-offset: 1px; border-color: var(--accent2); }
-.visitor-save, .visitor-skip {
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  border-radius: 5px;
-  padding: 5px 10px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.visitor-save { color: var(--accent); background: var(--accent-fill); border: 1px solid var(--accent); }
-.visitor-skip { color: var(--ink-faint); background: none; border: 1px solid var(--rule); }
-.visitor-save:hover, .visitor-skip:hover { opacity: 0.85; }
-.visitor-save:focus-visible, .visitor-skip:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
-
-@media (max-width: 620px) {
-  .visitor-ask-label { width: 100%; }
-  .visitor-input { flex: 1 1 auto; width: auto; min-width: 0; }
-}
+/* The header's empty #visitor-slot is kept only as heart.js's anchor. */
+#visitor-slot:empty { display: none; }
 
 /* ---- Phones ----
    Collected here, after every rule they adjust, so each one wins on order alone. */
@@ -2110,7 +2033,6 @@ a.job-title::after { content: " ↗"; font-size: 0.75em; color: var(--ink-faint)
   .nav-links { flex-wrap: nowrap; margin-right: auto; }
   .backlink { white-space: nowrap; }
   #visitor-slot { order: 10; }
-  #visitor-slot:has(.visitor-ask) { flex-basis: 100%; }
 
   /* Job rows stack: tags and the meta line sit under the company, at the left, not
      pushed to the right edge by the split layout's wide-screen rule. */
@@ -2725,9 +2647,9 @@ html[data-theme="dark"] .fb-done.is-error { color: #ff8f8f; }
 .page-split .requirement-status { font-weight: 600; }
 .page-split .detail-body .desc-hit { background: none; box-shadow: none; outline: 2px solid var(--accent-fill); outline-offset: 5px; }
 .page-split .jd-mark:focus-visible, .page-split .detail-close:focus-visible { outline: 2px solid var(--accent2); outline-offset: 3px; }
-@media (min-width: 1100px) {
-  .page-split #job-controls { position: sticky; top: 0; z-index: 8; background: var(--bg); }
-}
+/* The filters scroll away with the page: with every filter in view they are too tall
+   to pin over the list, and the description pane keeps itself in view regardless.
+   jobs-ui.js reads this and sets --toolbar-height to 0 when they are not sticky. */
 @media (min-width: 1100px) and (max-width: 1299px) {
   .page-split .results-split { gap: 16px; }
 }
@@ -2746,7 +2668,7 @@ html[data-theme="dark"] .fb-done.is-error { color: #ff8f8f; }
 
 @media (min-width: 1100px) {
   .page-split .results-split.is-split .job { column-gap: 12px; row-gap: 6px; }
-  .page-split .results-split.is-split .job-main { flex-basis: 190px; }
+  .page-split .results-split.is-split .job-main { flex: 1 1 0; }
 }
 /* Resizing the available viewport must not move the document's scroll anchor. */
 .page-split { overflow-anchor: none; }
@@ -2905,7 +2827,6 @@ header.masthead-compact { padding-bottom: 14px; margin-bottom: 0; }
   .masthead-compact .nav-links { flex-basis: 100%; margin-right: 0; }
   .masthead-compact .masthead-actions { display: flex; flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-end; }
   .masthead-compact #visitor-slot { order: -1; margin-right: auto; }
-  .masthead-compact #visitor-slot:has(.visitor-ask) { order: 10; flex-basis: 100%; margin-right: 0; }
   .masthead-compact h1.title { font-size: 1.6rem; }
   .masthead-compact .masthead-main { gap: 4px 16px; }
   .masthead-compact .dek { font-size: 0.88rem; }
@@ -2937,12 +2858,21 @@ header.masthead-compact { padding-bottom: 14px; margin-bottom: 0; }
 .job .job-main > .job-meta { margin: 3px 0 0; text-align: left; }
 .job .job-main > .job-when { margin-top: 1px; }
 
-/* The posted date stands at the far right of the row, level with the title. */
-.job > .job-when { flex: none; margin: 3px 0 0 auto; white-space: nowrap; text-align: right; }
+/* The last fifth of the row: the posted date, level with the title, and under it how
+   many roles at this company you have opened. */
+.job > .job-side { flex: 0 0 20%; max-width: 20%; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; margin: 3px 0 0 auto; text-align: right; }
+.job-side .job-when { margin: 0; white-space: nowrap; }
+.job-side .job-company-opened { white-space: normal; line-height: 1.35; }
+.job-side .job-company-opened:not(:empty)::before { content: none; }
+@media (max-width: 720px) {
+  .job > .job-side { flex-basis: auto; max-width: none; align-items: flex-start; text-align: left; margin: 0; }
+}
 @media (max-width: 620px) {
-  /* Stacked rows: the date keeps the top-right corner instead of dropping below. */
-  .page-split .job > .job-when { position: absolute; top: 15px; right: 0; margin: 0; }
-  .page-split .job.is-selected > .job-when { right: 12px; }
+  /* Stacked rows: the date keeps the top-right corner instead of dropping below, and
+     the opened note follows the row's other lines. */
+  .page-split .job > .job-side { display: contents; }
+  .page-split .job .job-side .job-when { position: absolute; top: 15px; right: 0; margin: 0; }
+  .page-split .job.is-selected .job-side .job-when { right: 12px; }
   .page-split .job .job-main { padding-right: 84px; }
 }
 
@@ -2978,36 +2908,4 @@ header.masthead-compact { padding-bottom: 14px; margin-bottom: 0; }
 @media (max-width: 1099px) {
   .page-split .detail-bar-anchor { margin: 0 -20px; }
   .page-split .detail-bar { padding: 8px 20px; gap: 10px; }
-}
-
-
-/* Filters share the desktop toolbar with a small, independently scrolling resume library. */
-@media (min-width: 721px) {
-  .page-split #job-controls:has(.resume-library) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(270px, 310px); align-items: start; column-gap: 24px; row-gap: 12px; }
-  .page-split #job-controls:has(.resume-library) > .filter-primary { grid-column: 1; grid-row: 1; }
-  .page-split #job-controls:has(.resume-library) > .filter-tail { grid-column: 1; grid-row: 2; gap: 10px 12px; }
-  .page-split #job-controls:has(.resume-library) > .preset-bar { grid-column: 1; }
-  .page-split #job-controls:has(.resume-library) .filter-primary .search-wrap { flex: 1.15 1 0; }
-  .page-split #job-controls:has(.resume-library) .primary-pickers { flex: 3 1 0; }
-  .resume-library { grid-column: 2; grid-row: 1 / span 3; align-self: stretch; min-width: 0; padding-left: 20px; border-left: 1px solid var(--rule); }
-}
-.resume-library-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; margin-bottom: 4px; }
-.resume-library-head h2 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; font-weight: 600; }
-.resume-library-count { color: var(--ink-faint); font-size: 11px; font-weight: 400; }
-/* The resume dropdown fills the column, its box matching the filter pickers beside it. */
-.resume-library .resume-picker { display: block; width: 100%; }
-.resume-library .resume-picker > summary { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.resume-library .resume-picker > .resume-picker-panel { width: 100%; min-width: 240px; }
-.resume-library-retry:focus-visible { outline: 2px solid var(--accent2); outline-offset: 1px; }
-.resume-library-note, .resume-library-status { margin: 4px 0; color: var(--ink-faint); font-size: 12px; line-height: 1.5; }
-.resume-library-status.is-error { color: light-dark(#a33d49, #f3a1ad); }
-.resume-library-retry { border: 0; padding: 4px 0; min-height: 32px; background: none; color: var(--accent); font: inherit; font-size: 12px; cursor: pointer; }
-@media (min-width: 721px) and (max-width: 1099px) {
-  .page-split #job-controls:has(.resume-library) { grid-template-columns: minmax(0, 1fr) 240px; column-gap: 16px; }
-  .page-split #job-controls:has(.resume-library) .filter-primary { flex-wrap: wrap; }
-  .page-split #job-controls:has(.resume-library) .filter-primary .search-wrap { flex-basis: 100%; }
-  .resume-library { padding-left: 16px; }
-}
-@media (max-width: 720px) {
-  .resume-library { width: 100%; min-width: 0; padding-top: 16px; margin-top: 4px; border-top: 1px solid var(--rule); }
 }

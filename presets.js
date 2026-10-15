@@ -232,8 +232,8 @@
     var bar = document.createElement("div");
     bar.className = "preset-bar";
     bar.id = "preset-bar";
-    // Pages with an advanced-filters panel give the bar a slot at its foot, with the
-    // filters it saves. Anything without one keeps it above the filters.
+    // Pages with the filter grid give the bar a slot at its foot, with the filters it
+    // saves. Anything without one keeps it above the filters.
     var slot = document.getElementById("preset-slot");
     if (slot) slot.appendChild(bar);
     else host.insertBefore(bar, host.firstChild);

@@ -173,7 +173,8 @@ async function labelJobs(results, cache, options = {}) {
     else if (!todo.has(h)) todo.set(h, j);
   }
 
-  const stats = { jobs: all.length, cached: all.length - [...hashOf.values()].filter((h) => todo.has(h)).length, asked: 0, failed: false, dropped: 0, tokens: 0 };
+  // Counted per listing, like `jobs`: one job object can sit in several firms' lists.
+  const stats = { jobs: all.length, cached: all.filter((j) => !todo.has(hashOf.get(j))).length, asked: 0, failed: false, dropped: 0, tokens: 0 };
   const key = options.apiKey || process.env.TYPESAFE_API_KEY;
   if (todo.size && !key) log(`No TYPESAFE_API_KEY: ${todo.size} new postings left unlabelled.`);
   if (todo.size && key) {
