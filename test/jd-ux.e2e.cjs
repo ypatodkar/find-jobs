@@ -90,6 +90,13 @@ async function main(){
   try {
     browser=await chromium.launch({headless:true});
     const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});
+    // The resume dropdown in the description pane: a resume's own button, and the one chosen.
+    const pick=(name)=>page.locator('#detail-match .resume-picker').getByRole('button',{name,exact:true});
+    const activeResume=()=>page.locator('#detail-match .resume-picker [data-act="choose"][aria-pressed="true"]').getAttribute('data-resume-id');
+    // The Resumes section beside the filters: open its dropdown, then act on a row.
+    const libraryOpen=async()=>{const p=page.locator('#resume-library .resume-picker');if(!await p.evaluate(el=>el.open))await p.locator('summary').click();};
+    const libraryChoose=async(id)=>{await libraryOpen();await page.locator(`#resume-library [data-library-act="choose"][data-resume-id="${id}"]`).click();};
+    const libraryDelete=async(name)=>{await libraryOpen();await page.locator('#resume-library').getByRole('button',{name:'Delete '+name,exact:true}).click();};
     page.setDefaultTimeout(8000);
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/*',route=>route.request().url().startsWith(base)?route.continue():route.abort());
@@ -240,12 +247,12 @@ async function main(){
     assert.ok((await page.locator('.jd-mark').first().evaluate(el=>el.previousSibling.textContent)).endsWith('Coordinate with your team on release planning.'),'indicators follow the complete bullet, not the middle of a sentence');
     assert.equal(await page.locator('.match-overview-grid,.mstrip-toggle,#match-audit').count(),0,'old expansion UI is removed');
     assert.equal(await page.locator('.analysis-header-picker .select-picker').isVisible(),true,'resume selection is directly available in the analysis header');
-    assert.equal(await page.locator('.analysis-settings select').count(),0,'Manage contains resume management only');
+    assert.equal(await page.locator('.analysis-more').count(),0,'resume management lives in the resume dropdown, not a separate menu');
     await page.locator('.analysis-header-picker .select-picker > summary').click();
-    await page.getByRole('option',{name:'Data resume',exact:true}).click();await waitScore(60);
+    await pick('Data resume').click();await waitScore(60);
     assert.equal(await down.getAttribute('aria-pressed'),'false','a different resume does not inherit the review');
     await page.locator('.analysis-header-picker .select-picker > summary').click();
-    await page.getByRole('option',{name:'Systems resume',exact:true}).click();await waitScore(20);
+    await pick('Systems resume').click();await waitScore(20);
     assert.equal(await down.getAttribute('aria-pressed'),'true','returning to the original resume restores its review');
     const layout=await page.evaluate(()=>{
       const a=document.querySelector('.results-main'),b=document.querySelector('.job-detail');
@@ -326,9 +333,9 @@ async function main(){
     await page.locator('.jd-mark').first().press('Escape');
     const savedSwitchCalls=postCalls;
     await page.locator('.analysis-header-picker .select-picker > summary').press('ArrowDown');
-    await page.getByRole('option',{name:'Data resume',exact:true}).waitFor();
+    await pick('Data resume').waitFor();
     await page.screenshot({path:path.join(artifactDir,'desktop-resume-picker.png')});
-    await page.getByRole('option',{name:'Data resume',exact:true}).press('Enter');
+    await pick('Data resume').press('Enter');
     assert.equal(await page.locator('.analysis-score-number').count(),0,'old resume score disappears immediately');
     assert.equal(await page.locator('.jd-mark').count(),0);
     await waitScore(60);
@@ -336,6 +343,10 @@ async function main(){
     assert.deepEqual(await page.locator('.analysis-metrics strong').allTextContents(),['2','0','0']);
     assert.equal(await page.locator('#detail-title').textContent(),'Senior Software Engineer');
     assert.equal(await page.locator('.analysis-header-picker .select-picker > summary').textContent(),'Data resume');
+    await page.locator('.analysis-header-picker .select-picker > summary').press('ArrowDown');
+    await page.waitForFunction(()=>document.querySelector('#detail-match .select-option.is-selected')===document.activeElement);
+    assert.equal(await page.locator('#detail-match .select-option.is-selected').textContent(),'Data resume','reopening the picker focuses the current resume, even when it is not first');
+    await pick('Data resume').press('Escape');
     postScore=66;
     await page.getByRole('button',{name:'Reanalyze',exact:true}).click();
     assert.equal(await page.locator('.analysis-score-number').textContent(),'60/100','previous score remains during reanalysis');
@@ -370,7 +381,7 @@ async function main(){
     // A single click from the unanalyzed state immediately exposes score + findings.
     mode='unanalyzed';postScore=20;await page.evaluate(()=>localStorage.setItem('find-jobs-active-resume','r_systems'));
     await open();await page.getByRole('button',{name:'Analyze resume',exact:true}).waitFor();
-    assert.equal(await page.locator('#match-resume').inputValue(),'r_systems');
+    assert.equal(await activeResume(),'r_systems');
     assert.equal(await page.locator('.analysis-score-number').count(),0);
     assert.equal(await page.locator('.description-controls').isVisible(),false,'highlights are offered only after analysis');
     const entryHeading=await page.locator('.analysis-entry h3').boundingBox();
@@ -379,13 +390,18 @@ async function main(){
     assert.ok(Math.abs(analyzeButton.x-entryHeading.x)<2,'Analyze resume aligns with the heading');
     await page.screenshot({path:path.join(artifactDir,'desktop-entry.png')});
     await page.getByRole('button',{name:'Analyze resume',exact:true}).press('Shift+Tab');
-    assert.equal(await page.locator('.analysis-more > summary').evaluate(el=>el===document.activeElement),true);
-    await page.locator('.analysis-more > summary').press('Enter');
-    await page.waitForFunction(()=>document.querySelector('.analysis-more > summary').getAttribute('aria-expanded')==='true');
-    assert.equal(await page.locator('.resume-menu-header strong').textContent(),'Systems resume');
+    assert.equal(await page.locator('#detail-match .resume-picker > summary').evaluate(el=>el===document.activeElement),true);
+    await page.locator('#detail-match .resume-picker > summary').press('Enter');
+    await page.waitForFunction(()=>document.querySelector('#detail-match .resume-picker').open);
+    assert.equal(await pick('Systems resume').getAttribute('aria-pressed'),'true');
+    // The toggle event that moves focus fires after the dropdown opens, not with it.
+    await page.waitForFunction(()=>document.activeElement?.matches('#detail-match .select-option[aria-pressed="true"]'),null,{timeout:2000}).catch(()=>assert.fail('opening focuses the selected resume'));
+    assert.equal(await page.locator('#detail-match .resume-picker-delete').count(),3,'every resume has its own delete button');
+    assert.equal(await page.locator('#detail-match .resume-picker-panel > :last-child').textContent(),'Add resume','Add resume is the last item');
     await page.screenshot({path:path.join(artifactDir,'desktop-entry-options.png')});
-    await page.locator('.analysis-more > summary').press('Escape');
-    assert.equal(await page.locator('.analysis-more').evaluate(el=>el.open),false);
+    await pick('Systems resume').press('Escape');
+    assert.equal(await page.locator('#detail-match .resume-picker').evaluate(el=>el.open),false);
+    assert.equal(await page.locator('#detail-match .resume-picker > summary').evaluate(el=>el===document.activeElement),true);
     const before=postCalls;
     await page.getByRole('button',{name:'Analyze resume',exact:true}).click();
     await page.getByText('Analyzing resume…',{exact:true}).last().waitFor();
@@ -418,28 +434,28 @@ async function main(){
     await checkExpanded('mobile-expanded');
     await page.locator('#detail-top').getByRole('button',{name:'Back to jobs',exact:true}).press('Shift+Tab');
     assert.ok(await page.evaluate(()=>document.querySelector('#job-detail').contains(document.activeElement)));
-    await page.locator('.analysis-more > summary').click();await page.locator('.analysis-more > summary').press('Escape');
+    await page.locator('#detail-match .resume-picker > summary').click();await page.locator('#detail-match .resume-picker > summary').press('Escape');
     assert.equal(await page.locator('#job-detail').isVisible(),true);
     await page.locator('#detail-top').getByRole('button',{name:'Back to jobs',exact:true}).click();assert.equal(await page.locator('#job-detail').isVisible(),false);
     mode='unanalyzed';await open();await page.getByRole('button',{name:'Analyze resume',exact:true}).waitFor();
     assert.equal(await page.locator('.analysis-feedback').count(),0,'unanalysed jobs do not show review controls');
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.screenshot({path:path.join(artifactDir,'mobile-entry.png')});
-    await page.locator('.analysis-more > summary').click();
-    const entryMenu=await page.locator('.analysis-settings').boundingBox();
+    await page.locator('#detail-match .resume-picker > summary').click();
+    const entryMenu=await page.locator('#detail-match .resume-picker-panel').boundingBox();
     assert.ok(entryMenu.x>=0 && entryMenu.x+entryMenu.width<=390,'Resume options stay inside the mobile viewport');
     await page.screenshot({path:path.join(artifactDir,'mobile-entry-options.png')});
-    await page.locator('.analysis-more > summary').click();
+    await page.locator('#detail-match .resume-picker > summary').click();
     for(const state of ['no-resume','error','signed-out','no-description']){
       mode=state;await open();
       const expected=state==='no-resume'?'Upload resume':state==='error'?'Storage temporarily unavailable.':state==='signed-out'?'Sign in to analyze your resume.':'This job has no description to compare against.';
       await page.locator('#detail-match').getByText(expected,{exact:state!=='error'}).waitFor();assert.equal(await page.locator('#detail-body').isVisible(),true);
       if(state==='no-resume') {
         await page.locator('#detail-match input[type="file"]').setInputFiles({name:'fixture.txt',mimeType:'text/plain',buffer:Buffer.from('Built and operated backend services, improved reliability and maintained automated tests. Collaborated with engineering teams to deliver production APIs.')});
-        await waitScore(20);await page.locator('.analysis-more > summary').click();
-        page.once('dialog',dialog=>dialog.dismiss());await page.getByRole('button',{name:'Remove this resume',exact:true}).click();
+        await waitScore(20);await page.locator('#detail-match .resume-picker > summary').click();
+        page.once('dialog',dialog=>dialog.dismiss());await page.getByRole('button',{name:'Delete Uploaded resume',exact:true}).click();
         assert.ok((await page.locator('.analysis-source').textContent()).includes('Uploaded resume'),'canceling removal preserves the selected resume');
-        page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Remove this resume',exact:true}).click();
+        page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Delete Uploaded resume',exact:true}).click();
         await page.getByRole('button',{name:'Upload resume',exact:true}).waitFor();assert.equal(await page.locator('#detail-title').textContent(),'Senior Software Engineer');
       }
     }
@@ -447,14 +463,18 @@ async function main(){
     await page.evaluate(()=>localStorage.setItem('find-jobs-active-resume','r_systems'));
     await open();await waitScore(20);
     await page.locator('.analysis-header-picker .select-picker > summary').click();
-    await page.getByRole('option',{name:'Frontend resume',exact:true}).click();
+    await pick('Frontend resume').click();
     await page.getByRole('button',{name:'Analyze resume',exact:true}).waitFor();
-    assert.equal(await page.locator('#match-resume').inputValue(),'r_frontend');
+    assert.equal(await activeResume(),'r_frontend');
     assert.equal(await page.locator('.analysis-score-number').count(),0,'switching to an unscored resume clears the old score');
     assert.equal(await page.locator('.jd-mark').count(),0);
     assert.equal(await page.locator('.analysis-header-picker').isVisible(),true,'the selector stays in the header for the new analysis');
     assert.equal(await page.locator('#detail-title').textContent(),'Senior Software Engineer');
-    await page.getByText('Not analyzed',{exact:true}).waitFor();
+    await page.waitForFunction(()=>!document.querySelector('#detail-match .analysis-loading'));
+    assert.equal(await page.getByText('Not analyzed',{exact:true}).count(),0,'a switched-to resume shows no "Not analyzed" label');
+    const switchedPicker=await page.locator('#detail-match .resume-picker > summary').boundingBox(),switchedRun=await page.getByRole('button',{name:'Analyze resume',exact:true}).boundingBox();
+    assert.ok(switchedRun.y>=switchedPicker.y+switchedPicker.height && switchedRun.y-(switchedPicker.y+switchedPicker.height)<=16,'Analyze resume sits right below the resume dropdown');
+    assert.ok(Math.abs(switchedRun.x-switchedPicker.x)<2,'Analyze resume lines up with the dropdown');
     await page.screenshot({path:path.join(artifactDir,'mobile-resume-switched.png')});
     const newResumeCalls=postCalls;
     await page.getByRole('button',{name:'Analyze resume',exact:true}).click();await waitScore(74);
@@ -462,7 +482,7 @@ async function main(){
     assert.equal(postCalls,newResumeCalls+1);assert.equal(lastPost.resume_id,'r_frontend');assert.equal(lastPost.force,false);
     const cachedSwitchGets=getCalls,cachedSwitchPosts=postCalls;
     await page.locator('.analysis-header-picker .select-picker > summary').click();
-    await page.getByRole('option',{name:'Systems resume',exact:true}).click();await waitScore(20);
+    await pick('Systems resume').click();await waitScore(20);
     assert.equal(getCalls,cachedSwitchGets,'returning to a loaded resume reuses its result immediately');
     assert.equal(postCalls,cachedSwitchPosts);
     mode='twenty-seven';
@@ -479,8 +499,14 @@ async function main(){
     assert.equal(await page.locator('.requirement-breakdown').isVisible(),false,'clicking the backdrop closes the modal');
     mode='normal';await page.setViewportSize({width:1440,height:900});await page.goto(base);
     const library=page.locator('#resume-library');
-    await library.locator('.resume-library-select').first().waitFor();
-    assert.equal(await library.locator('.resume-library-select').count(),3,'the resume library is available before opening a job');
+    await library.locator('.resume-picker > summary').waitFor();
+    assert.equal(await library.locator('[data-library-act="choose"]').count(),3,'the resume library is available before opening a job');
+    await libraryOpen();
+    assert.equal(await library.locator('.resume-picker-delete').count(),3,'every resume in the Resumes dropdown has a delete button');
+    assert.equal(await library.locator('.resume-picker-panel > :last-child').textContent(),'Add resume','Add resume is the last item');
+    await page.screenshot({path:path.join(artifactDir,'resume-library-dropdown.png')});
+    await library.locator('.resume-picker-panel button').first().press('Escape');
+    assert.equal(await library.locator('.resume-picker').evaluate(el=>el.open),false,'Escape closes the Resumes dropdown');
     const toolbarLayout=await page.evaluate(()=>{
       const filters=document.querySelector('.filter-primary').getBoundingClientRect();
       const library=document.querySelector('#resume-library').getBoundingClientRect();
@@ -490,44 +516,48 @@ async function main(){
     assert.ok(toolbarLayout.search<toolbarLayout.toolbar*.3,'the search field is narrower');
     await page.screenshot({path:path.join(artifactDir,'resume-library-1440.png')});
     const beforeLibraryPosts=postCalls;
-    await library.locator('[data-library-act="select"][data-resume-id="r_data"]').click();
+    await libraryChoose('r_data');
     await page.locator('.job[data-job-id="job_0"]').click();await waitScore(60);
-    assert.equal(await page.locator('#match-resume').inputValue(),'r_data','library selection is used by the inspector');
-    await library.locator('[data-library-act="select"][data-resume-id="r_systems"]').click();await waitScore(20);
+    assert.equal(await activeResume(),'r_data','library selection is used by the inspector');
+    await libraryChoose('r_systems');await waitScore(20);
     assert.equal(postCalls,beforeLibraryPosts,'choosing a resume reuses its saved analysis');
     const fixtureFile={name:'library-fixture.txt',mimeType:'text/plain',buffer:Buffer.from('Built and operated backend services, improved reliability and maintained automated tests. Collaborated with engineering teams to deliver production APIs.')};
     const uploadInput=library.locator('input[type="file"]');
     const beforeUploads=resumePostCalls;
     await uploadInput.setInputFiles(fixtureFile);
     await page.getByRole('button',{name:'Analyze resume',exact:true}).waitFor();
-    await page.waitForFunction(()=>!document.querySelector('.resume-library-add').disabled);
-    assert.equal(await library.locator('.resume-library-select').count(),4,'adding a resume updates the library');
-    assert.equal(await page.locator('#match-resume').inputValue(),'r_uploaded','a new upload becomes the active resume');
+    await page.waitForFunction(()=>!document.querySelector('#resume-library .resume-picker-add').disabled);
+    assert.equal(await library.locator('[data-library-act="choose"]').count(),4,'adding a resume updates the library');
+    assert.equal(await activeResume(),'r_uploaded','a new upload becomes the active resume');
     assert.equal(resumePostCalls,beforeUploads+1);assert.equal(postCalls,beforeLibraryPosts,'library uploads do not trigger paid analysis');
     assert.equal(await page.locator('#detail-title').textContent(),'Senior Software Engineer');
     const beforeDeletes=resumeDeleteCalls;
-    page.once('dialog',dialog=>dialog.dismiss());await library.getByRole('button',{name:'Remove Uploaded resume',exact:true}).click();
+    page.once('dialog',dialog=>dialog.dismiss());await libraryDelete('Uploaded resume');
     assert.equal(resumeDeleteCalls,beforeDeletes,'cancelled removal makes no request');
-    resumeWriteError=true;page.once('dialog',dialog=>dialog.accept());await library.getByRole('button',{name:'Remove Uploaded resume',exact:true}).click();
+    resumeWriteError=true;page.once('dialog',dialog=>dialog.accept());await libraryDelete('Uploaded resume');
     await library.getByText('Resume removal temporarily unavailable.',{exact:true}).waitFor();
-    assert.equal(await library.locator('.resume-library-select').count(),4,'a failed removal retains the resume');
-    resumeWriteError=false;page.once('dialog',dialog=>dialog.accept());await library.getByRole('button',{name:'Remove Uploaded resume',exact:true}).click();
-    await waitScore(20);await page.waitForFunction(()=>!document.querySelector('.resume-library-add').disabled);
-    assert.equal(await library.locator('.resume-library-select').count(),3);
-    assert.equal(await page.locator('#match-resume').inputValue(),'r_systems','removing the active resume selects a remaining resume');
+    assert.equal(await library.locator('[data-library-act="choose"]').count(),4,'a failed removal retains the resume');
+    resumeWriteError=false;page.once('dialog',dialog=>dialog.accept());await libraryDelete('Uploaded resume');
+    await waitScore(20);await page.waitForFunction(()=>!document.querySelector('#resume-library .resume-picker-add').disabled);
+    assert.equal(await library.locator('[data-library-act="choose"]').count(),3);
+    assert.equal(await activeResume(),'r_systems','removing the active resume selects a remaining resume');
     for(const width of [1280,800]){
-      await page.setViewportSize({width,height:900});await page.goto(base);await library.locator('.resume-library-select').first().waitFor();
+      await page.setViewportSize({width,height:900});await page.goto(base);await library.locator('.resume-picker > summary').waitFor();
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       await page.screenshot({path:path.join(artifactDir,'resume-library-'+width+'.png')});
     }
     await page.setViewportSize({width:390,height:844});await page.goto(base);
-    await page.locator('#mobile-filter-toggle').click();await library.locator('.resume-library-select').first().waitFor();
+    await page.locator('#mobile-filter-toggle').click();await library.locator('.resume-picker > summary').waitFor();
     await library.scrollIntoViewIfNeeded();
     assert.ok(await page.locator('#job-controls').evaluate(el=>el.scrollWidth<=el.clientWidth),'the mobile drawer has no horizontal overflow');
     await page.screenshot({path:path.join(artifactDir,'resume-library-mobile.png')});
-    await library.locator('[data-library-act="select"][data-resume-id="r_data"]').click();
+    await libraryOpen();await library.locator('.resume-picker-add').scrollIntoViewIfNeeded();
+    const drawerBox=await page.locator('#job-controls').boundingBox(),addBox=await library.locator('.resume-picker-add').boundingBox();
+    assert.ok(addBox.y+addBox.height<=drawerBox.y+drawerBox.height+1,'the open Resumes dropdown is not cut off by the drawer');
+    await page.screenshot({path:path.join(artifactDir,'resume-library-mobile-open.png')});
+    await libraryChoose('r_data');
     await page.locator('#filter-drawer-close').click();await page.locator('.job[data-job-id="job_0"]').click();await waitScore(60);
-    assert.equal(await page.locator('#match-resume').inputValue(),'r_data','mobile library selection reaches the JD');
+    assert.equal(await activeResume(),'r_data','mobile library selection reaches the JD');
     console.log('Resume library passed: independent management, synced selection, upload, cancellation, failure retry, removal and responsive layout.');
     assert.deepEqual(errors,[]);
     console.log('Reading layout:',JSON.stringify(readingMeasurements));

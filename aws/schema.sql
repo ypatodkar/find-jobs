@@ -119,8 +119,8 @@ CREATE TABLE IF NOT EXISTS resumes (
 CREATE INDEX IF NOT EXISTS idx_resumes_visitor ON resumes (visitor_id, created_at);
 
 -- One stored assessment per résumé and job, so reopening a job shows the score it
--- already got instead of paying for it again. "Check again" overwrites it. Deleting
--- the résumé deletes its scores.
+-- already got instead of paying for it again. "Check again" overwrites it. Removing
+-- a resume in the app marks it inactive; a physical database deletion cascades here.
 CREATE TABLE IF NOT EXISTS resume_matches (
   resume_id  TEXT NOT NULL REFERENCES resumes (id) ON DELETE CASCADE,
   job_id     TEXT NOT NULL,
@@ -237,3 +237,9 @@ CREATE TABLE IF NOT EXISTS match_feedback (
   created_at BIGINT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_match_feedback_ts ON match_feedback (created_at);
+
+-- Deleting a résumé keeps the row: it is marked inactive and its label prefixed
+-- "delete_", and every read in match-store.cjs skips it. Its scores and reviews stay
+-- with it instead of being cascaded away. 0/1 like jobs.active.
+ALTER TABLE resumes ADD COLUMN IF NOT EXISTS active SMALLINT NOT NULL DEFAULT 1;
+ALTER TABLE resumes ADD COLUMN IF NOT EXISTS deleted_at BIGINT;

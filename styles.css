@@ -2610,6 +2610,8 @@ html[data-theme="dark"] .fb-done.is-error { color: #ff8f8f; }
 .analysis-header-picker > select[hidden] { display: none; }
 .analysis-timestamp { display: block; margin-top: 2px; font-size: 11px; }
 .analysis-tools { display: flex; align-items: center; gap: 8px; flex: none; }
+.analysis-header-toolbar.is-pending { display: flex; flex-direction: column; align-items: flex-start; }
+.analysis-header-toolbar.is-pending .match-run { flex: none; }
 .page-split .analysis-reanalyze { height: 32px; padding: 0 10px; font-size: 12px; background: none; color: var(--ink-soft); border: 1px solid var(--rule); border-radius: 7px; }
 .page-split .analysis-reanalyze:hover:not(:disabled) { color: var(--accent); background: var(--accent-fill); }
 .scoring-help { position: relative; font-size: 11px; color: var(--ink-faint); }
@@ -2662,22 +2664,25 @@ html[data-theme="dark"] .fb-done.is-error { color: #ff8f8f; }
 .requirement-navigation a { color: var(--accent); text-decoration: none; }
 .requirement-navigation a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .requirement-navigation span { color: var(--ink-faint); }
-.page-split .analysis-more { position: relative; flex: none; }
-.page-split .analysis-more > summary { height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 12px; list-style: none; cursor: pointer; border: 1px solid var(--rule); border-radius: 7px; color: var(--ink-soft); background: var(--surface); font-size: 12px; }
-.page-split .analysis-more > summary::-webkit-details-marker { display: none; }
-.page-split .analysis-more > summary:hover { background: var(--chip-bg); }
-.page-split .analysis-more > div { position: absolute; top: calc(100% + 4px); right: 0; z-index: 7; width: 284px; max-width: calc(100vw - 56px); min-width: 0; padding: 0; background: var(--bg); border: 1px solid var(--rule); border-radius: 8px; box-shadow: 0 8px 24px #25202b18; }
-.page-split .analysis-resume-controls .analysis-more { position: static; }
-.page-split .analysis-resume-controls .analysis-more > div { left: 0; right: auto; }
 .resume-menu-icon { width: 16px; height: 16px; flex: none; }
-.resume-menu-header { padding: 14px; border-bottom: 1px solid var(--rule); }
-.resume-menu-header > span { font-size: 11px; color: var(--ink-faint); }
-.resume-menu-header p { display: flex; align-items: center; gap: 8px; margin: 5px 0 0; font-size: 12px; color: var(--ink); }
-.resume-menu-header strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-.resume-menu-actions { padding: 5px; }
-.page-split .resume-menu-actions button { display: flex; align-items: center; gap: 8px; width: 100%; height: 39px; min-height: 39px; padding: 0 9px; font-size: 12px; background: none; color: var(--ink-soft); text-align: left; border: 0; border-radius: 5px; cursor: pointer; }
-.page-split .resume-menu-actions button:hover:not(:disabled) { background: var(--surface); }
-.page-split .resume-menu-actions .resume-remove { color: light-dark(#a33d49, #f3a1ad); }
+/* The resume dropdown (resume-match.js): a select-menu picker whose rows each carry a
+   delete button, with Add resume at the foot. */
+/* Scoped past the phone rule that lays filter panels flat in the drawer: this one is
+   a dropdown at every width. */
+.resume-picker > .resume-picker-panel { position: absolute; width: 280px; max-width: calc(100vw - 32px); margin-top: 0; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14); }
+.resume-picker-row { display: flex; align-items: center; gap: 2px; }
+.resume-picker-row .select-option { flex: 1; min-width: 0; }
+.resume-picker-row .select-option > span { overflow: hidden; text-overflow: ellipsis; }
+.resume-picker-delete { flex: none; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--ink-faint); cursor: pointer; }
+.resume-picker-delete .resume-menu-icon { width: 14px; height: 14px; }
+.resume-picker-delete:hover:not(:disabled),
+.resume-picker-delete:focus-visible { background: light-dark(#fbe9eb, #3a2026); color: light-dark(#a33d49, #f3a1ad); outline: none; }
+.resume-picker-add { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 4px; padding: 9px 10px 7px; border: 0; border-top: 1px solid var(--rule); border-radius: 0 0 4px 4px; background: none; font-family: var(--sans); font-size: 0.84rem; color: var(--accent); text-align: left; cursor: pointer; }
+.resume-picker-add .resume-menu-icon { width: 14px; height: 14px; }
+.resume-picker-add:hover:not(:disabled),
+.resume-picker-add:focus-visible { background: var(--accent-fill); outline: none; }
+.resume-picker-delete:disabled,
+.resume-picker-add:disabled { opacity: 0.5; cursor: default; }
 .description-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; margin: 0 0 12px; }
 .description-controls[hidden] { display: none; }
 .description-controls h3 { margin: 0; font-size: 16px; font-weight: 600; }
@@ -2746,7 +2751,6 @@ html[data-theme="dark"] .fb-done.is-error { color: #ff8f8f; }
 /* Resizing the available viewport must not move the document's scroll anchor. */
 .page-split { overflow-anchor: none; }
 
-.page-split .analysis-header-toolbar .analysis-more > summary { height: 32px; padding: 0 10px; font-size: 12px; }
 .page-split .analysis-header-toolbar .analysis-primary { height: 32px; padding: 0 10px; font-size: 12px; }
 @media (max-width: 359px) { .analysis-header-toolbar { grid-template-columns: minmax(0, 1fr); } }
 .page-split .detail-match.is-analyzed { margin: 8px 0 24px; padding: 16px; }
@@ -2990,18 +2994,11 @@ header.masthead-compact { padding-bottom: 14px; margin-bottom: 0; }
 .resume-library-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; margin-bottom: 4px; }
 .resume-library-head h2 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; font-weight: 600; }
 .resume-library-count { color: var(--ink-faint); font-size: 11px; font-weight: 400; }
-.resume-library-add { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 4px 8px; border: 1px solid var(--rule); border-radius: 7px; background: var(--bg); color: var(--ink-soft); font: inherit; font-size: 12px; cursor: pointer; }
-.resume-library-list { max-height: 108px; overflow-y: auto; overscroll-behavior: contain; list-style: none; margin: 0; padding: 0; }
-.resume-library-list li { display: flex; align-items: center; gap: 4px; min-width: 0; border-radius: 5px; }
-.resume-library-select { flex: 1; display: flex; align-items: center; gap: 7px; min-width: 0; min-height: 34px; padding: 5px 7px; border: 0; border-radius: 5px; background: none; color: var(--ink-soft); text-align: left; font: inherit; font-size: 12px; cursor: pointer; }
-.resume-library-select > span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.resume-library-select .resume-menu-icon { width: 14px; height: 14px; }
-.resume-library-select[aria-pressed="true"] { background: var(--accent-fill); color: var(--accent); }
-.resume-library-remove { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 32px; height: 32px; padding: 7px; border: 0; border-radius: 5px; background: none; color: var(--ink-faint); cursor: pointer; }
-.resume-library button:hover:not(:disabled) { color: var(--ink); background: var(--surface); }
-.resume-library .resume-library-remove:hover:not(:disabled) { color: light-dark(#a33d49, #f3a1ad); }
-.resume-library button:focus-visible { outline: 2px solid var(--accent2); outline-offset: 1px; }
-.resume-library button:disabled { opacity: .55; cursor: default; }
+/* The resume dropdown fills the column, its box matching the filter pickers beside it. */
+.resume-library .resume-picker { display: block; width: 100%; }
+.resume-library .resume-picker > summary { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resume-library .resume-picker > .resume-picker-panel { width: 100%; min-width: 240px; }
+.resume-library-retry:focus-visible { outline: 2px solid var(--accent2); outline-offset: 1px; }
 .resume-library-note, .resume-library-status { margin: 4px 0; color: var(--ink-faint); font-size: 12px; line-height: 1.5; }
 .resume-library-status.is-error { color: light-dark(#a33d49, #f3a1ad); }
 .resume-library-retry { border: 0; padding: 4px 0; min-height: 32px; background: none; color: var(--accent); font: inherit; font-size: 12px; cursor: pointer; }
@@ -3013,7 +3010,4 @@ header.masthead-compact { padding-bottom: 14px; margin-bottom: 0; }
 }
 @media (max-width: 720px) {
   .resume-library { width: 100%; min-width: 0; padding-top: 16px; margin-top: 4px; border-top: 1px solid var(--rule); }
-  .resume-library-list { max-height: 220px; }
-  .resume-library-select, .resume-library-remove, .resume-library-add { min-height: 40px; }
-  .resume-library-remove { width: 40px; }
 }

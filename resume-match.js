@@ -15,7 +15,6 @@
   "use strict";
 
   const ACTIVE = "find-jobs-active-resume";
-  const UPLOAD = "__upload";
   const API = (global.MATCH_API || "api").replace(/\/$/, "");
 
   // The "sparkles" mark that has come to mean AI-assisted (Lucide, ISC licence),
@@ -29,8 +28,7 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const icon = (paths) => `<svg class="resume-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${paths}</svg>`;
   const CHEVRON = icon('<path d="m6 9 6 6 6-6"/>');
-  const FILE = icon('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>');
-  const UPLOAD_ICON = icon('<path d="M12 16V4m-5 5 5-5 5 5M4 16v4h16v-4"/>');
+  const PLUS = icon('<path d="M12 5v14M5 12h14"/>');
   const TRASH = icon('<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/>');
   const THUMB_UP = icon('<path d="M7 10v12M15 5.9 14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 8A2 2 0 0 1 17.5 22H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.8a2 2 0 0 0 1.8-1.1L13 2a3.1 3.1 0 0 1 2 3.9Z"/>');
   const THUMB_DOWN = THUMB_UP.replace('<svg ', '<svg style="transform:rotate(180deg)" ');
@@ -140,24 +138,74 @@
     [...scores.keys()].forEach((cacheKey) => { if (cacheKey.startsWith(id + '|')) { scores.delete(cacheKey); stale.delete(cacheKey); } });
     if (wasActive) setActive(items[0]?.id || null); else renderLibrary();
   }
+  // One dropdown for everything about resumes, in the Resumes section beside the
+  // filters and in the description pane: pick one, delete any of them from its own
+  // row, or add another from the foot of the list. Drawn like the select-menu.js
+  // pickers, but by hand, since a <select> cannot hold the buttons. `act` is the data
+  // attribute each host's click handler reads.
+  function pickerHtml(act, selected, disabled) {
+    const off = disabled ? " disabled" : "";
+    const active = items.find((r) => r.id === selected);
+    const label = active ? active.label : items.length ? "Select resume" : "No resumes yet";
+    return `<details class="company-picker select-picker resume-picker${disabled ? " is-disabled" : ""}"><summary aria-haspopup="true" aria-label="Resume: ${esc(label)}" title="${esc(label)}"${disabled ? ' aria-disabled="true"' : ""}>${esc(label)}</summary>
+      <div class="company-panel select-panel resume-picker-panel" role="group" aria-label="Your resumes">
+        ${items.map((r) => `<div class="resume-picker-row"><button type="button" class="select-option${r.id === selected ? " is-selected" : ""}" ${act}="choose" data-resume-id="${esc(r.id)}" aria-pressed="${r.id === selected}" aria-label="${esc(r.label)}" title="${esc(r.label)}"${off}><span>${esc(r.label)}</span></button><button type="button" class="resume-picker-delete" ${act}="remove" data-resume-id="${esc(r.id)}" aria-label="Delete ${esc(r.label)}" title="Delete resume"${off}>${TRASH}</button></div>`).join("")}
+        <button type="button" class="resume-picker-add" ${act}="upload"${off}>${PLUS}Add resume</button>
+      </div></details>`;
+  }
+  // Opening the dropdown puts focus on the chosen resume, as select-menu.js does.
+  function wirePickers(root) {
+    root.querySelectorAll('.resume-picker').forEach((picker) => picker.addEventListener('toggle', () => {
+      if (!picker.open) return;
+      if (picker.classList.contains('is-disabled')) { picker.open = false; return; }
+      (picker.querySelector('.select-option.is-selected') || picker.querySelector('.select-option, .resume-picker-add'))?.focus({ preventScroll: true });
+    }));
+  }
+  // Arrow keys open the dropdown, then walk its rows, delete buttons included; Escape
+  // closes it. Returns whether the key was the dropdown's.
+  function pickerKeydown(event) {
+    const picker = event.target.closest(".resume-picker");
+    if (!picker) return false;
+    const summary = picker.firstElementChild;
+    if (!picker.open) {
+      if (event.target !== summary || (event.key !== "ArrowDown" && event.key !== "ArrowUp")) return false;
+      event.preventDefault();
+      if (!picker.classList.contains("is-disabled")) picker.open = true;
+      return true;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault(); event.stopPropagation();
+      picker.open = false; summary.focus({ preventScroll: true });
+      return true;
+    }
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return false;
+    const list = [...picker.querySelectorAll(".resume-picker-panel button:not(:disabled)")];
+    const at = list.indexOf(document.activeElement);
+    const next = event.key === "Home" ? list[0] : event.key === "End" ? list[list.length - 1]
+      : list[Math.max(0, Math.min(list.length - 1, at + (event.key === "ArrowDown" ? 1 : -1)))];
+    event.preventDefault(); next?.focus();
+    return true;
+  }
+
   function renderLibrary() {
     if (!libraryHost?.isConnected) return;
-    const scrollTop = libraryHost.querySelector('.resume-library-list')?.scrollTop || 0;
     const focused = libraryHost.contains(document.activeElement) ? document.activeElement : null;
     const focusAction = focused?.dataset.libraryAct, focusId = focused?.dataset.resumeId;
+    const focusSummary = !!focused?.matches('.resume-picker > summary');
     const signedOut = libraryReady && global.Auth && !global.Auth.account();
     const locked = libraryBusy || !!(current_mount?.host.isConnected && current_mount.isBusy());
-    const selected = activeId(items);
-    libraryHost.innerHTML = `<div class="resume-library-head"><h2 id="resume-library-title">Resumes${libraryReady && !signedOut ? `<span class="resume-library-count">${items.length}</span>` : ''}</h2>${libraryReady && !signedOut ? `<button type="button" class="resume-library-add" data-library-act="upload" aria-label="Add resume" title="Add a PDF, Word, TXT or Markdown resume"${locked ? ' disabled' : ''}>${icon('<path d="M12 5v14M5 12h14"/>')}Add</button>` : ''}</div>
-      ${!libraryReady ? '<p class="resume-library-note">Loading resumes…</p>' : signedOut ? `<p class="resume-library-note">Sign in to manage your resumes.</p>${global.Auth.enabled() ? '<div class="resume-library-signin"></div>' : ''}` : items.length ? `<ul class="resume-library-list" aria-label="Your resumes">${items.map((resume) => `<li><button type="button" class="resume-library-select" data-library-act="select" data-resume-id="${esc(resume.id)}" aria-pressed="${resume.id === selected}" title="${esc(resume.label)}"${locked ? ' disabled' : ''}>${FILE}<span>${esc(resume.label)}</span></button><button type="button" class="resume-library-remove" data-library-act="remove" data-resume-id="${esc(resume.id)}" aria-label="Remove ${esc(resume.label)}" title="Remove resume"${locked ? ' disabled' : ''}>${TRASH}</button></li>`).join('')}</ul>` : libraryError ? '' : '<p class="resume-library-note">Add a resume to check your fit for a job.</p>'}
-      <p class="resume-library-status${libraryError ? ' is-error' : ''}" role="status" aria-live="polite"${libraryError || libraryBusy ? '' : ' hidden'}>${esc(libraryError || (libraryBusy ? 'Saving resume changes…' : ''))}</p>${libraryError && !listing ? '<button type="button" class="resume-library-retry" data-library-act="retry">Retry</button>' : ''}`;
+    // A list that never loaded has nothing to pick from: the error and Retry stand alone.
+    const failed = libraryError && !listing;
+    libraryHost.innerHTML = `<div class="resume-library-head"><h2 id="resume-library-title">Resumes${libraryReady && !signedOut ? `<span class="resume-library-count">${items.length}</span>` : ''}</h2></div>
+      ${!libraryReady ? '<p class="resume-library-note">Loading resumes…</p>' : signedOut ? `<p class="resume-library-note">Sign in to manage your resumes.</p>${global.Auth.enabled() ? '<div class="resume-library-signin"></div>' : ''}` : failed ? '' : pickerHtml('data-library-act', activeId(items), locked) + (items.length ? '' : '<p class="resume-library-note">Add a resume to check your fit for a job.</p>')}
+      <p class="resume-library-status${libraryError ? ' is-error' : ''}" role="status" aria-live="polite"${libraryError || libraryBusy ? '' : ' hidden'}>${esc(libraryError || (libraryBusy ? 'Saving resume changes…' : ''))}</p>${failed ? '<button type="button" class="resume-library-retry" data-library-act="retry">Retry</button>' : ''}`;
     if (libraryInput) libraryHost.append(libraryInput);
-    const list = libraryHost.querySelector('.resume-library-list');
-    if (list) list.scrollTop = scrollTop;
+    wirePickers(libraryHost);
     if (signedOut && global.Auth.enabled()) global.Auth.renderButton(libraryHost.querySelector('.resume-library-signin'), { size: 'medium' });
-    if (focusAction) {
+    if (focusAction || focusSummary) {
+      // A row inside the closed dropdown cannot take focus; its summary stands in.
       const target = [...libraryHost.querySelectorAll('[data-library-act]')].find((button) => button.dataset.libraryAct === focusAction && button.dataset.resumeId === focusId);
-      (target || libraryHost.querySelector('.resume-library-add'))?.focus({ preventScroll: true });
+      (target && !target.closest('details:not([open])') ? target : libraryHost.querySelector('.resume-picker > summary, .resume-library-retry'))?.focus({ preventScroll: true });
     }
   }
   async function startLibrary() {
@@ -176,7 +224,7 @@
   async function changeLibrary(action, id, file) {
     if (libraryBusy || (current_mount?.host.isConnected && current_mount.isBusy())) return;
     const resume = items.find((item) => item.id === id);
-    if (action === 'remove' && (!resume || !global.confirm(`Remove “${resume.label}”? Its match scores are removed with it.`))) return;
+    if (action === 'remove' && (!resume || !global.confirm(`Remove “${resume.label}”?`))) return;
     const identity = accountVersion;
     libraryBusy = true; libraryError = ''; renderLibrary();
     if (current_mount?.host.isConnected) current_mount.refresh();
@@ -192,7 +240,7 @@
         if (current_mount?.host.isConnected) {
           if (changed) await current_mount.start(); else current_mount.refresh();
         }
-        libraryHost?.querySelector('.resume-library-add')?.focus({ preventScroll: true });
+        libraryHost?.querySelector('.resume-picker > summary')?.focus({ preventScroll: true });
       }
     }
   }
@@ -210,14 +258,16 @@
       const button = event.target.closest('[data-library-act]');
       if (!button || button.disabled) return;
       const { libraryAct: action, resumeId: id } = button.dataset;
-      if (action === 'upload') libraryInput.click();
+      if (action === 'upload') { button.closest('.resume-picker')?.removeAttribute('open'); libraryInput.click(); }
       else if (action === 'remove') changeLibrary(action, id);
       else if (action === 'retry') startLibrary();
-      else if (action === 'select') {
+      else if (action === 'choose') {
+        button.closest('.resume-picker')?.removeAttribute('open');
         if (current_mount?.host.isConnected) current_mount.chooseResume(id, false);
         else setActive(id);
       }
     });
+    host.addEventListener('keydown', pickerKeydown);
     startLibrary();
   }
 
@@ -552,16 +602,14 @@
       const hasBreakdown = Array.isArray(result?.findings);
       const controlsBusy = !!busy || libraryBusy;
       const canCheck = loaded && !signedOut && items.length && hasDescription !== false && !controlsBusy;
-      const active = items.find((r) => r.id === current());
-      const options = items.map((r) => `<option value="${esc(r.id)}"${r.id === current() ? " selected" : ""}>${esc(r.label)}</option>`).join("");
-      const select = `<select id="match-resume" aria-label="Resume"${controlsBusy ? " disabled" : ""}>${options}<option value="${UPLOAD}">Upload another resume…</option></select>`;
-      const more = items.length && !signedOut ? `<details class="match-more analysis-more"><summary aria-label="Manage resume" aria-expanded="false">Manage${CHEVRON}</summary><div class="analysis-settings">
-        <div class="resume-menu-header"><span>Selected resume</span><p title="${esc(active?.label || 'Selected resume')}">${FILE}<strong>${esc(active?.label || 'Selected resume')}</strong></p></div>
-        <div class="resume-menu-actions"><button type="button" data-act="upload"${controlsBusy ? " disabled" : ""}>${UPLOAD_ICON}Upload another resume</button>
-        <button type="button" class="resume-remove" data-act="remove"${controlsBusy ? " disabled" : ""}>${TRASH}Remove this resume</button></div></div></details>` : "";
-      const controls = `<div class="analysis-resume-controls"><div class="analysis-entry-picker">${select}</div>${more}</div>`;
+      const select = pickerHtml("data-act", current(), controlsBusy);
+      const controls = `<div class="analysis-resume-controls"><div class="analysis-entry-picker">${select}</div></div>`;
       const action = `<button type="button" class="match-run${result ? " analysis-reanalyze" : " analysis-primary"}${busy === "checking" ? " is-busy" : ""}" data-act="run"${canCheck ? "" : " disabled"}>${SPARKLE}<span>${busy === "checking" ? result ? "Updating…" : "Analyzing resume…" : result ? "Reanalyze" : "Analyze resume"}</span></button>`;
-      const toolbar = `<div class="analysis-header-toolbar"><div class="analysis-source"><div class="analysis-header-picker">${select}</div><span class="analysis-timestamp">${busy === 'loading' ? 'Checking saved…' : result?.checkedAt ? `Analyzed ${esc(ago(result.checkedAt))}` : result ? 'Analyzed' : 'Not analyzed'}</span></div><div class="analysis-tools">${action}${more}</div></div>`;
+      // Analyzed: the dropdown with when it was analyzed, and Reanalyze to the side. Not
+      // yet (a resume just switched to): no label, just Analyze under the dropdown.
+      const toolbar = result
+        ? `<div class="analysis-header-toolbar"><div class="analysis-source"><div class="analysis-header-picker">${select}</div><span class="analysis-timestamp">${result.checkedAt ? `Analyzed ${esc(ago(result.checkedAt))}` : 'Analyzed'}</span></div><div class="analysis-tools">${action}</div></div>`
+        : `<div class="analysis-header-toolbar is-pending"><div class="analysis-header-picker">${select}</div>${action}</div>`;
       let content;
       if (result) {
         const score = Number.isFinite(result.score) ? result.score : null;
@@ -613,12 +661,7 @@
           descriptionControls.querySelector('input').checked = marksOn;
         }
         if (signedOut && global.Auth?.enabled()) global.Auth.renderButton(host.querySelector('#match-signin'), { size: 'medium' });
-        if (global.SelectMenu) global.SelectMenu.enhance(host.querySelector('#match-resume'));
-        const pickerSummary = host.querySelector('.analysis-header-picker .select-picker > summary');
-        if (pickerSummary) pickerSummary.title = active?.label || 'Select resume';
-        host.querySelector('.analysis-more')?.addEventListener('toggle', (event) => {
-          event.target.querySelector('summary').setAttribute('aria-expanded', String(event.target.open));
-        });
+        wirePickers(host);
         host.querySelectorAll('.requirement-row').forEach((row) => row.addEventListener('toggle', () => {
           if (row.open) expandedRows.add(Number(row.dataset.index));
           else expandedRows.delete(Number(row.dataset.index));
@@ -736,9 +779,9 @@
         render();
       }
     }
-    async function remove() {
-      const id = current(), r = items.find((x) => x.id === id);
-      if (!r || !global.confirm(`Remove “${r.label}”? Its match scores are removed with it.`)) return;
+    async function remove(id = current()) {
+      const r = items.find((x) => x.id === id);
+      if (!r || !global.confirm(`Remove “${r.label}”?`)) return;
       const version = ++revision, identity = accountVersion;
       busy = "removing"; message = null; breakdownOpen = false; breakdownFilter = 'all'; expandedRows.clear(); render(); remark();
       try {
@@ -765,10 +808,11 @@
       else if (action === 'breakdown-close') setBreakdownOpen(false);
       else if (action === 'filter-status') filterBreakdown(act.dataset.filterStatus);
       else if (action === "retry") start();
-      else if (action === "upload") input.click();
+      else if (action === "upload") { act.closest('.resume-picker')?.removeAttribute('open'); input.click(); }
+      else if (action === "choose") { act.closest('.resume-picker')?.removeAttribute('open'); chooseResume(act.dataset.resumeId); }
       else if (action === "run") run();
       else if (action === "review") review(act.dataset.rating);
-      else if (action === "remove") remove();
+      else if (action === "remove") remove(act.dataset.resumeId);
     });
     host.addEventListener("submit", (event) => {
       const form = event.target.closest("[data-limit-form]");
@@ -792,13 +836,8 @@
       busy = null; render(); remark();
       if (focusPicker) host.querySelector('.select-picker > summary')?.focus({ preventScroll: true });
     }
-    host.addEventListener("change", (event) => {
-      if (event.target.id !== "match-resume") return;
-      if (event.target.value === UPLOAD) { event.target.value = current() || ""; input.click(); return; }
-      chooseResume(event.target.value);
-    });
     host.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape") return;
+      if (pickerKeydown(event) || event.key !== "Escape") return;
       const menu = event.target.closest("details[open]");
       if (menu) { menu.open = false; menu.querySelector("summary").focus({ preventScroll: true }); }
       else if (breakdownOpen && event.target.closest('.requirement-breakdown')) setBreakdownOpen(false);
@@ -821,10 +860,6 @@
   // Signing in or out changes whose resumes these are: forget everything cached and
   // redraw the card that is on screen.
   let current_mount = null;
-  document.addEventListener("click", (event) => {
-    const more = current_mount?.host.querySelector(".analysis-more[open]");
-    if (more && !event.composedPath().includes(more)) more.open = false;
-  });
   if (global.Auth) {
     global.Auth.onChange(() => {
       accountVersion++;

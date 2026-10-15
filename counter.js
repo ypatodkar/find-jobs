@@ -1,7 +1,7 @@
 // The live click counter in the page header.
 //
-// Reads a single aggregate from the worker — total clicks, distinct jobs, users —
-// and shows the total. Nothing identifying is fetched or sent; the per-job breakdown
+// Reads a single aggregate from the API — total clicks, distinct jobs, users — and
+// shows the total clicks. Nothing identifying is fetched or sent; the per-job breakdown
 // stays behind ADMIN_TOKEN on /counts.
 //
 // Deliberately quiet about failure: if the worker is unreachable, or ENDPOINT is
@@ -39,7 +39,7 @@
     if (!el) return;
     el.innerHTML =
       '<span class="counter" title="' +
-      stats.jobs + ' different roles opened by ' + stats.users + ' people">' +
+      stats.jobs.toLocaleString() + ' different roles opened by ' + stats.users.toLocaleString() + ' people">' +
       '<span class="counter-dot" aria-hidden="true"></span>' +
       '<span class="counter-n">' + stats.clicks.toLocaleString() + '</span>' +
       '<span class="counter-label">job clicks</span>' +

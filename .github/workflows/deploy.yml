@@ -47,8 +47,27 @@ jobs:
       # The CI user publishes static assets only. API releases use the approved
       # operator path documented in README.md; no extra IAM access is needed here.
 
+      # Jev's answers from earlier runs (job-labels.json, see classify.js), so only
+      # postings new since the last run are put to it. Each run saves under its own key
+      # and restores the newest by prefix; an evicted cache costs one full pass, ~$0.50.
+      - name: Restore job classifications
+        uses: actions/cache/restore@v4
+        with:
+          path: job-labels.json
+          key: job-labels-${{ github.run_id }}
+          restore-keys: job-labels-
+
       - name: Scrape all boards
+        env:
+          # Without it the scrape still runs; new postings are just left unlabelled.
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         run: node scrape.js
+
+      - name: Save job classifications
+        uses: actions/cache/save@v4
+        with:
+          path: job-labels.json
+          key: job-labels-${{ github.run_id }}
 
       - name: Build static site
         run: node build.js

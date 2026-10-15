@@ -1,0 +1,724 @@
+[
+  {
+    "job_id": "illumio_ashby_9c18a179-bdf5-4a33-8abb-4c56be14b584",
+    "company": "Illumio",
+    "title": "Sr. Member of Technical Staff - Platform",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "friendliai_ashby_c1ecbef9-5358-4c76-8aec-c0fac659c5b9",
+    "company": "Friendliai",
+    "title": "Software Engineer – Cloud Infrastructure",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "zoox_lever_9e0751cd-f651-4cc7-bea7-f21663f082c0",
+    "company": "Zoox",
+    "title": "Senior AI Developer Productivity Engineer",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "applied-compute_ashby_f32b991c-3e21-445d-8ebd-98aaf31e1ae0",
+    "company": "Applied Compute",
+    "title": "ML Perception Software Engineer",
+    "field": "cs",
+    "level": "early",
+    "borderline": "level"
+  },
+  {
+    "job_id": "zoox_lever_de43fa7a-1cf2-41b9-ba99-244f699e3870",
+    "company": "Zoox",
+    "title": "Staff Software Engineer, HPC",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "applied-compute_ashby_16df66a3-fd6b-4e87-8fb6-4c48ee2c2e4c",
+    "company": "Applied Compute",
+    "title": "Senior Software Engineer - Data Infrastructure",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "aktos_greenhouse_5077985004",
+    "company": "Aktos",
+    "title": "Full Stack Engineer - LATAM (Remote)",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "dealpath_greenhouse_8080760",
+    "company": "Dealpath",
+    "title": "Engineering Manager, Platform",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "databricks_greenhouse_8224683002",
+    "company": "Databricks",
+    "title": "Staff Software Engineer, Foundational Model Serving",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "timescale_ashby_8c701831-c4cf-4cc8-a9f0-0afa30474c08",
+    "company": "Timescale",
+    "title": "Senior Platform Engineer - Postgres Specialist",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "specter_ashby_e4046807-31e3-4974-82d0-50971972b2ed",
+    "company": "Specter",
+    "title": "Software Engineer - Backend",
+    "field": "cs",
+    "level": "unclear"
+  },
+  {
+    "job_id": "negotiateai-inc_ashby_1269c100-f064-47cd-a551-8c9ec740b528",
+    "company": "Negotiateai Inc.",
+    "title": "Forward Deployed Engineer",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "specter_ashby_dab4adfc-971b-4f8e-b0c8-f36ed9df75f9",
+    "company": "Specter",
+    "title": "Hardware Test Engineer",
+    "field": "not_cs",
+    "level": "early"
+  },
+  {
+    "job_id": "vetcove_ashby_7c0557ca-fadf-4e6d-8769-c39f87ee5f0d",
+    "company": "Vetcove",
+    "title": "Staff Frontend Engineer",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "databricks_greenhouse_8285949002",
+    "company": "Databricks",
+    "title": "Sr. Staff Software Engineer - Money Team",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "bitwarden_greenhouse_7866918003",
+    "company": "Bitwarden",
+    "title": "Senior Software Engineer (Auth)",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "formal_ashby_478897bd-5c4a-44ae-84bc-afc5d8ac1ac7",
+    "company": "Formal",
+    "title": "Software Engineer | Systems and L7 Protocols",
+    "field": "cs",
+    "level": "unclear"
+  },
+  {
+    "job_id": "physical-intelligence_ashby_c01b0e18-5eb8-4255-a10a-7e9a171676b7",
+    "company": "Physical Intelligence",
+    "title": "Software Engineer, Data Quality",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "julius-ai_ashby_e653d931-d8a4-4647-933e-812d6622f619",
+    "company": "Julius AI",
+    "title": "Software Engineer - Infrastructure (Mid - Senior)",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "timescale_ashby_ce3e0bab-5756-4b41-929e-536c566d087c",
+    "company": "Timescale",
+    "title": "Senior Security Engineer",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "true-anomaly_greenhouse_5252967007",
+    "company": "True Anomaly",
+    "title": "Software Engineer II, Spacecraft Simulation",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "general-matter_greenhouse_5412538008",
+    "company": "General Matter",
+    "title": "Software Engineer, Data Platform",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "betterment_greenhouse_8212276",
+    "company": "Betterment",
+    "title": "Sr. Software Engineer – API & Auth Platform",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "lilt_ashby_571c96ea-3789-4b33-bb86-7a3566ba6251",
+    "company": "Lilt",
+    "title": "AI Training Contributor - Czech - Remote",
+    "field": "not_cs",
+    "level": "unclear"
+  },
+  {
+    "job_id": "physical-intelligence_ashby_8e9830f4-89ba-46e6-ab73-648c550aaf3c",
+    "company": "Physical Intelligence",
+    "title": "Robot Integration Engineer",
+    "field": "not_cs",
+    "level": "experienced",
+    "borderline": "field"
+  },
+  {
+    "job_id": "lilt_ashby_ca7bf405-e7e6-4ef0-bd6e-11df3a327fbd",
+    "company": "Lilt",
+    "title": "AI Training Contributor - Lithuanian - Remote",
+    "field": "not_cs",
+    "level": "unclear"
+  },
+  {
+    "job_id": "chaos_greenhouse_5159089007",
+    "company": "Chaos",
+    "title": "Control Systems Engineer",
+    "field": "not_cs",
+    "level": "early",
+    "borderline": "field"
+  },
+  {
+    "job_id": "blink-health_greenhouse_8876894002",
+    "company": "Blink Health",
+    "title": "Senior Site Reliability Engineer II",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "savvy_ashby_7ef904d4-8dbf-4ad6-8bf7-328c6f72e644",
+    "company": "Savvy",
+    "title": "Staff Application and AI Security Engineer",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "true-anomaly_greenhouse_5224053007",
+    "company": "True Anomaly",
+    "title": "Engineering Manager, Autonomy",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "fabrion_ashby_ee416bce-cb97-4c2b-8504-e3457b365245",
+    "company": "Fabrion",
+    "title": "DevOps Engineer (Founding Team)",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "freeform_greenhouse_7979541003",
+    "company": "Freeform",
+    "title": "Factory Infrastructure Engineer",
+    "field": "not_cs",
+    "level": "early"
+  },
+  {
+    "job_id": "horizon3-ai_ashby_15489e18-2957-4b2f-be49-3f00b219d6b7",
+    "company": "Horizon3.ai",
+    "title": "Senior Engineering Manager, MSSP",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "vector_ashby_08712d1e-2901-4ded-852f-57d90e43e8ee",
+    "company": "Vector",
+    "title": "Software Solutions Engineer",
+    "field": "cs",
+    "level": "unclear",
+    "borderline": "field"
+  },
+  {
+    "job_id": "flux_ashby_fb21b54d-baf5-4a3e-9a24-ef6479884d63",
+    "company": "Flux",
+    "title": "Product Engineer, Front End",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "bobyard_ashby_39196a79-10f7-4c8e-9b40-d77134734e87",
+    "company": "Bobyard",
+    "title": "Forward Deployed Engineer",
+    "field": "cs",
+    "level": "unclear"
+  },
+  {
+    "job_id": "general-matter_greenhouse_5268862008",
+    "company": "General Matter",
+    "title": "Quality Engineer, Manufacturing",
+    "field": "not_cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "gallatin_ashby_00ae6401-2466-4ae8-b122-37c61bb4d122",
+    "company": "Gallatin",
+    "title": "IT Systems Engineer",
+    "field": "cs",
+    "level": "unclear",
+    "borderline": "field"
+  },
+  {
+    "job_id": "partnerize_greenhouse_8014644003",
+    "company": "Partnerize",
+    "title": "Site Reliability Engineer - Fully Remote",
+    "field": "cs",
+    "level": "unclear"
+  },
+  {
+    "job_id": "evolutionaryscale_greenhouse_7747518",
+    "company": "EvolutionaryScale",
+    "title": "Research Scientist, AI",
+    "field": "cs",
+    "level": "unclear",
+    "borderline": "level"
+  },
+  {
+    "job_id": "verse-medical_ashby_9762cd99-050b-4898-83d9-bd995ff71f8b",
+    "company": "Verse Medical",
+    "title": "Senior Software Engineer, Full Stack",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "snowflake_ashby_ed704306-6585-4a76-ba8c-d23565ae6b9c",
+    "company": "Snowflake",
+    "title": "Senior Software Engineer - Identity & Access Management",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "fulfil_greenhouse_7680955003",
+    "company": "Fulfil",
+    "title": "Staff Robotics Software Engineer",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "realm-alliance_ashby_342c2354-ed32-47eb-a778-d8dc6366b40e",
+    "company": "Realm Alliance",
+    "title": "Forward Deployed Engineer - NYC",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "faros_ashby_f0978123-07f9-457e-9236-dc136ac1c0e7",
+    "company": "Faros",
+    "title": "AI-Native Builder",
+    "field": "cs",
+    "level": "unclear"
+  },
+  {
+    "job_id": "snowflake_ashby_b93dd7ef-bb2b-4cc5-aef6-19576a7157fb",
+    "company": "Snowflake",
+    "title": "Solution Engineer, Enterprise Acquisition",
+    "field": "not_cs",
+    "level": "unclear",
+    "borderline": "field"
+  },
+  {
+    "job_id": "unconventional-ai_greenhouse_4425476009",
+    "company": "Unconventional AI",
+    "title": "AI Silicon, DFT Engineer",
+    "field": "not_cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "ibotta_ashby_b048fefb-c2f3-4ff2-b5e4-45245a309cce",
+    "company": "Ibotta",
+    "title": "Data Scientist, Strategic Partner Analytics",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "airbyte_ashby_efe55756-f28b-4030-b9a0-539f6c8ed8ff",
+    "company": "Airbyte",
+    "title": "Engineering Manager, Platform",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "agility-robotics_greenhouse_6019178004",
+    "company": "Agility Robotics",
+    "title": "Senior Hardware Test Engineer - Mechatronics",
+    "field": "not_cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "prepared_greenhouse_5495705003",
+    "company": "Prepared",
+    "title": "Senior Embedded Application Software Engineer II",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "generalist_ashby_9871bd5a-6c1a-40b3-98cb-62d38b61a3fe",
+    "company": "Generalist",
+    "title": "Research Scientist: Pretraining",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "fabrion_ashby_df73f4bf-429c-427e-a7cb-dc917784f819",
+    "company": "Fabrion",
+    "title": "Founding Engineer",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "bedrock-robotics_ashby_59f4cf4c-e0cc-4c39-a9a6-0e8a7c52a488",
+    "company": "Bedrock Robotics",
+    "title": "Machine Learning Engineer: Perception",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "defense-unicorns_greenhouse_5203690007",
+    "company": "Defense Unicorns",
+    "title": "Platform Engineer - FedD180/FedD181",
+    "field": "cs",
+    "level": "unclear"
+  },
+  {
+    "job_id": "heygen_greenhouse_5265289007",
+    "company": "HeyGen",
+    "title": "AI Video Creator",
+    "field": "not_cs",
+    "level": "early"
+  },
+  {
+    "job_id": "the-nuclear-company_greenhouse_5391888008",
+    "company": "The Nuclear Company",
+    "title": "Spring 2027 AI Applied Research Internship",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "bedrock-robotics_ashby_18001e6d-4431-4da4-8484-d2a46926f625",
+    "company": "Bedrock Robotics",
+    "title": "Systems Engineer, Safety",
+    "field": "not_cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "lapel_ashby_6465f8a0-9b13-4027-9b96-ec6c86b29c10",
+    "company": "Lapel",
+    "title": "Backend Engineer, Agents",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "toggle_greenhouse_5018731007",
+    "company": "Toggle",
+    "title": "Machine Learning and AI Engineer - New York",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "unconventional-ai_greenhouse_4068882009",
+    "company": "Unconventional AI",
+    "title": "AI Silicon, Analog Design",
+    "field": "not_cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "modal-labs_ashby_9fadb51f-ce11-41b1-84d5-470e66cc8ee9",
+    "company": "Modal Labs",
+    "title": "Forward Deployed Engineer - ML",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "tandem_ashby_8342be01-9ce2-4b20-b4b4-196b80dcd42e",
+    "company": "Tandem",
+    "title": "Software Engineer, Provider Growth",
+    "field": "cs",
+    "level": "unclear"
+  },
+  {
+    "job_id": "scribe_ashby_4cbbac75-4082-4e5f-905b-e985f68bd77c",
+    "company": "Scribe",
+    "title": "Backend Engineer",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "videahealth_ashby_06def833-6fdc-48d4-a40d-5e6250af3ea4",
+    "company": "VideaHealth",
+    "title": "Software Engineer, Full-Stack",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "upstart_greenhouse_7572996",
+    "company": "Upstart",
+    "title": "Applied Scientist",
+    "field": "cs",
+    "level": "unclear"
+  },
+  {
+    "job_id": "heygen_greenhouse_5174700007",
+    "company": "HeyGen",
+    "title": "Security Engineer",
+    "field": "cs",
+    "level": "unclear"
+  },
+  {
+    "job_id": "garage_ashby_f4018670-2c66-4da9-acac-2aa0af432abb",
+    "company": "Garage",
+    "title": "Software Engineer",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "faros_ashby_622e1f1e-4a39-4e7c-8526-1189ca588066",
+    "company": "Faros",
+    "title": "Software Engineer - New Grad",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "webai_ashby_346b2d54-ec61-406c-9e1e-2c2d1fed84ca",
+    "company": "webAI",
+    "title": "AI Software Engineer",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "lambda_ashby_20738542-164f-45b6-a822-f54c11b5fc60",
+    "company": "Lambda",
+    "title": "Corporate Development Associate - Digital Infrastructure M&A",
+    "field": "not_cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "matx_ashby_39056633-9e40-4a83-89e0-65bb32803aac",
+    "company": "Matx",
+    "title": "Mechanical Engineer - AI Rack Scale Systems",
+    "field": "not_cs",
+    "level": "unclear"
+  },
+  {
+    "job_id": "muon-space_greenhouse_5214405007",
+    "company": "Muon Space",
+    "title": "Engineering Manager, Avionics",
+    "field": "not_cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "perpay_greenhouse_4076978007",
+    "company": "Perpay",
+    "title": "Data Science Internship, Summer 2027",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "zipline_greenhouse_7909570003",
+    "company": "Zipline",
+    "title": "Perception Intern (Summer 2027)",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "nubank_ashby_d91e0c01-91ca-48f5-ac15-48e421b64f21",
+    "company": "Nubank",
+    "title": "Head of Design, AI Private Banker",
+    "field": "not_cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "whoop_ashby_88692663-be11-4797-b458-b3452e173218",
+    "company": "WHOOP",
+    "title": "Hardware Test Engineer (Manufacturing)",
+    "field": "not_cs",
+    "level": "unclear"
+  },
+  {
+    "job_id": "singlestore_greenhouse_8205427",
+    "company": "SingleStore",
+    "title": "Software Engineer-Engine-New Grad 2027",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "singlestore_greenhouse_8154399",
+    "company": "SingleStore",
+    "title": "Software Engineer Intern- Engine-2027",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "nooks_ashby_311d6e70-5cfa-4e80-89f6-fe00ac1f9f53",
+    "company": "Nooks",
+    "title": "Software Engineer, New Grad",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "defense-unicorns_greenhouse_4661526007",
+    "company": "Defense Unicorns",
+    "title": "SkillBridge Intern - Platform Engineer",
+    "field": "cs",
+    "level": "early",
+    "borderline": "level"
+  },
+  {
+    "job_id": "netic_ashby_b0ea7aab-8eea-4d31-96f9-278364180ae7",
+    "company": "Netic",
+    "title": "Software Engineer (Agent Platform) - Intern - 2026-2027",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "whoop_ashby_93461152-136b-484e-b9cd-1582e457b44d",
+    "company": "WHOOP",
+    "title": "Software Engineering Manager (Hardware Accelerate)",
+    "field": "cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "crusoe_ashby_2875f7e1-7cfc-41d4-ba4d-1ed6be4939c8",
+    "company": "Crusoe",
+    "title": "Director, People Success - Digital Infrastructure Group",
+    "field": "not_cs",
+    "level": "experienced"
+  },
+  {
+    "job_id": "kodiak-robotics_greenhouse_4396622009",
+    "company": "Kodiak Robotics",
+    "title": "Winter 2027 Intern, Data Engineering",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "composio_ashby_eea3c0be-8589-4e3d-a684-de29a9eada0d",
+    "company": "Composio",
+    "title": "Fullstack Engineering Internship, Product Team (Fall 2026 & Winter 2027)",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "clockwork-systems_greenhouse_6174230004",
+    "company": "Clockwork Systems",
+    "title": "Software Engineer Intern",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "veeam-software_greenhouse_4955279101",
+    "company": "Veeam Software",
+    "title": "Competitive Intelligence AI Engineering Intern - Summer 2027",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "inferact_ashby_2b6032f9-12a5-4083-b5e6-4bec5376cbaa",
+    "company": "Inferact",
+    "title": "Inference Engineering, Co-op",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "mercor_ashby_11516609-e54b-4087-87c2-e84a8bafbb5a",
+    "company": "Mercor",
+    "title": "Data Science Intern",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "muon-space_greenhouse_5204498007",
+    "company": "Muon Space",
+    "title": "Software Engineer, Entry-Level",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "persona_ashby_eb77c97c-fa9d-4bf0-9566-e5ba4453b7d3",
+    "company": "Persona",
+    "title": "Software Engineer, Intern (Summer 2027)",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "ramp_ashby_a13ae586-f4cb-4385-8822-c42b9b54ed74",
+    "company": "Ramp",
+    "title": "Software Engineer Internship, Frontend",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "astranis_greenhouse_4705617006",
+    "company": "Astranis",
+    "title": "Software Developer, Network Software Associate (Winter 2027)",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "revel_ashby_014c6445-bf8c-4213-ad97-faa83d129199",
+    "company": "Revel",
+    "title": "Software Engineer - Test (Entry-Junior)",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "applied-intuition_ashby_250080bd-10a8-4e5f-82b8-506029292d19",
+    "company": "Applied Intuition",
+    "title": "Software Integration Engineer - New Grad (2027)",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "superhuman_ashby_da5e147c-f957-4ba1-9712-1b2dde377cb0",
+    "company": "Superhuman",
+    "title": "Software Engineer, Early Career",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "astranis_greenhouse_4705660006",
+    "company": "Astranis",
+    "title": "Environmental Test Engineer Associate (Winter 2027)",
+    "field": "not_cs",
+    "level": "early"
+  },
+  {
+    "job_id": "composio_ashby_01e0e7ad-44a2-44e8-9340-64ca70eff491",
+    "company": "Composio",
+    "title": "Fullstack Engineer, Product Team (New Grad)",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "anduril_greenhouse_5162263007",
+    "company": "Anduril",
+    "title": "2027 Early Career Software Engineer",
+    "field": "cs",
+    "level": "early"
+  },
+  {
+    "job_id": "mercor_ashby_50a58426-2e97-43a5-99b1-d0d9cdc88100",
+    "company": "Mercor",
+    "title": "Enterprise AI Associate",
+    "field": "not_cs",
+    "level": "early"
+  },
+  {
+    "job_id": "genmo_ashby_9b5477f4-97af-4aaa-b855-910c982ce191",
+    "company": "Genmo",
+    "title": "Research Engineer (New Grad)",
+    "field": "cs",
+    "level": "early"
+  }
+]

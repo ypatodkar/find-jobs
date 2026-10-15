@@ -40,6 +40,11 @@
     staff: "Staff / Principal", manager: "Manager", exec: "Director+",
   };
   const SENIORITY_ORDER = ["intern", "junior", "mid", "senior", "staff", "manager", "exec"];
+  // From reading the posting rather than the title (classify.js), so a plain "Software
+  // Engineer" asking for two years lands under Early career. Roles not yet classified
+  // carry no value and are counted with "Not stated".
+  const CAREER_LABELS = { early: "Early career", experienced: "Experienced", unclear: "Not stated" };
+  const CAREER_ORDER = ["early", "experienced", "unclear"];
   const SIZE_LABELS = {
     "1-10": "1–10", "11-50": "11–50", "51-200": "51–200",
     "201-1000": "201–1,000", "1000+": "1,000+",
@@ -329,6 +334,7 @@
       { key: "role", label: "Role", group: "primary", values: (j) => j.roles || [], labelFor: (v) => ROLE_LABELS[v] || v },
       { key: "city", label: "Location", group: "primary", values: (j) => [j.city] },
       { key: "seniority", label: "Experience", group: "primary", values: (j) => (j.seniority ? [j.seniority] : []), labelFor: (v) => SENIORITY_LABELS[v] || v, order: SENIORITY_ORDER },
+      { key: "career", label: "Career stage", group: "primary", values: (j) => [j.career || "unclear"], labelFor: (v) => CAREER_LABELS[v] || v, order: CAREER_ORDER },
       { key: "company", label: "Company", group: "advanced", values: (j) => [j.company] },
       // The only subtractive filter here. Everything else narrows to what you picked;
       // this one removes it, which is the difference between "show me these six

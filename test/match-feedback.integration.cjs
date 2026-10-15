@@ -112,6 +112,18 @@ async function main() {
       const voted = await invoke('/api/match/feedback', 'POST', { ...body, checked_at: next.checkedAt, rating: 'down' });
       assert.equal(voted.statusCode, 200); assert.equal(JSON.parse(voted.body).feedback.rating, 'down');
       assert.equal((await lambda.releaseAction({ releaseAction: 'migrate' }, context)).ok, true);
+      // Deleting a resume is a soft delete: gone from the account, kept in the table.
+      assert.equal((await invoke(`/api/resumes/${resume}`, 'DELETE', undefined, 'fj_session=other-feedback-test-session-token')).statusCode, 404, 'another account cannot delete it');
+      assert.equal((await invoke(`/api/resumes/${resume}`, 'DELETE')).statusCode, 200);
+      assert.deepEqual(JSON.parse((await invoke('/api/resumes')).body).resumes, [], 'a deleted resume leaves the list');
+      const [row] = (await pool.query('SELECT active, label, deleted_at FROM resumes WHERE id = $1', [resume])).rows;
+      assert.equal(row.active, 0); assert.equal(row.label, 'delete_Test resume'); assert.ok(Number(row.deleted_at) > 0);
+      assert.equal((await pool.query('SELECT count(*)::int AS n FROM resume_matches WHERE resume_id = $1', [resume])).rows[0].n, 1, 'its scores are kept');
+      assert.equal((await pool.query('SELECT count(*)::int AS n FROM resume_match_feedback WHERE resume_id = $1', [resume])).rows[0].n, 2, 'its reviews are kept');
+      assert.equal(await store.getMatch('owner', resume, 'fixture_job'), null, 'its scores are not served');
+      await assert.rejects(store.body('owner', resume), /could not be found/, 'it cannot be analyzed again');
+      assert.equal((await invoke(`/api/resumes/${resume}`, 'DELETE')).statusCode, 404, 'deleting twice does not prefix twice');
+      assert.equal((await pool.query('SELECT label FROM resumes WHERE id = $1', [resume])).rows[0].label, 'delete_Test resume');
       await assert.rejects(lambda.releaseAction({ releaseAction: 'migrate', requestContext: {} }, context), /internal invocation/);
       const logout = await invoke('/api/auth/logout', 'POST', {});
       assert.equal(logout.statusCode, 200); assert.ok(logout.cookies[0].includes('HttpOnly; SameSite=Lax; Max-Age=0; Secure'));

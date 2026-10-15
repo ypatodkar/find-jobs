@@ -8,6 +8,9 @@
 // below is scoped by the account id the session resolved to: knowing a resume id is
 // not enough to read, score or delete someone else's. visitor_id records which
 // browser a resume was uploaded from.
+//
+// Deleting is a soft delete: the row stays, with active = 0 and its label prefixed
+// "delete_", and every read below asks for active = 1, so to the account it is gone.
 
 const crypto = require("crypto");
 const { Pool } = require("pg");
@@ -61,7 +64,7 @@ function createStore(pool) {
   return {
     async list(accountId) {
       const { rows } = await q(
-        "SELECT id, label, file_name, created_at FROM resumes WHERE account_id = $1 ORDER BY created_at DESC",
+        "SELECT id, label, file_name, created_at FROM resumes WHERE account_id = $1 AND active = 1 ORDER BY created_at DESC",
         [checkAccount(accountId)]
       );
       return rows.map((r) => ({ id: r.id, label: r.label, fileName: r.file_name, createdAt: Number(r.created_at) }));
@@ -72,7 +75,7 @@ function createStore(pool) {
       const text = typeof body === "string" ? body.trim().slice(0, MAX_BODY) : "";
       if (text.length < 100) throw fail(400, "Too little text could be read from that resume to compare. Try a text-based PDF or .docx.");
       const name = String(label || fileName || "Resume").trim().slice(0, MAX_LABEL) || "Resume";
-      const { rows } = await q("SELECT count(*)::int AS n FROM resumes WHERE account_id = $1", [a]);
+      const { rows } = await q("SELECT count(*)::int AS n FROM resumes WHERE account_id = $1 AND active = 1", [a]);
       if (rows[0].n >= MAX_RESUMES) throw fail(409, `You can keep up to ${MAX_RESUMES} resumes. Remove one to add another.`);
       const id = "r_" + crypto.randomBytes(12).toString("base64url");
       const createdAt = Date.now();
@@ -84,12 +87,15 @@ function createStore(pool) {
     },
 
     async remove(accountId, id) {
-      const { rowCount } = await q("DELETE FROM resumes WHERE id = $1 AND account_id = $2", [checkResumeId(id), checkAccount(accountId)]);
+      const { rowCount } = await q(
+        "UPDATE resumes SET active = 0, label = 'delete_' || label, deleted_at = $3 WHERE id = $1 AND account_id = $2 AND active = 1",
+        [checkResumeId(id), checkAccount(accountId), Date.now()]
+      );
       if (!rowCount) throw fail(404, "That resume could not be found.");
     },
 
     async body(accountId, id) {
-      const { rows } = await q("SELECT body FROM resumes WHERE id = $1 AND account_id = $2", [checkResumeId(id), checkAccount(accountId)]);
+      const { rows } = await q("SELECT body FROM resumes WHERE id = $1 AND account_id = $2 AND active = 1", [checkResumeId(id), checkAccount(accountId)]);
       if (!rows.length) throw fail(404, "That resume could not be found. It may have been removed.");
       return rows[0].body;
     },
@@ -107,7 +113,7 @@ function createStore(pool) {
            JOIN resumes r ON r.id = m.resume_id
            LEFT JOIN resume_match_feedback f ON f.resume_id = m.resume_id AND f.job_id = m.job_id
              AND f.account_id = r.account_id AND f.analysis_checked_at = m.checked_at
-          WHERE m.resume_id = $1 AND r.account_id = $2 AND m.job_id = $3`,
+          WHERE m.resume_id = $1 AND r.account_id = $2 AND r.active = 1 AND m.job_id = $3`,
         [checkResumeId(resumeId), checkAccount(accountId), String(jobId)]
       );
       if (!rows.length) return null;
@@ -134,7 +140,7 @@ function createStore(pool) {
            (account_id, resume_id, job_id, analysis_checked_at, rating, result, score, model, rubric, desc_hash, created_at, updated_at)
          SELECT $2, m.resume_id, m.job_id, m.checked_at, $5, m.result, m.score, m.model, m.rubric, m.desc_hash, $6, $6
            FROM resume_matches m JOIN resumes r ON r.id = m.resume_id
-          WHERE m.resume_id = $1 AND r.account_id = $2 AND m.job_id = $3 AND m.checked_at = $4
+          WHERE m.resume_id = $1 AND r.account_id = $2 AND r.active = 1 AND m.job_id = $3 AND m.checked_at = $4
          ON CONFLICT (account_id, resume_id, job_id, analysis_checked_at) DO UPDATE
            SET rating = EXCLUDED.rating, updated_at = EXCLUDED.updated_at
          RETURNING rating, updated_at`,
