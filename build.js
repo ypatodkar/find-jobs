@@ -8,29 +8,21 @@
 //   dist/api/results.json
 //   dist/api/all-jobs.json
 //   dist/api/firm/<id>.json      (one per firm, including the unscrapeable ones)
+//   dist/api/desc/<shard>.json   (job descriptions, a few per file; see description.js)
 //
 const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
 const { BOARDS } = require("./boards");
 const { resultsPayload, allJobsPayload, firmPayload } = require("./pipeline");
+const { groupByShard } = require("./description");
 
 const ROOT = __dirname;
 const DIST = path.join(ROOT, "dist");
 const RESULTS_FILE = path.join(ROOT, "results.json");
+const DESCRIPTIONS_FILE = path.join(ROOT, "descriptions.json");
 
-// Everything the browser needs. Server-side files (pipeline, scraper, ats, …) are
-// deliberately absent — shipping them would put the scrape internals on the public site.
-const ASSETS = [
-  "index.html", "firms.html", "firm.html", "about.html",
-  "styles.css", "og.png", "robots.txt", "sitemap.xml", "404.html",
-  "fonts/geist-sans-400.woff2", "fonts/geist-sans-500.woff2",
-  "fonts/geist-sans-600.woff2", "fonts/geist-sans-700.woff2",
-  "api-config.js", "data.js", "jobs-ui.js", "presets.js", "filter-drawer.js", "all.js", "app.js", "firm.js", "track.js", "theme.js", "visitor.js", "viewed.js", "counter.js", "heart.js", "feedback.js",
-  // Content, not code: rewritten by the /feature command between scrapes, and shipped
-  // as-is so the browser can fetch it at the same relative path server.js serves.
-  "featured.js", "featured.json",
-];
+const { ASSETS } = require("./assets");
 
 async function writeJson(rel, body) {
   const full = path.join(DIST, rel);
@@ -70,18 +62,41 @@ async function main() {
   // file or directory beginning with an underscore.
   await fsp.writeFile(path.join(DIST, ".nojekyll"), "");
 
+  // Same-origin dynamic account routes on the production Cloudflare Pages host.
+  await fsp.copyFile(path.join(ROOT, 'deploy/pages-worker.mjs'), path.join(DIST, '_worker.js'));
+  await writeJson('_routes.json', { version: 1, include: ['/api/auth/*', '/api/sync', '/api/sync/*', '/api/resumes', '/api/resumes/*', '/api/match', '/api/match/*'], exclude: [] });
+
   // --- data ---
+  // Which jobs have a description, so the job lists can mark them (see pipeline.js).
+  const described = fs.existsSync(DESCRIPTIONS_FILE)
+    ? new Set(Object.keys(JSON.parse(await fsp.readFile(DESCRIPTIONS_FILE, "utf8"))))
+    : null;
   let bytes = 0;
   bytes += await writeJson("api/results.json", resultsPayload(data));
-  bytes += await writeJson("api/all-jobs.json", allJobsPayload(data));
+  bytes += await writeJson("api/all-jobs.json", allJobsPayload(data, described));
 
   let firmCount = 0;
   for (const id of Object.keys(BOARDS)) {
-    const payload = firmPayload(data, id);
+    const payload = firmPayload(data, id, described);
     if (!payload) continue;
     bytes += await writeJson(`api/firm/${id}.json`, payload);
     firmCount++;
   }
+
+  // Optional: a results.json from before descriptions were kept still builds, and the
+  // pane says there is no description rather than the build failing.
+  let shardCount = 0;
+  let descBytes = 0;
+  if (fs.existsSync(DESCRIPTIONS_FILE)) {
+    const shards = groupByShard(JSON.parse(await fsp.readFile(DESCRIPTIONS_FILE, "utf8")));
+    for (const [k, body] of Object.entries(shards)) {
+      descBytes += await writeJson(`api/desc/${k}.json`, body);
+      shardCount++;
+    }
+  } else {
+    console.warn("No descriptions.json — the description pane will have no text. Run `node scrape.js`.");
+  }
+  console.log(`descriptions: ${shardCount} shard files, ${(descBytes / 1048576).toFixed(2)} MB uncompressed`);
 
   const jobs = allJobsPayload(data).jobs.length;
   console.log(`dist/ built — ${ASSETS.length} assets, ${firmCount} firm files, ${jobs} roles`);

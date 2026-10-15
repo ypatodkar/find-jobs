@@ -128,7 +128,9 @@
     // it to nothing after closing.
     function syncCount() {
       if (!applyBtn) return;
-      var raw = countSource ? String(countSource.textContent || "").trim() : "";
+      // data-total when the source carries one: its text is a sentence ("Showing 1–45
+      // of 12789 matching roles"), not a number.
+      var raw = countSource ? String(countSource.dataset.total || countSource.textContent || "").trim() : "";
       if (!raw) {
         applyBtn.textContent = "Show results";
         return;

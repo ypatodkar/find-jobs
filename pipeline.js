@@ -211,11 +211,18 @@ function packCompanies(jobs) {
   return { companyFields: COMPANY_FIELDS, companies: order, jobs: packed };
 }
 
+// `described` is the set of job ids with a stored description (descriptions.json).
+// Each such job is marked, so the list can put roles you can read about first within
+// a day without fetching a single description to find out which those are.
+function markDescribed(job, described) {
+  return described && described.has(job.job_id) ? { ...job, described: true } : job;
+}
+
 /**
  * Every role across every firm, deduped. The same company can sit in several
  * portfolios, so a job carries the list of investors that back it.
  */
-function allJobsPayload(data) {
+function allJobsPayload(data, described) {
   const merged = new Map();
   for (const [firmId, r] of Object.entries(data.firms || {})) {
     if (r.status !== "ok") continue;
@@ -236,7 +243,7 @@ function allJobsPayload(data) {
   return {
     scrapedAt: data.scrapedAt,
     enrichment: data.enrichment || null,
-    ...packCompanies([...merged.values()]),
+    ...packCompanies([...merged.values()].map((j) => markDescribed(j, described))),
   };
 }
 
@@ -244,9 +251,9 @@ function allJobsPayload(data) {
  * One firm's payload, or null if that id isn't a firm at all. Firms that have never
  * been scrapeable still get a real page explaining why, from the board config.
  */
-function firmPayload(data, id) {
+function firmPayload(data, id, described) {
   const firm = (data.firms || {})[id];
-  if (firm) return { scrapedAt: data.scrapedAt, ...firm };
+  if (firm) return { scrapedAt: data.scrapedAt, ...firm, jobs: (firm.jobs || []).map((j) => markDescribed(j, described)) };
 
   const cfg = BOARDS[id];
   if (cfg && !cfg.platform) {

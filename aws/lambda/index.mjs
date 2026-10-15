@@ -27,6 +27,7 @@
 //      run inside an explicit transaction, which is what batch() was providing.
 
 import pg from "pg";
+import accountApi from "./api.cjs";
 
 const USER_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const JOB_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}_(ashby|greenhouse|lever|vc)_[a-z0-9-]{1,64}$/;
@@ -149,7 +150,9 @@ async function sendFeedbackEmail(payload) {
   }
 }
 
-export const handler = async (event) => {
+export const handler = async (event, context) => {
+  if (!event.requestContext && event.releaseAction) return accountApi.releaseAction(event, context);
+  if (/^\/api\/(auth|sync|resumes|match)(\/|$)/.test(event.rawPath || '')) return accountApi.handle(event, context);
   const method = event.requestContext?.http?.method || "GET";
   const path = event.rawPath || "/";
   const headers = event.headers || {};

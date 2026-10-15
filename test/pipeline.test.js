@@ -59,3 +59,18 @@ test("does not report boards that are configured as unsupported", () => {
   assert.ok(unsupported.length > 0, "fixture needs at least one unsupported board");
   assert.deepEqual(failedBoards(results), []);
 });
+
+test("marks jobs that have a stored description, on both payloads", () => {
+  const { allJobsPayload, firmPayload } = require("../pipeline");
+  const data = { scrapedAt: "t", firms: { f1: { status: "ok", jobs: [
+    { job_id: "a", company: "Acme", title: "Engineer", city: "SF" },
+    { job_id: "b", company: "Acme", title: "Designer", city: "SF" },
+  ] } } };
+  const described = new Set(["a"]);
+  const all = allJobsPayload(data, described).jobs;
+  assert.equal(all.find((j) => j.job_id === "a").described, true);
+  assert.equal(all.find((j) => j.job_id === "b").described, undefined);
+  assert.equal(firmPayload(data, "f1", described).jobs.find((j) => j.job_id === "a").described, true);
+  // Without the set (no descriptions.json), nothing is marked.
+  assert.ok(allJobsPayload(data).jobs.every((j) => j.described === undefined));
+});
