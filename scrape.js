@@ -8,9 +8,42 @@
 const fsp = require("fs/promises");
 const path = require("path");
 const { runScrape, failedPlatforms, failedBoards } = require("./pipeline");
+const { labelJobs } = require("./classify");
 
 const RESULTS_FILE = path.join(__dirname, "results.json");
 const DESCRIPTIONS_FILE = path.join(__dirname, "descriptions.json");
+// Jev's answers from earlier scrapes, keyed by a hash of each posting, so a posting
+// is classified once rather than on every run. Not in git: CI carries it between runs
+// with actions/cache, and losing it only means asking again (classify.js).
+const LABELS_FILE = path.join(__dirname, "job-labels.json");
+
+// Reads TYPESAFE_API_KEY from .env for local runs; CI passes it as a secret.
+function loadKey() {
+  if (process.env.TYPESAFE_API_KEY) return;
+  try {
+    for (const line of require("fs").readFileSync(path.join(__dirname, ".env"), "utf8").split(/\r?\n/)) {
+      const m = /^\s*TYPESAFE_API_KEY\s*=\s*(.*?)\s*$/.exec(line);
+      if (m) process.env.TYPESAFE_API_KEY = m[1].replace(/^(["'])(.*)\1$/, "$2");
+    }
+  } catch { /* no .env */ }
+}
+
+async function classifyJobs(results) {
+  loadKey();
+  let cache = {};
+  try {
+    cache = JSON.parse(await fsp.readFile(LABELS_FILE, "utf8"));
+  } catch { /* first run, or the CI cache was evicted: everything is asked */ }
+  const s = await labelJobs(results, cache, {
+    log: (m) => console.warn(m),
+    onProgress: (done, total) => done % 1500 < 30 && console.log(`  classified ${done}/${total}…`),
+  });
+  await fsp.writeFile(LABELS_FILE, JSON.stringify(cache));
+  console.log(
+    `Classified ${s.asked} new postings (${s.tokens.toLocaleString()} input tokens), ${s.cached} from cache; ` +
+      `dropped ${s.dropped} that are not computing roles.`
+  );
+}
 
 // Descriptions are most of the bytes a scrape collects and only the description pane
 // reads them, one job at a time. Kept in results.json they would ride along into every
@@ -66,6 +99,13 @@ async function main() {
   if (lost.length) {
     console.warn(`\n${lost.length} configured board${lost.length === 1 ? "" : "s"} did not return:`);
     for (const [id, reason] of lost) console.warn(`  ${id.padEnd(24)} ${reason}`);
+  }
+
+  // Optional: a bug here must not cost the deploy, which is the job list itself.
+  try {
+    await classifyJobs(results);
+  } catch (err) {
+    console.warn(`Classification skipped: ${err.message}`);
   }
 
   const descriptions = splitDescriptions(results);

@@ -32,3 +32,6 @@ aws/function.zip
 
 # Résumés used for scoring reviews (scripts/validate-matches.js) are personal.
 validation/resumes/
+
+# Jev classifications cached between scrapes (classify.js); CI keeps its own copy.
+job-labels.json

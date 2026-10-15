@@ -303,6 +303,19 @@ refresh rather than trusting a stale file.
 
 ## Resume matching production release
 
+Job classification runs during `scrape.js`, using the same TypeSafe service as resume
+matching. Configure the encrypted `TYPESAFE_API_KEY` repository secret for the Actions
+workflow. Only public job titles, company names, and short description excerpts are
+sent by this step; resumes are not involved. Requests batch 30 distinct postings and
+`job-labels.json` caches answers by posting content and rubric version between runs.
+Confident non-computing roles are excluded, and career stage becomes a filter. If the
+key is absent or the service fails, unclassified postings remain visible. Validate
+classification against the labeled examples with `node scripts/validate-classify.js`.
+
+Resume removal marks a record inactive and hides it from account and matching APIs.
+The server retains its extracted text, analyses, and reviews. Deploy the additive
+`active` / `deleted_at` schema migration before the API version that queries them.
+
 The active site runs on Cloudflare Pages. `build.js` adds a small Pages worker that
 forwards `/api/auth/*`, `/api/sync*`, `/api/resumes*`, and `/api/match*` to the existing
 `find-jobs-api` Lambda. Static JSON and description shards stay with Pages. Account

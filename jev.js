@@ -213,6 +213,15 @@ async function assess(resume, job, options = {}) {
   if (!key) throw fail(503, "Resume matching is not configured on this server.");
   const request = requestFor(resume, job, options.model || MODEL);
   if (!request.items.length) throw fail(422, "No requirements could be found in this job's description to compare against.");
+  return parseAssessment(await post(request.body, { ...options, apiKey: key }), request);
+}
+
+/**
+ * Send one systemone request and return the parsed response. Shared with classify.js,
+ * which asks Jev about many jobs at once rather than about one résumé.
+ */
+async function post(body, options = {}) {
+  const key = options.apiKey || process.env.TYPESAFE_API_KEY;
   const fetcher = options.fetch || fetch;
   let response;
   // One retry, and only for rate limiting or overload, which are the two answers that
@@ -222,8 +231,8 @@ async function assess(resume, job, options = {}) {
       response = await fetcher(ENDPOINT, {
         method: "POST",
         headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-        body: JSON.stringify(request.body),
-        signal: AbortSignal.timeout(30000),
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(options.timeoutMs || 30000),
         redirect: "error",
       });
     } catch (error) {
@@ -241,13 +250,11 @@ async function assess(resume, job, options = {}) {
     if (response.status === 529) throw fail(503, "The matching service is overloaded. Please try again shortly.");
     throw fail(502, "The matching service is unavailable. Please try again shortly.");
   }
-  let result;
   try {
-    result = await response.json();
+    return await response.json();
   } catch {
     throw fail(502, "The matching service returned an unreadable response.");
   }
-  return parseAssessment(result, request);
 }
 
-module.exports = { MODEL, RUBRIC_VERSION, STATUS, requestFor, parseAssessment, assess, resumeLines };
+module.exports = { MODEL, RUBRIC_VERSION, STATUS, requestFor, parseAssessment, assess, post, resumeLines };

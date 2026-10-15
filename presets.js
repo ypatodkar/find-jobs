@@ -109,7 +109,7 @@
   //
   // Priority is most-specific-first. What someone typed is the strongest signal of
   // intent, then who they're looking at, then what the role is, then where.
-  var NAME_ORDER = ["company", "firm", "role", "seniority", "industry", "city", "size", "stage"];
+  var NAME_ORDER = ["company", "firm", "role", "seniority", "career", "industry", "city", "size", "stage"];
 
   function describe(view, filters) {
     var sel = filters.selected || {};

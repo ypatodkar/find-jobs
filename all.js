@@ -99,16 +99,8 @@
       }
       message.hidden = true;
 
-      const companies = new Set(jobs.map((j) => j.company)).size;
-      const investors = new Set(jobs.flatMap((j) => j.firms || [])).size;
-      const live = jobs.filter((j) => j.source === "ats").length;
-
-      stats.innerHTML = [
-        `${jobs.length.toLocaleString()} roles`,
-        `${companies} companies`,
-        `${investors} investors`,
-        `${live.toLocaleString()} live from company boards`,
-      ].map((s) => `<span>${JobsUI.escapeHtml(s)}</span>`).join("");
+      // No totals here: the header's click counter (counter.js) is the one number shown.
+      stats.innerHTML = "";
 
       const multi = jobs.filter((j) => (j.firms || []).length > 1).length;
       note.textContent =
