@@ -5,8 +5,8 @@
 // ResumeMatch.mount() each time it renders a job into the pane.
 //
 // Resumes and scores belong to a Google account (auth.js), stored on the server
-// (server.js, backed by Postgres). Signed out, the card asks the visitor to sign in
-// instead. An upload sends the extracted text once; after that only the resume's id
+// (server.js, backed by Postgres). Signed out, Upload resume requests sign-in
+// before opening the file chooser. An upload sends extracted text once; then only its id
 // travels. A job opened again shows the score it already got, read back from the
 // database, without calling the model.
 //
@@ -544,13 +544,13 @@
 
           </div>`;
       } else if (signedOut) {
-        content = `<div class="analysis-entry"><h3>${SPARKLE} Resume match</h3><p class="match-msg">Sign in to analyze your resume.</p>${global.Auth?.enabled() ? `<div class="match-signin" id="match-signin"></div>` : `<p class="match-fine">Sign-in is not configured on this server.</p>`}</div>`;
+        content = `<div class="analysis-entry analysis-entry-upload"><h3>${SPARKLE} Resume match</h3><button type="button" class="match-run analysis-primary" data-act="upload">${SPARKLE}Upload resume</button><p class="match-msg">Add a resume to analyse this job.</p></div>`;
       } else if (!loaded) {
         content = `<div class="analysis-entry"><h3>${SPARKLE} Resume match</h3><p class="analysis-loading" role="status"><span class="analysis-spinner" aria-hidden="true"></span>Loading resume…</p></div>`;
       } else if (message?.kind === 'error' && !listing) {
         content = `<div class="analysis-entry"><h3>${SPARKLE} Resume match</h3><p class="match-msg">Analysis unavailable</p></div>`;
       } else if (!items.length) {
-        content = `<div class="analysis-entry"><h3>${SPARKLE} Resume match</h3><p class="match-msg">Add a resume to analyze this job.</p><button type="button" class="match-run analysis-primary" data-act="upload"${controlsBusy ? ' disabled' : ''}>${SPARKLE}${busy === 'reading' ? 'Reading resume…' : 'Upload resume'}</button></div>`;
+        content = `<div class="analysis-entry analysis-entry-upload"><h3>${SPARKLE} Resume match</h3><button type="button" class="match-run analysis-primary" data-act="upload"${controlsBusy ? ' disabled' : ''}>${SPARKLE}${busy === 'reading' ? 'Reading resume…' : 'Upload resume'}</button><p class="match-msg">Add a resume to analyse this job.</p></div>`;
       } else if (showResumeToolbar) {
         content = `${toolbar}${busy === 'checking' || busy === 'loading' ? `<p class="analysis-loading" role="status"><span class="analysis-spinner" aria-hidden="true"></span>${busy === 'checking' ? 'Analyzing resume…' : 'Loading saved analysis…'}</p>` : `<p class="match-msg">Analyze this resume against the selected job.</p>`}`;
       } else {
@@ -572,7 +572,6 @@
           descriptionControls.hidden = !result || !hasBreakdown || hasDescription !== true;
           descriptionControls.querySelector('input').checked = marksOn;
         }
-        if (signedOut && global.Auth?.enabled()) global.Auth.renderButton(host.querySelector('#match-signin'), { size: 'medium' });
         wirePickers(host);
         host.querySelectorAll('.requirement-row').forEach((row) => row.addEventListener('toggle', () => {
           if (row.open) expandedRows.add(Number(row.dataset.index));
@@ -634,6 +633,7 @@
     current_mount = { host, start, chooseResume, refresh: render, isBusy: () => !!busy };
 
     async function upload(file) {
+      if (signedOut || (global.Auth && !global.Auth.account())) { global.Auth?.requestResumeSignIn(); return; }
       if (!Import) { message = { kind: "error", text: "Resume upload could not load. Refresh and try again." }; render(); return; }
       const version = ++revision, identity = accountVersion;
       busy = "reading"; message = null; breakdownOpen = false; breakdownFilter = 'all'; expandedRows.clear(); remark(); render();
@@ -719,7 +719,11 @@
       else if (action === 'breakdown-close') setBreakdownOpen(false);
       else if (action === 'filter-status') filterBreakdown(act.dataset.filterStatus);
       else if (action === "retry") start();
-      else if (action === "upload") { act.closest('.resume-picker')?.removeAttribute('open'); input.click(); }
+      else if (action === "upload") {
+        act.closest('.resume-picker')?.removeAttribute('open');
+        if (signedOut || (global.Auth && !global.Auth.account())) global.Auth?.requestResumeSignIn();
+        else input.click();
+      }
       else if (action === "choose") { act.closest('.resume-picker')?.removeAttribute('open'); chooseResume(act.dataset.resumeId); }
       else if (action === "run") run();
       else if (action === "review") review(act.dataset.rating);

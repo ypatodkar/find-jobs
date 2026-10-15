@@ -97,7 +97,14 @@ async function main(){
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/*',route=>route.request().url().startsWith(base)?route.continue():route.abort());
     const waitScore=async(score)=>{await page.waitForFunction(n=>document.querySelector('.analysis-score-number')?.textContent===`${n}/100`,score);await page.getByRole('button',{name:'Reanalyze',exact:true}).waitFor();};
-    const open=async()=>{await page.goto(base);await page.locator('.job[data-job-id="job_0"]').click();};
+    const open=async()=>{
+      await page.goto(base);await page.locator('.job[data-job-id="job_0"]').waitFor();
+      if(page.viewportSize().width<1100&&await page.locator('#job-detail').isVisible()){
+        if(await page.locator('#detail-title').textContent()==='Senior Software Engineer')return;
+        await page.locator('#detail-top .detail-close').click();await page.locator('#job-detail').waitFor({state:'hidden'});
+      }
+      await page.locator('.job[data-job-id="job_0"]').click();
+    };
     const readingMeasurements=[];
     const checkReadingLayout=async()=>{
       await page.waitForFunction(()=>!document.querySelector('#detail-body').hasAttribute('aria-busy'));
@@ -380,9 +387,9 @@ async function main(){
     assert.ok(Math.abs(await page.evaluate(()=>window.scrollY)-listAt)<40,'job selection retains list position');
     await waitScore(60);
     await page.evaluate(()=>document.querySelector('.job-detail').scrollTop=350);
-    const beforePage=await page.locator('.job-detail').evaluate(el=>el.scrollTop);
     await page.locator('.page-next').click();assert.equal(new URL(page.url()).searchParams.get('page'),'2');
-    assert.equal(await page.locator('.job-detail').evaluate(el=>el.scrollTop),beforePage);
+    await page.waitForFunction(()=>document.querySelector('.job[data-job-id]')?.classList.contains('is-selected'));
+    assert.equal(await page.locator('.job-detail').evaluate(el=>el.scrollTop),0,'pagination opens its first role at the top');
     await page.goBack();await page.waitForURL(base+'/');await page.goForward();await page.waitForURL(base+'/?page=2');
     // A single click from the unanalyzed state immediately exposes score + findings.
     mode='unanalyzed';postScore=20;await page.evaluate(()=>localStorage.setItem('find-jobs-active-resume','r_systems'));
@@ -442,7 +449,7 @@ async function main(){
     assert.ok(await page.evaluate(()=>document.querySelector('#job-detail').contains(document.activeElement)));
     await page.locator('#detail-match .resume-picker > summary').click();await page.locator('#detail-match .resume-picker > summary').press('Escape');
     assert.equal(await page.locator('#job-detail').isVisible(),true);
-    await page.locator('#detail-top').getByRole('button',{name:'Back to jobs',exact:true}).click();assert.equal(await page.locator('#job-detail').isVisible(),false);
+    await page.locator('#detail-top').getByRole('button',{name:'Back to jobs',exact:true}).click();await page.locator('#job-detail').waitFor({state:'hidden'});
     mode='unanalyzed';await open();await page.getByRole('button',{name:'Analyze resume',exact:true}).waitFor();
     assert.equal(await page.locator('.analysis-feedback').count(),0,'unanalysed jobs do not show review controls');
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
@@ -454,8 +461,27 @@ async function main(){
     await page.locator('#detail-match .resume-picker > summary').click();
     for(const state of ['no-resume','error','signed-out','no-description']){
       mode=state;await open();
-      const expected=state==='no-resume'?'Upload resume':state==='error'?'Storage temporarily unavailable.':state==='signed-out'?'Sign in to analyze your resume.':'This job has no description to compare against.';
+      const expected=state==='no-resume'?'Upload resume':state==='error'?'Storage temporarily unavailable.':state==='signed-out'?'Upload resume':'This job has no description to compare against.';
       await page.locator('#detail-match').getByText(expected,{exact:state!=='error'}).waitFor();assert.equal(await page.locator('#detail-body').isVisible(),true);
+      if(state==='signed-out') {
+        const uploadsBefore=resumePostCalls, analysesBefore=postCalls;
+        assert.equal(await page.locator('#detail-match .match-signin').count(),0,'no sign-in control is shown before Upload');
+        let chooserOpened=false;
+        const onChooser=()=>{chooserOpened=true;};page.on('filechooser',onChooser);
+        await page.getByRole('button',{name:'Upload resume',exact:true}).click();
+        const signInPopup=page.getByRole('dialog',{name:'Sign in to upload your resume',exact:true});
+        await signInPopup.waitFor();
+        await page.screenshot({path:path.join(artifactDir,'resume-upload-signin-mobile.png')});
+        await signInPopup.getByRole('button',{name:'Close sign-in popup',exact:true}).press('Escape');
+        await signInPopup.waitFor({state:'hidden'});
+        assert.equal(await page.locator('#job-detail').isVisible(),true,'Escape closes the popup without closing the mobile job');
+        assert.equal(await page.getByRole('button',{name:'Upload resume',exact:true}).evaluate(el=>el===document.activeElement),true);
+        await page.getByRole('button',{name:'Upload resume',exact:true}).click();
+        await signInPopup.getByRole('button',{name:'Close sign-in popup',exact:true}).click();
+        assert.equal(chooserOpened,false,'signed-out Upload does not open the file chooser');
+        assert.equal(resumePostCalls,uploadsBefore);assert.equal(postCalls,analysesBefore);
+        page.off('filechooser',onChooser);
+      }
       if(state==='no-resume') {
         await page.locator('#detail-match input[type="file"]').setInputFiles({name:'fixture.txt',mimeType:'text/plain',buffer:Buffer.from('Built and operated backend services, improved reliability and maintained automated tests. Collaborated with engineering teams to deliver production APIs.')});
         await waitScore(20);await page.locator('#detail-match .resume-picker > summary').click();
@@ -557,7 +583,7 @@ async function main(){
     assert.equal(await page.locator('#job-controls #sort-select').count(),0,'Sort is not in the filter toolbar');
     const tailRow=await page.evaluate(()=>{const c=(n)=>{const r=n.getBoundingClientRect();return r.top+r.height/2;};return Math.abs(c(document.querySelector('.preset-save'))-c(document.querySelector('#hide-opened').closest('label')));});
     assert.ok(tailRow<6,'Save this filter sits in the row with the Hide checkboxes');
-    await page.setViewportSize({width:390,height:844});await page.goto(base);await page.locator('.job').first().waitFor();await page.waitForTimeout(400);
+    await page.setViewportSize({width:390,height:844});await page.goto(base+'/index.html');await page.locator('.job').first().waitFor();await page.waitForTimeout(400);
     assert.equal(await page.locator('#job-detail').evaluate(el=>el.classList.contains('is-open')),false,'on a phone nothing opens over the list by itself');
     for(const width of [800,390]){
       await page.setViewportSize({width,height:900});await page.goto(base+'?view=grouped');await page.locator('.cgroup').first().waitFor();
@@ -593,6 +619,185 @@ async function main(){
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       await page.screenshot({path:path.join(artifactDir,'toolbar-'+width+'.png')});
     }
+    // A phone's browser Back closes the sheet, preserving the list beneath it.
+    const mobile=await browser.newPage({viewport:{width:390,height:844},reducedMotion:'reduce'});
+    mobile.setDefaultTimeout(8000);
+    mobile.on('pageerror',e=>errors.push(e.message));
+    await mobile.route('**/*',route=>route.request().url().startsWith(base)?route.continue():route.abort());
+    const navigationPosts=postCalls;
+    const sheet=mobile.locator('#job-detail');
+    const backButton=()=>mobile.locator('#detail-top').getByRole('button',{name:'Back to jobs',exact:true});
+    const waitClosed=()=>sheet.waitFor({state:'hidden'});
+    await mobile.goto(base+'/about.html');
+    await mobile.goto(base+'/?q=Platform%207');
+    const mobileRole=mobile.locator('.job[data-job-id="job_6"] .job-title');
+    await mobileRole.waitFor();await mobileRole.scrollIntoViewIfNeeded();
+    const listUrl=mobile.url(),listScroll=await mobile.evaluate(()=>scrollY),listHistory=await mobile.evaluate(()=>history.length);
+    await mobileRole.click();await sheet.waitFor({state:'visible'});
+    assert.equal(await mobile.evaluate(()=>history.length),listHistory+1,'opening a mobile description adds one Back step');
+    await mobile.screenshot({path:path.join(artifactDir,'mobile-history-detail.png')});
+    await mobile.goBack();await waitClosed();
+    assert.equal(mobile.url(),listUrl,'browser Back stays in the app on the same list');
+    assert.equal(await mobile.locator('#job-search').inputValue(),'Platform 7','Back preserves the search');
+    await mobile.waitForFunction(y=>Math.abs(scrollY-y)<2,listScroll);
+    assert.equal(await mobileRole.evaluate(el=>el===document.activeElement),true,'Back restores focus to the role');
+    await mobile.screenshot({path:path.join(artifactDir,'mobile-history-list.png')});
+    await mobile.goForward();await sheet.waitFor({state:'visible'});
+    assert.equal(await mobile.locator('#detail-title').textContent(),'Software Engineer, Platform 7','Forward reopens the selected role');
+    await mobile.reload();await sheet.waitFor({state:'visible'});
+    assert.equal(await mobile.locator('#detail-title').textContent(),'Software Engineer, Platform 7','reloading a description preserves its Back step');
+    assert.equal(await mobile.evaluate(()=>history.length),listHistory+1,'Forward and reload do not add duplicate entries');
+    await backButton().click();await waitClosed();
+    await mobile.goForward();await sheet.waitFor({state:'visible'});
+    await backButton().press('Escape');await waitClosed();
+    await mobile.goBack();
+    assert.equal(new URL(mobile.url()).pathname,'/about.html','Back from the list can still leave normally; no navigation trap');
+    // Companies keep their expanded roles and tab navigation when the sheet closes.
+    await mobile.goto(base+'/?q=Software');await mobile.locator('.job').first().waitFor();
+    await mobile.locator('#view-grouped').click();
+    const company=mobile.locator('.cg-head[data-company="Engineering Company"]');
+    await company.click();
+    const groupedRole=mobile.locator('.cg-body .job[data-job-id="job_2"] .job-title');
+    await groupedRole.scrollIntoViewIfNeeded();
+    const companyScroll=await mobile.evaluate(()=>scrollY),companyUrl=mobile.url();
+    await groupedRole.click();await sheet.waitFor({state:'visible'});
+    await mobile.goBack();await waitClosed();
+    assert.equal(mobile.url(),companyUrl);
+    assert.equal(await company.getAttribute('aria-expanded'),'true','Back keeps the company expanded');
+    await mobile.waitForFunction(y=>Math.abs(scrollY-y)<2,companyScroll);
+    assert.equal(await mobile.locator('#job-search').inputValue(),'Software');
+    await mobile.goBack();
+    await mobile.waitForFunction(()=>document.querySelector('#view-flat')?.getAttribute('aria-pressed')==='true');
+    assert.equal(await sheet.isVisible(),false,'the next Back returns to All jobs, without reopening a description');
+    assert.equal(postCalls,navigationPosts,'history navigation never starts a paid analysis');
+    await mobile.close();
+    // Exercise the upload sign-in continuation with a fixture Google button/token.
+    // No Google account, real credential or external authentication request is used.
+    mode='signed-out';
+    const signInPage=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});
+    let signInAttempts=0;
+    await signInPage.route('**/*',async route=>{
+      const url=route.request().url();
+      if(url===base+'/api/auth/config')return route.fulfill({json:{clientId:'fixture-client'}});
+      if(url===base+'/api/auth/google') {
+        signInAttempts++;
+        if(signInAttempts===1)return route.fulfill({status:503,json:{error:'Sign-in temporarily unavailable. Please try again.'}});
+        mode='no-resume';return route.fulfill({json:{account:{id:'fixture',name:'Test user'},sync:{}}});
+      }
+      if(url==='https://accounts.google.com/gsi/client')return route.fulfill({contentType:'text/javascript',body:`window.google={accounts:{id:{initialize(options){window.fixtureCredential=options.callback},renderButton(host){const button=document.createElement('button');button.type='button';button.textContent='Continue with Google';button.onclick=()=>window.fixtureCredential({credential:'fixture-token'});host.replaceChildren(button)},disableAutoSelect(){}}}};`});
+      return url.startsWith(base)?route.continue():route.abort();
+    });
+    await signInPage.goto(base);await signInPage.locator('#detail-title').waitFor();
+    const uploadAction=()=>signInPage.getByRole('button',{name:'Upload resume',exact:true});
+    await uploadAction().click();
+    const uploadSignIn=signInPage.getByRole('dialog',{name:'Sign in to upload your resume',exact:true});
+    await uploadSignIn.getByRole('button',{name:'Continue with Google',exact:true}).click();
+    await uploadSignIn.getByText('Sign-in temporarily unavailable. Please try again.',{exact:true}).waitFor();
+    await uploadSignIn.getByRole('button',{name:'Continue with Google',exact:true}).click();
+    await uploadSignIn.waitFor({state:'hidden'});
+    const chooser=signInPage.waitForEvent('filechooser');
+    await uploadAction().click();await chooser;
+    assert.equal(signInAttempts,2,'sign-in can be retried and then unlocks the real upload action');
+    await signInPage.close();mode='normal';
+    // Filter categories live in the controls; selection labels also survive reload.
+    const filters=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});
+    filters.setDefaultTimeout(8000);
+    filters.on('pageerror',e=>errors.push(e.message));
+    await filters.route('**/*',route=>route.request().url().startsWith(base)?route.continue():route.abort());
+    await filters.goto(base);await filters.locator('.job').first().waitFor();
+    assert.equal(await filters.locator('.picker-label').count(),0,'no duplicate labels above filters');
+    assert.equal(await filters.locator('#sum-role').textContent(),'Role');
+    assert.equal(await filters.locator('#sum-company').textContent(),'Company');
+    const posted=filters.locator('#date-select + details > summary');
+    const salary=filters.locator('#salary-select + details > summary');
+    assert.equal(await posted.textContent(),'Posted');
+    assert.equal(await salary.textContent(),'Salary');
+    const companySummary=filters.locator('#sum-company');
+    const advancedToggle=filters.locator('#advanced-filters > summary');
+    assert.equal(await filters.locator('#primary-grid .picker-wrap').count(),4);
+    assert.equal(await filters.locator('#advanced-grid .picker-wrap').count(),6);
+    assert.equal(await filters.locator('#advanced-filters').evaluate(el=>el.open),false);
+    const resultsTop=await filters.locator('#results-split').evaluate(el=>el.getBoundingClientRect().top);
+    for(const width of [1440,1280]) {
+      await filters.setViewportSize({width,height:900});
+      const row=await filters.locator('#primary-grid > .picker-wrap, #advanced-filters').evaluateAll(items=>items.map(el=>Math.round(el.getBoundingClientRect().top)));
+      assert.ok(row.every(y=>Math.abs(y-row[0])<2),'four filters and Advanced share one row at '+width);
+      assert.ok(await filters.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    }
+    await filters.setViewportSize({width:1440,height:900});
+    await advancedToggle.click();
+    assert.equal(await filters.locator('#results-split').evaluate(el=>el.getBoundingClientRect().top),resultsTop,'advanced popover does not shift results');
+    await companySummary.click();
+    await filters.locator('#list-company input[value="Telescope"]').check();
+    assert.equal(await companySummary.textContent(),'Telescope');
+    assert.match(await companySummary.getAttribute('aria-label'),/^Company filter: Telescope$/);
+    await filters.locator('#q-company').fill('Engineering');
+    await filters.locator('#list-company input[value="Engineering Company"]').check();
+    assert.equal(await companySummary.textContent(),'(2) Companies');
+    await companySummary.press('Escape');
+    await filters.reload();await filters.locator('.job').first().waitFor();
+    assert.equal(await companySummary.textContent(),'(2) Companies','URL restoration keeps the count and category');
+    assert.equal(await filters.locator('#advanced-filter-label').textContent(),'Advanced filters (1)');
+    await filters.locator('#detail-match .resume-picker').waitFor();
+    await filters.screenshot({path:path.join(artifactDir,'filters-primary-desktop.png')});
+    await advancedToggle.click();
+    await filters.screenshot({path:path.join(artifactDir,'filters-compact-desktop.png')});
+    await filters.locator('#advanced-filter-done').click();
+    assert.equal(await advancedToggle.evaluate(el=>el===document.activeElement),true,'Done restores focus');
+    assert.equal(await filters.locator('#advanced-filters').evaluate(el=>el.open),false);
+    await filters.locator('#reset-filters').click();
+    assert.equal(await companySummary.textContent(),'Company');
+    await advancedToggle.click();
+    await posted.focus();await posted.press('ArrowDown');
+    await filters.locator('#date-select + details [role="option"]').first().waitFor();
+    await filters.keyboard.press('ArrowDown');await filters.keyboard.press('Enter');
+    assert.equal(await posted.textContent(),'Last 7 days','keyboard selection shows the selected date');
+    assert.equal(await filters.locator('#date-select').inputValue(),'7');
+    await salary.click();
+    await filters.locator('#salary-select + details').getByRole('option',{name:'$150k+',exact:true}).click();
+    assert.equal(await salary.textContent(),'$150k+');
+    await filters.locator('#advanced-filter-reset').click();
+    assert.equal(await filters.locator('#advanced-filter-label').textContent(),'Advanced filters');
+    assert.equal(await posted.textContent(),'Posted');assert.equal(await salary.textContent(),'Salary');
+    await filters.setViewportSize({width:390,height:844});
+    await filters.goto(base+'/index.html');await filters.locator('.job').first().waitFor();
+    await filters.locator('#mobile-filter-toggle').click();
+    await advancedToggle.click();
+    await companySummary.click();
+    await filters.locator('#list-company input[value="Telescope"]').check();
+    assert.equal(await companySummary.textContent(),'Telescope');
+    await companySummary.click();
+    await filters.screenshot({path:path.join(artifactDir,'filters-compact-mobile.png')});
+    assert.ok(await filters.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'compact filters fit on mobile');
+    await filters.locator('#advanced-filter-reset').click();
+    await filters.locator('#filter-drawer-close').click();
+    assert.equal(await companySummary.textContent(),'Company','reset updates the closed mobile drawer');
+    // Search and main filters stay visible; the inspector clears the pinned bar.
+    for(const width of [1440,1280]) {
+      await filters.setViewportSize({width,height:width===1440?900:800});
+      await filters.goto(base);await filters.locator('#detail-title').waitFor();
+      await filters.evaluate(()=>scrollTo(0,800));
+      await filters.waitForFunction(()=>Math.abs(document.querySelector('#job-controls').getBoundingClientRect().top)<1);
+      await filters.waitForFunction(()=>{
+        const controls=document.querySelector('#job-controls').getBoundingClientRect();
+        return document.querySelector('#job-detail').getBoundingClientRect().top>=controls.bottom;
+      });
+      assert.ok(await filters.locator('#job-search').isVisible());
+      await advancedToggle.click();
+      const pinnedPanel=await filters.locator('#advanced-panel').boundingBox();
+      assert.ok(pinnedPanel.y+pinnedPanel.height<=filters.viewportSize().height,'advanced popover fits below the pinned filters');
+      await filters.screenshot({path:path.join(artifactDir,`sticky-filters-${width}.png`)});
+      await filters.locator('#advanced-filter-done').click();
+      await filters.locator('#sum-role').click();
+      await filters.locator('#list-role input').first().waitFor({state:'visible'});
+      await filters.locator('#sum-role').click();
+      await filters.locator('#job-search').fill('Platform 7');
+      await filters.waitForFunction(()=>document.querySelector('#job-count').textContent.includes('11 matching roles'));
+      assert.equal(await filters.locator('#job-controls').evaluate(el=>getComputedStyle(el).position),'sticky');
+    }
+    await filters.close();
+    console.log('Compact filters passed: placeholders, single and multiple selections, search, reload, reset, keyboard and mobile.');
+    console.log('Mobile Back passed: list/search/scroll/focus restoration, Forward, reload, in-app Back, Escape, Companies state and normal page navigation.');
     console.log('Pane-only resumes passed: no Resumes section, upload, cancellation, failure retry and removal from the description pane.');
     assert.deepEqual(errors,[]);
     console.log('Reading layout:',JSON.stringify(readingMeasurements));

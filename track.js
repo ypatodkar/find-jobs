@@ -117,7 +117,7 @@
       "display:grid;place-items:center;box-sizing:border-box;" +
       "border:2px solid var(--accent);border-radius:50%;" +
       "box-shadow:inset 0 0 0 3px transparent,inset 0 0 0 4px var(--accent);" +
-      "font-family:var(--mono);font-size:.56rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;" +
+      "font-family:var(--font);font-size: var(--text-sm);font-weight:700;letter-spacing:.08em;text-transform:uppercase;" +
       "color:var(--accent);opacity:.17;pointer-events:none}" +
 
       // the row stacks on narrow screens and the middle is no longer empty

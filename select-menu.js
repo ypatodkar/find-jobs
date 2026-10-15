@@ -33,7 +33,10 @@
 
     function sync() {
       const opt = select.options[select.selectedIndex];
-      summary.textContent = opt ? opt.textContent : "";
+      const placeholder = select.dataset.placeholder;
+      const isDefault = select.value === select.dataset.placeholderValue;
+      summary.textContent = placeholder && (!opt || isDefault) ? placeholder : (opt ? opt.textContent : "");
+      if (placeholder) picker.classList.toggle("has-selection", !!opt && !isDefault);
       summary.setAttribute("aria-label", name ? `${name}: ${summary.textContent}` : summary.textContent);
       picker.classList.toggle("is-disabled", select.disabled);
       if (select.disabled) summary.setAttribute("aria-disabled", "true");
