@@ -59,9 +59,16 @@
     return gsi;
   }
 
-  const pending = []; // containers waiting for a button
+  // Keep Google's supported button appearance in step with the app's theme.
+  // Repainting uses the existing GSI client; it does not restart sign-in.
+  const buttons = new Map();
+  const systemDark = global.matchMedia?.('(prefers-color-scheme: dark)');
+  const buttonTheme = () => (global.Theme?.current() || document.documentElement.dataset.theme || (systemDark?.matches ? 'dark' : 'light')) === 'dark' ? 'outline_dark' : 'outline';
   function renderButton(el, options) {
     if (!el) return;
+    el.classList.add('google-signin');
+    for (const host of buttons.keys()) if (!host.isConnected) buttons.delete(host);
+    buttons.set(el, options);
     if (!clientId) {
       el.innerHTML = `<p class="auth-off">Sign-in isn't set up on this server yet.</p>`;
       return;
@@ -69,9 +76,63 @@
     loadGsi().then((id) => {
       if (!el.isConnected) return;
       el.innerHTML = "";
-      id.renderButton(el, { theme: "outline", size: "large", text: "signin_with", shape: "rectangular", logo_alignment: "left", ...options });
+      id.renderButton(el, { theme: buttonTheme(), size: "large", text: "signin_with", shape: "rectangular", logo_alignment: "left", ...options });
     }).catch((err) => { el.innerHTML = `<p class="auth-off">${esc(err.message)}</p>`; });
   }
+  let lastButtonTheme = buttonTheme();
+  function refreshButtonThemes() {
+    const next = buttonTheme();
+    if (next === lastButtonTheme) return;
+    lastButtonTheme = next;
+    for (const [host, options] of [...buttons]) {
+      if (host.isConnected) renderButton(host, options);
+      else buttons.delete(host);
+    }
+  }
+  new MutationObserver(refreshButtonThemes).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  systemDark?.addEventListener('change', refreshButtonThemes);
+
+  // Sign-in is requested only after the visitor chooses to upload a resume.
+  let resumeSignInDialog = null;
+  function requestResumeSignIn() {
+    if (account) return;
+    if (resumeSignInDialog?.isConnected) {
+      resumeSignInDialog.querySelector('button')?.focus();
+      return;
+    }
+    const dialog = document.createElement('dialog');
+    dialog.className = 'resume-signin-dialog';
+    dialog.setAttribute('aria-labelledby', 'resume-signin-title');
+    dialog.setAttribute('aria-describedby', 'resume-signin-description');
+    dialog.innerHTML = `<button type="button" class="resume-signin-close" aria-label="Close sign-in popup" autofocus><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+      <h2 id="resume-signin-title">Sign in to upload your resume</h2>
+      <p id="resume-signin-description">Sign in with Google to save your resume and analyze how it matches this job.</p>
+      <div class="match-signin"></div>
+      <p class="resume-signin-error" role="alert" hidden></p>`;
+    document.body.append(dialog);
+    resumeSignInDialog = dialog;
+    dialog.querySelector('button').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (event) => {
+      if (event.target !== dialog) return;
+      const bounds = dialog.getBoundingClientRect();
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
+    });
+    // The native modal owns Tab and Escape, including above the mobile job sheet.
+    dialog.addEventListener('keydown', (event) => event.stopPropagation());
+    dialog.addEventListener('close', () => {
+      if (resumeSignInDialog === dialog) resumeSignInDialog = null;
+      dialog.remove();
+    });
+    dialog.showModal();
+    renderButton(dialog.querySelector('.match-signin'), { size: 'large', text: 'continue_with' });
+  }
+  listeners.push((next) => { if (next) resumeSignInDialog?.close(); });
+  global.addEventListener('auth-error', (event) => {
+    const error = resumeSignInDialog?.querySelector('.resume-signin-error');
+    if (!error) return;
+    error.textContent = event.detail || 'Sign-in failed. Please try again.';
+    error.hidden = false;
+  });
 
   // ---- signing in and out -------------------------------------------------------
   let signingIn = null;
@@ -219,6 +280,7 @@
     enabled: () => !!clientId,
     onChange: (fn) => listeners.push(fn),
     renderButton,
+    requestResumeSignIn,
     signOut,
   };
 })(window);

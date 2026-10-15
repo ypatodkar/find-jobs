@@ -415,12 +415,12 @@
     if (document.querySelector("[data-preset-styles]")) return;
     var css =
       ".preset-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%;margin-bottom:12px}" +
-      ".preset-label{font:600 11px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}" +
+      ".preset-label{font: 600 var(--text-sm)/1 var(--font);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}" +
 
       // Save is a deliberate action rather than another filter, so it is filled.
       ".preset-save{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--accent);" +
       "border-radius:5px;background:var(--accent-fill);color:var(--accent);" +
-      "font:600 12px/1 var(--sans);padding:7px 11px;cursor:pointer}" +
+      "font: 600 var(--text-sm)/1 var(--font);padding:7px 11px;cursor:pointer}" +
       ".preset-save:hover{background:var(--accent);color:var(--bg)}" +
       ".preset-save svg{flex:none}" +
 
@@ -433,11 +433,11 @@
       // something that merely behaves like one.
       ".preset-picker{position:relative}" +
       ".preset-picker>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:10px;" +
-      "font-family:var(--sans);font-size:0.82rem;color:var(--ink);background:var(--surface);" +
+      "font-family:var(--font);font-size: var(--text-sm);color:var(--ink);background:var(--surface);" +
       "border:1px solid var(--rule);border-radius:5px;padding:6px 10px;min-width:116px;" +
       "white-space:nowrap;user-select:none}" +
       ".preset-picker>summary::-webkit-details-marker{display:none}" +
-      ".preset-picker>summary::after{content:'▾';margin-left:auto;color:var(--ink-faint);font-size:0.85em}" +
+      ".preset-picker>summary::after{content:'▾';margin-left:auto;color:var(--ink-faint);font-size: var(--text-sm)}" +
       ".preset-picker>summary:hover{border-color:var(--rule-strong)}" +
       ".preset-picker>summary:focus-visible{outline:2px solid var(--accent2);outline-offset:1px}" +
       ".preset-picker[open]>summary{border-color:var(--accent2)}" +
@@ -445,7 +445,7 @@
       "border-color:var(--accent);font-weight:500}" +
       ".preset-picker.has-selection>summary::after{color:var(--accent)}" +
       ".preset-current{max-width:20ch;overflow:hidden;text-overflow:ellipsis}" +
-      ".preset-n{font-size:0.72rem;color:var(--ink-faint)}" +
+      ".preset-n{font-size: var(--text-sm);color:var(--ink-faint)}" +
       ".preset-picker.has-selection .preset-n{color:var(--accent)}" +
 
       ".preset-menu{position:absolute;z-index:5;top:calc(100% + 6px);left:0;min-width:250px;max-height:320px;" +
@@ -456,15 +456,15 @@
       ".preset-row.is-active{background:var(--accent-fill)}" +
       ".preset-row.is-editing{padding:4px}" +
       ".preset-row button{border:0;background:none;cursor:pointer;color:inherit;font:inherit;padding:7px 8px;line-height:1.2}" +
-      ".preset-row .preset-apply{flex:1;text-align:left;font-size:0.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
+      ".preset-row .preset-apply{flex:1;text-align:left;font-size: var(--text-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
       ".preset-row.is-active .preset-apply{color:var(--accent);font-weight:500}" +
       ".preset-edit{display:inline-flex;align-items:center}" +
 
       ".preset-naming{display:inline-flex;gap:6px;align-items:center}" +
       ".preset-name{border:1px solid var(--accent);border-radius:5px;background:var(--surface);" +
-      "color:var(--ink);font:400 13px/1 var(--sans);padding:7px 8px;min-width:20ch;flex:1}" +
+      "color:var(--ink);font: 400 var(--text-sm)/1 var(--font);padding:7px 8px;min-width:20ch;flex:1}" +
       ".preset-confirm,.preset-cancel{border:1px solid var(--rule);border-radius:5px;background:var(--chip-bg);" +
-      "color:var(--ink-soft);font:600 12px/1 var(--sans);padding:7px 10px;cursor:pointer}" +
+      "color:var(--ink-soft);font: 600 var(--text-sm)/1 var(--font);padding:7px 10px;cursor:pointer}" +
       ".preset-confirm:hover{color:var(--accent);border-color:var(--accent)}";
     var el = document.createElement("style");
     el.setAttribute("data-preset-styles", "");

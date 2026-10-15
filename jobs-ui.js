@@ -201,14 +201,14 @@
     let dirty = true;
     let visibleValues = []; // what "Select all" acts on: the rows currently listed
 
-    function updateSummary(available) {
+    function updateSummary() {
       const n = selected.size;
       const value =
-        n === 0 ? (opts.placeholder || (opts.emptyLabel ? `${opts.emptyLabel} (${available})` : `All (${available})`))
+        n === 0 ? opts.label
         : n === 1 ? opts.labelFor([...selected][0])
-        : `${n} ${opts.exclude ? "excluded" : "selected"}`;
+        : `(${n}) ${opts.pluralLabel}`;
       summary.textContent = value;
-      summary.setAttribute("aria-label", `${opts.label} filter: ${n === 0 && opts.placeholder ? "Any" : value}`);
+      summary.setAttribute("aria-label", `${opts.label} filter: ${n === 0 ? (opts.exclude ? "None excluded" : "Any") : value}`);
       root.classList.toggle("has-selection", n > 0);
       clear.hidden = n === 0;
     }
@@ -265,7 +265,7 @@
           else selected.delete(cb.value);
           dirty = true;
           opts.onChange();          // refresh results only
-          updateSummary(entries.length);
+          updateSummary();
         });
       });
 
@@ -284,7 +284,7 @@
       }
 
       dirty = false;
-      updateSummary(entries.length);
+      updateSummary();
     }
 
     search.addEventListener("input", (e) => { query = e.target.value; build(); });
@@ -303,10 +303,9 @@
     return {
       markDirty() {
         dirty = true;
-        // Even while closed the summary must show how many options survive the other
-        // filters, so the count on the button stays truthful.
+        // Restore the selected label even when the menu stays closed.
         if (root.open) build();
-        else updateSummary(opts.counts().length);
+        else updateSummary();
       },
     };
   }
@@ -335,33 +334,30 @@
     // job, and how to label them. Filters combine with AND across dimensions and OR
     // within one (ticking two cities means either city).
     //
-    // `group` splits them into the two labelled blocks the controls render as. It is
-    // presentation only: filtering, saved views, the counts and the reset button all
-    // still treat DIMENSIONS as one flat list, so moving a filter between groups
-    // changes where it sits on screen and nothing else.
-    // Primary filters sit in the row beside the search; the rest in the grid under
-    // it. Array order is the order they appear in each.
+    // Groups only choose the render host. Array order determines the control order;
+    // filtering, saved views and reset continue to use the same dimensions.
     const GROUPS = [
+      { id: "primary", target: "primary-grid" },
       { id: "advanced", target: "advanced-grid" },
     ];
 
     const DIMENSIONS = [
-      { key: "role", label: "Role", group: "advanced", values: (j) => j.roles || [], labelFor: (v) => ROLE_LABELS[v] || v },
-      { key: "city", label: "Location", group: "advanced", values: (j) => [j.city] },
-      { key: "seniority", label: "Experience", group: "advanced", values: (j) => (j.seniority ? [j.seniority] : []), labelFor: (v) => SENIORITY_LABELS[v] || v, order: SENIORITY_ORDER },
-      { key: "career", label: "Career stage", group: "advanced", values: (j) => [j.career || "unclear"], labelFor: (v) => CAREER_LABELS[v] || v, order: CAREER_ORDER },
-      { key: "company", label: "Company", group: "advanced", values: (j) => [j.company] },
+      { key: "role", label: "Role", pluralLabel: "Roles", group: "primary", values: (j) => j.roles || [], labelFor: (v) => ROLE_LABELS[v] || v },
+      { key: "city", label: "Location", pluralLabel: "Locations", group: "primary", values: (j) => [j.city] },
+      { key: "seniority", label: "Experience", pluralLabel: "Experience levels", group: "primary", values: (j) => (j.seniority ? [j.seniority] : []), labelFor: (v) => SENIORITY_LABELS[v] || v, order: SENIORITY_ORDER },
+      { key: "career", label: "Career stage", pluralLabel: "Career stages", group: "primary", values: (j) => [j.career || "unclear"], labelFor: (v) => CAREER_LABELS[v] || v, order: CAREER_ORDER },
+      { key: "company", label: "Company", pluralLabel: "Companies", group: "advanced", values: (j) => [j.company] },
       // The only subtractive filter here. Everything else narrows to what you picked;
       // this one removes it, which is the difference between "show me these six
       // companies" and "show me everything except this one". Worth having because a
       // single employer that never closes a requisition can dominate a whole page —
       // one currently carries 665 roles, none posted in the last three months — and
       // the include filter cannot express "all of them but that".
-      { key: "notcompany", label: "Exclude company", group: "advanced", values: (j) => [j.company], exclude: true },
-      { key: "industry", label: "Industry", group: "advanced", values: (j) => j.markets || [] },
-      { key: "size", label: "Company size", group: "advanced", values: (j) => (j.size ? [j.size] : []), labelFor: (v) => SIZE_LABELS[v] || v, order: SIZE_ORDER },
-      { key: "stage", label: "Funding", group: "advanced", values: (j) => (j.stage ? [j.stage] : []) },
-      { key: "firm", label: "Investor", group: "advanced", values: (j) => j.firms || [], labelFor: (v) => cfg.firmLabel(v), onlyWhenFirms: true },
+      { key: "notcompany", label: "Exclude company", pluralLabel: "Excluded companies", group: "advanced", values: (j) => [j.company], exclude: true },
+      { key: "industry", label: "Industry", pluralLabel: "Industries", group: "advanced", values: (j) => j.markets || [] },
+      { key: "size", label: "Company size", pluralLabel: "Company sizes", group: "advanced", values: (j) => (j.size ? [j.size] : []), labelFor: (v) => SIZE_LABELS[v] || v, order: SIZE_ORDER },
+      { key: "stage", label: "Funding", pluralLabel: "Funding stages", group: "advanced", values: (j) => (j.stage ? [j.stage] : []) },
+      { key: "firm", label: "Investor", pluralLabel: "Investors", group: "advanced", values: (j) => j.firms || [], labelFor: (v) => cfg.firmLabel(v), onlyWhenFirms: true },
     ].filter((d) => !d.onlyWhenFirms || cfg.showFirms);
 
     const state = {
@@ -488,14 +484,12 @@
 
     // ---- dropdowns ----
     // One picker per dimension, built into the markup up front so ids stay stable.
-    // A primary picker has no visible label: it sits in a row of controls the size of
-    // the search box, so its name doubles as the placeholder until something is picked.
-    // One in the grid under it keeps its label above it.
+    // The category lives inside the control; its accessible name stays present
+    // when a single selected option replaces the visible category.
     const pickerMarkup = (d) => `
       <div class="picker-wrap">
-        ${d.group === "primary" ? "" : `<span class="picker-label">${escapeHtml(d.label)}</span>`}
         <details class="company-picker" id="pick-${d.key}">
-          <summary id="sum-${d.key}">${d.group === "primary" ? escapeHtml(d.label) : "All"}</summary>
+          <summary id="sum-${d.key}">${escapeHtml(d.label)}</summary>
           <div class="company-panel">
             <div class="company-panel-top">
               <input type="search" id="q-${d.key}" placeholder="Find…" aria-label="Search ${escapeHtml(d.label)}" autocomplete="off" />
@@ -518,6 +512,40 @@
       if (host && dims.length) host.insertAdjacentHTML("afterbegin", dims.map(pickerMarkup).join(""));
     });
 
+    const advanced = $("advanced-filters");
+    const advancedSummary = advanced?.querySelector(":scope > summary");
+    function closeAdvanced(returnFocus = false) {
+      if (!advanced?.open) return;
+      advanced.open = false;
+      advanced.querySelectorAll("details[open]").forEach((menu) => { menu.open = false; });
+      if (returnFocus) advancedSummary.focus();
+    }
+    if (advanced) {
+      advanced.addEventListener("toggle", () => {
+        advancedSummary.setAttribute("aria-expanded", String(advanced.open));
+        if (!advanced.open) return;
+        const panel = $("advanced-panel");
+        const top = panel.getBoundingClientRect().top;
+        panel.style.setProperty("--advanced-max-height", `${Math.max(200, global.innerHeight - top - 16)}px`);
+      });
+      advancedSummary.setAttribute("aria-expanded", "false");
+      $("advanced-filter-done")?.addEventListener("click", () => closeAdvanced(true));
+      $("advanced-filter-reset")?.addEventListener("click", () => el.resetBtn?.click());
+      document.addEventListener("click", (event) => {
+        if (!advanced.contains(event.target)) closeAdvanced();
+      });
+      advanced.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape" || !advanced.open) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const nested = event.target.closest("details.company-picker[open]");
+        if (nested) {
+          nested.open = false;
+          nested.querySelector("summary").focus();
+        } else closeAdvanced(true);
+      });
+    }
+
     const pickers = DIMENSIONS.map((d) => {
       const labelFor = d.labelFor || ((v) => v);
       return {
@@ -527,13 +555,10 @@
           {
             selected: state.selected[d.key],
             label: d.label,
+            pluralLabel: d.pluralLabel,
             labelFor,
             order: d.order || null,
             exclude: !!d.exclude,
-            // "All (1617)" would be a lie on a filter that removes things: with nothing
-            // ticked it excludes nothing at all.
-            emptyLabel: d.exclude ? "None" : null,
-            placeholder: d.group === "primary" ? d.label : null,
             maxOptions: 60,
             // Counts come from everything *except* this dimension, so an option only
             // appears if it would still return rows under the other active filters.
@@ -667,6 +692,19 @@
     const shardCache = new Map(); // shard -> Promise<{ job_id: text }>
     const NARROW = global.matchMedia ? global.matchMedia("(max-width: 1099px)") : null;
     const isNarrow = () => !!(NARROW && NARROW.matches);
+    const DETAIL_HISTORY_KEY = 'findJobsDetail';
+    let detailHistoryOpen = false, detailHistoryUrl = null, detailBackPending = false;
+    const currentUrl = () => location.pathname + location.search + location.hash;
+
+    function recordDetailHistory(id) {
+      if (!global.history?.pushState) return;
+      const snapshot = { ...global.history.state, [DETAIL_HISTORY_KEY]: id };
+      // Switching roles inside an open sheet still needs only one Back to the list.
+      if (detailHistoryOpen && global.history.state?.[DETAIL_HISTORY_KEY]) global.history.replaceState(snapshot, '', currentUrl());
+      else global.history.pushState(snapshot, '', currentUrl());
+      detailHistoryOpen = true;
+      detailHistoryUrl = currentUrl();
+    }
 
     function loadDescription(id) {
       const D = global.JobDescription;
@@ -817,9 +855,10 @@
       });
     }
 
-    function selectJob(id, { revealWorkspace = true } = {}) {
+    function selectJob(id, { revealWorkspace = true, fromHistory = false } = {}) {
       const j = findJob(id);
       if (!j) return;
+      if (isNarrow() && !fromHistory) recordDetailHistory(id);
       selectedId = id;
       el.list.querySelectorAll(".job.is-selected").forEach((r) => r.classList.remove("is-selected"));
       const row = el.list.querySelector(`.job[data-job-id="${CSS.escape(id)}"]`);
@@ -832,12 +871,16 @@
       if (isNarrow()) { const t = $("detail-title"); if (t) t.focus({ preventScroll: true }); }
     }
 
-    function closeDetail() {
+    function closeDetail({ fromHistory = false } = {}) {
       if (!el.detail || !el.detail.classList.contains("is-open")) return;
+      if (!fromHistory && detailHistoryOpen && global.history.state?.[DETAIL_HISTORY_KEY]) {
+        if (!detailBackPending) { detailBackPending = true; global.history.back(); }
+        return;
+      }
       setDetailOpen(false);
       if (isNarrow() && selectedId) {
         const row = el.list.querySelector(`.job[data-job-id="${CSS.escape(selectedId)}"] .job-title`);
-        if (row) row.focus();
+        if (row) row.focus({ preventScroll: true });
       }
     }
 
@@ -871,7 +914,11 @@
       });
       // Widening past the breakpoint turns the overlay back into the column; the scroll
       // lock it held has to go with it.
-      if (NARROW) NARROW.addEventListener("change", () => setDetailOpen(el.detail.classList.contains("is-open")));
+      if (NARROW) NARROW.addEventListener("change", () => {
+        const open = el.detail.classList.contains("is-open");
+        setDetailOpen(open);
+        if (open && isNarrow() && selectedId) recordDetailHistory(selectedId);
+      });
     }
 
     // ---- side by side ----
@@ -993,7 +1040,7 @@
       if (split) split.classList.toggle("is-split", wide);
       if (!wide && columnDrag) finishColumnDrag(false);
       updateColumns();
-      const pinned = wide && controls && getComputedStyle(controls).position === "sticky";
+      const pinned = controls && getComputedStyle(controls).position === "sticky";
       document.documentElement.style.setProperty("--toolbar-height", pinned ? controls.offsetHeight + "px" : "0px");
     }
     if (split) {
@@ -1326,6 +1373,10 @@
 
     function updateResetBtn() {
       const n = activeCount();
+      const advancedCount = DIMENSIONS.filter((d) => d.group === "advanced" && state.selected[d.key].size).length
+        + (state.range !== "all" ? 1 : 0) + (state.salary !== "all" ? 1 : 0);
+      if ($("advanced-filter-label")) $("advanced-filter-label").textContent = advancedCount ? `Advanced filters (${advancedCount})` : "Advanced filters";
+      advanced?.classList.toggle("has-selection", advancedCount > 0);
       if (el.undoBtn) updateUndoBtn();
 
       if (el.resetBtn) {
@@ -1482,8 +1533,11 @@
     function syncUrl() {
       if (syncing || !global.history || !global.history.replaceState) return;
       const url = stateToUrl();
-      const snapshot = { page: state.page };
-      if (pushNext) global.history.pushState(snapshot, "", url);
+      const snapshot = { ...global.history.state, page: state.page };
+      if (pushNext) {
+        delete snapshot[DETAIL_HISTORY_KEY];
+        global.history.pushState(snapshot, "", url);
+      }
       else global.history.replaceState(snapshot, "", url);
       pushNext = false;
     }
@@ -1667,7 +1721,11 @@
         if (!booted) {
           booted = true;
           if (openedWith) applyUrlState(openedWith);
-          selectFirst();
+          if (global.history.state?.[DETAIL_HISTORY_KEY]) {
+            detailHistoryUrl = currentUrl();
+            restoreDetailHistory(global.history.state);
+          }
+          else selectFirst();
         }
       },
       state,
@@ -1714,9 +1772,32 @@
 
     // Back and Forward. Wired after `view` exists because applyUrl reads getFilters()
     // off it to resync the undo stack's idea of "where we are now".
-    global.addEventListener("popstate", () => {
+    function restoreDetailHistory(snapshot) {
+      const id = snapshot?.[DETAIL_HISTORY_KEY];
+      const leavingDetail = detailHistoryOpen;
+      const sameList = detailHistoryUrl === currentUrl();
+      detailBackPending = false;
+      detailHistoryOpen = !!id;
+      if (!sameList) applyUrl();
+      if (id) {
+        const job = findJob(id);
+        if (!job) { closeDetail({ fromHistory: true }); return; }
+        // Forward and reload restore the company expansion as well as its role.
+        if (state.view === 'grouped' && !state.expanded.has(job.company)) {
+          state.expanded.add(job.company);
+          renderResults();
+        }
+        clearTimeout(firstTimer);
+        detailHistoryUrl = currentUrl();
+        selectJob(id, { revealWorkspace: false, fromHistory: true });
+      } else if (leavingDetail) {
+        closeDetail({ fromHistory: true });
+      }
+    }
+    global.addEventListener("popstate", (event) => {
       if (!booted) return; // data hasn't landed yet; setJobs will read the URL instead
-      applyUrl();
+      if (detailHistoryOpen || event.state?.[DETAIL_HISTORY_KEY]) restoreDetailHistory(event.state);
+      else applyUrl();
     });
 
     // Wired here rather than from the pages so both get it automatically. presets.js

@@ -89,7 +89,7 @@
           <button type="button" class="drawer-close" id="filter-drawer-close">Done</button>
         </div>
 
-        <!-- The search on its own line; every filter is in the grid under it. -->
+        <!-- Search above the four main filters and Advanced filters. -->
         <div class="filter-primary" id="filter-primary">
           <div class="search-wrap">
             <svg class="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
@@ -100,13 +100,19 @@
           </div>
         </div>
 
-        <!-- Every filter, always in view, each under its label. jobs-ui.js renders
-             the pickers in ahead of Posted and Salary. -->
-        <div class="filter-more" id="advanced-filters" role="group" aria-label="More filters">
-          <div class="filter-grid" id="advanced-grid">
-            <label class="sort-wrap"><span>Posted</span><select id="date-select" aria-label="Filter by date posted" data-select-menu></select></label>
-            <label class="sort-wrap"><span>Salary</span><select id="salary-select" aria-label="Filter by minimum salary" data-select-menu></select></label>
-          </div>
+        <div class="filter-shortcuts">
+          <div class="primary-filter-grid" id="primary-grid" role="group" aria-label="Main filters"></div>
+          <details class="advanced-picker" id="advanced-filters">
+            <summary aria-controls="advanced-panel"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M8 3v6M16 9v6M10 15v6"/></svg><span id="advanced-filter-label">Advanced filters</span></summary>
+            <div class="advanced-panel" id="advanced-panel" role="group" aria-label="Advanced filters">
+              <div class="advanced-panel-head"><strong>Advanced filters</strong><button type="button" class="linkish" id="advanced-filter-done">Done</button></div>
+              <div class="filter-grid" id="advanced-grid">
+                <label class="sort-wrap"><select data-placeholder="Posted" data-placeholder-value="all" id="date-select" aria-label="Filter by date posted" data-select-menu></select></label>
+                <label class="sort-wrap"><select data-placeholder="Salary" data-placeholder-value="all" id="salary-select" aria-label="Filter by minimum salary" data-select-menu></select></label>
+              </div>
+              <div class="advanced-panel-foot"><button type="button" class="linkish" id="advanced-filter-reset">Reset all</button></div>
+            </div>
+          </details>
         </div>
 
         <div class="filter-tail">
