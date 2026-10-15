@@ -1,6 +1,7 @@
 const { BOARDS, LOCATIONS } = require("./boards");
 const { keep, dedupe, deriveSeniority, sizeBucket, isBlockedCompany } = require("./match");
 const { classifySponsorship } = require("./sponsorship");
+const { toDisplayHtml } = require("./description");
 
 // Consider exposes a few logo variants keyed by where it found them; `manual` is the
 // curated 160px one and the best of them, with the LinkedIn scrape as a fallback.
@@ -220,6 +221,8 @@ async function scrapeConsider(cfg) {
       domain: j.companyDomain || null,
       logo: logoOf(j.companyLogos),
       source: "board",
+      // Moved out into descriptions.json by scrape.js before results.json is written.
+      description: toDisplayHtml(j.descriptionHtml || j.description || j.descriptionPlain || j.content || ""),
     });
   }
   return { jobs: out, scanned: (data.jobs || []).length, totalOnBoard: data.total ?? null };
@@ -360,6 +363,8 @@ async function scrapeA16z(cfg) {
           domain: co.domain || null,
           logo: co.logoUrl || j.company_logo || null,
           source: "board",
+          // Moved out into descriptions.json by scrape.js before results.json is written.
+          description: toDisplayHtml(j.description_html || ""),
         });
       }
     }
@@ -507,6 +512,8 @@ async function scrapeGetro(cfg) {
         domain: null,
         logo: j.organization?.logo_url || null,
         source: "board",
+        // Moved out into descriptions.json by scrape.js before results.json is written.
+        description: toDisplayHtml(j.descriptionHtml || j.description || j.descriptionPlain || j.content || ""),
       });
     }
 

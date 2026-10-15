@@ -44,14 +44,15 @@
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to job listings</a>
-  <main class="page" id="main-content">
+  <main class="page page-split" id="main-content">
     <div class="wrap">
 
-      <header class="masthead">
+      <header class="masthead masthead-compact">
         <div class="masthead-top">
           <div class="nav-links"><a class="backlink" href="firms.html">Browse by investor →</a><a class="backlink" href="about.html">About</a></div>
           <div class="masthead-actions">
             <div id="visitor-slot"></div>
+            <div id="account-slot"></div>
             <a class="masthead-link" href="https://lnkd.in/p/g2hge79J" target="_blank" rel="noopener noreferrer" aria-label="This project on LinkedIn" title="LinkedIn">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true" focusable="false">
                 <path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.22 8.02h4.56V24H.22zM8.34 8.02h4.37v2.18h.06c.61-1.15 2.1-2.37 4.32-2.37 4.62 0 5.47 3.04 5.47 6.99V24h-4.56v-7.28c0-1.74-.03-3.98-2.42-3.98-2.42 0-2.79 1.89-2.79 3.85V24H8.34z"/>
@@ -62,14 +63,20 @@
             </button>
           </div>
         </div>
-        <h1 class="title">Find Jobs</h1>
+        <!-- Title and the live totals share one row; the description is one line under
+             them. Kept short on purpose: the filters and jobs are what the page is for. -->
+        <div class="masthead-main">
+          <h1 class="title">Find Jobs</h1>
+          <div class="stats" id="all-stats"></div>
+        </div>
         <p class="dek">Engineering roles across all 16 tracked portfolios in a single list. Search across 19 US metros and choose the filters that fit you.</p>
         <!-- One small company a day, written up by hand through the /feature command.
              Stays empty until there is a current, unexpired entry in featured.json. -->
         <div id="featured-slot"></div>
-        <div id="viewed-slot"></div>
-        <div class="stats" id="all-stats"></div>
       </header>
+
+      <!-- Next to the filters it belongs with, rather than up in the header. -->
+      <div id="viewed-slot"></div>
 
       <div id="mobile-filter-backdrop" class="mobile-filter-backdrop" hidden></div>
       <button type="button" id="mobile-filter-toggle" class="mobile-filter-toggle" aria-controls="job-controls" aria-expanded="false" hidden>Filters</button>
@@ -82,21 +89,60 @@
           <button type="button" class="drawer-close" id="filter-drawer-close">Done</button>
         </div>
 
-        <div class="filter-sections" id="picker-row"></div>
+        <!-- The three filters people reach for on every visit sit in one row with the
+             search. Everything else is a click away in the advanced panel, so the
+             list starts near the top of the page instead of below two grids of
+             dropdowns. jobs-ui.js renders the pickers into both. -->
+        <div class="filter-primary" id="filter-primary">
+          <div class="search-wrap">
+            <svg class="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+              <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.3"/>
+              <line x1="10.2" y1="10.2" x2="14" y2="14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+            <input id="job-search" type="search" placeholder="Search title or company…" aria-label="Search roles" autocomplete="off" />
+          </div>
+          <div class="primary-pickers" id="picker-row"></div>
+          <button type="button" class="advanced-toggle" id="advanced-toggle" aria-expanded="false" aria-controls="advanced-filters" aria-label="Advanced filters" title="Advanced filters">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+              <path d="M3 6h7M14 6h7M3 12h3M10 12h11M3 18h11M18 18h3"/>
+            </svg>
+            <span class="advanced-n" id="advanced-count" hidden></span>
+          </button>
+
+          <!-- Desktop: a popover under the row. Mobile: shown inline in the drawer,
+               where everything is already one scrolling sheet. -->
+          <div class="advanced-panel" id="advanced-filters" role="group" aria-labelledby="advanced-title">
+            <div class="advanced-head">
+              <h2 class="advanced-title" id="advanced-title">Advanced filters</h2>
+              <button type="button" class="linkish advanced-reset" id="advanced-reset">Reset all</button>
+              <button type="button" class="advanced-close" id="advanced-close">Close</button>
+            </div>
+            <div class="filter-grid" id="advanced-grid">
+              <label class="sort-wrap"><span>Posted</span><select id="date-select" aria-label="Filter by date posted"></select></label>
+              <label class="sort-wrap"><span>Salary</span><select id="salary-select" aria-label="Filter by minimum salary"></select></label>
+            </div>
+            <div class="advanced-foot" id="preset-slot"></div>
+          </div>
+        </div>
 
         <div class="filter-tail">
-          <label class="sort-wrap"><span>Posted</span><select id="date-select" aria-label="Filter by date posted"></select></label>
-          <label class="sort-wrap"><span>Salary</span><select id="salary-select" aria-label="Filter by minimum salary"></select></label>
-          <label class="toggle filter-toggle" title="Leaves only companies you have never opened a role at">
-            <input type="checkbox" id="hide-opened-companies" />
-            <span>Hide companies I&rsquo;ve opened</span>
-          </label>
           <label class="toggle applied-toggle" title="Roles you have already opened from this site">
             <input type="checkbox" id="hide-opened" />
             <span>Hide roles I&rsquo;ve opened</span>
           </label>
-          <label class="sort-wrap"><span>Sort</span>
-            <select id="sort-select" aria-label="Sort roles">
+          <span class="tail-sep" aria-hidden="true"></span>
+          <label class="toggle applied-toggle" title="Leaves only companies you have never opened a role at">
+            <input type="checkbox" id="hide-opened-companies" />
+            <span>Hide companies I&rsquo;ve opened</span>
+          </label>
+          <button type="button" class="undo-btn" id="undo-filters" hidden>↩ Undo</button>
+          <button type="button" class="reset-btn" id="reset-filters" hidden>Reset filters</button>
+          <button type="button" class="saved-toggle" id="saved-toggle" aria-pressed="false">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            Saved jobs <span class="tab-n" id="saved-count"></span>
+          </button>
+          <div class="sort-wrap tail-sort"><span aria-hidden="true">Sort</span>
+            <select id="sort-select" aria-label="Sort roles" data-select-menu>
               <option value="newest">Newest first</option>
               <option value="oldest">Oldest first</option>
               <option value="salary">Highest salary</option>
@@ -104,20 +150,13 @@
               <option value="company">Company A–Z</option>
               <option value="title">Title A–Z</option>
             </select>
-          </label>
-          <button type="button" class="undo-btn" id="undo-filters" hidden>↩ Undo</button>
-          <button type="button" class="reset-btn" id="reset-filters" hidden>Reset filters</button>
+          </div>
         </div>
 
-        <!-- Last, so it reads as "narrow what the filters left" rather than as the
-             starting point. Alone on its flex line, so it spans the full width. -->
-        <div class="search-wrap">
-          <svg class="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-            <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.3"/>
-            <line x1="10.2" y1="10.2" x2="14" y2="14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-          </svg>
-          <input id="job-search" type="search" placeholder="Search title or company…" aria-label="Search roles" autocomplete="off" />
-        </div>
+        <section class="resume-library" id="resume-library" aria-labelledby="resume-library-title">
+          <div class="resume-library-head"><h2 id="resume-library-title">Resumes</h2></div>
+          <p class="resume-library-note">Loading resumes…</p>
+        </section>
 
         <!-- Mobile only. The list is behind the drawer, so without this you filter
              blind and only discover you cut it to nothing after closing. Doubles as a
@@ -127,20 +166,21 @@
         </div>
       </div>
 
-      <div class="view-tabs" id="job-view-tabs" role="group" aria-label="List view" hidden>
-        <button type="button" class="seg" id="view-flat" aria-pressed="true">Flat list<span class="seg-n" id="count-flat"></span></button>
-        <button type="button" class="seg" id="view-grouped" aria-pressed="false">By company<span class="seg-n" id="count-grouped"></span></button>
-      </div>
-
-      <div class="results-bar" id="job-results-bar" hidden>
-        <p class="results-meta" id="job-count"></p>
-        <div class="group-actions" id="group-actions">
-          <button type="button" class="linkish" id="expand-all">Expand visible</button>
-          <button type="button" class="linkish" id="collapse-all">Collapse all</button>
+      <!-- The list and the selected job side by side. The pane stays in view while the
+           list scrolls; under 1100px it opens over the list instead. -->
+      <div class="results-split" id="results-split">
+        <div class="results-main">
+          <div class="results-bar" id="job-results-bar" hidden>
+            <p class="results-meta" id="job-count"></p>
+            <p class="results-hint" aria-hidden="true"><kbd>↑</kbd><kbd>↓</kbd> to move between jobs</p>
+          </div>
+          <div id="job-list" class="job-list" hidden></div>
+          <nav id="job-pagination" class="pagination" aria-label="Job result pages" hidden></nav>
         </div>
+        <aside class="job-detail" id="job-detail" aria-label="Job description">
+          <p class="job-detail-empty">Select a job to see its description.</p>
+        </aside>
       </div>
-      <div id="job-list" class="job-list" hidden></div>
-      <nav id="job-pagination" class="pagination" aria-label="Job result pages" hidden></nav>
       <div id="all-message" class="firm-message" hidden></div>
 
       <footer>
@@ -153,10 +193,11 @@
           <p>Portfolio and company job boards are checked twice daily, so new openings appear automatically.</p>
         </div>
         <p class="privacy-note">
-          <span aria-hidden="true">*</span> This site stores a random ID in your browser to
-          remember which roles you've opened and the views you've saved, plus your first name
-          if you choose to give one. No email, no password, no IP address, and no account.
-          Clearing your browser's site data erases all of it.
+          Browsing preferences are saved in this browser. Optional Google sign-in saves your
+          account, resumes, saved jobs, and analysis results on our server. Resume analysis
+          sends extracted resume text and the job description to TypeSafe AI. Remove a resume
+          to delete its stored text and match results; clearing browser data does not delete
+          server records. <a href="about.html">More about your data</a>.
         </p>
       </footer>
 
@@ -165,6 +206,9 @@
 
   <script src="theme.js"></script>
   <script src="data.js"></script>
+  <script src="description.js"></script>
+  <script src="select-menu.js"></script>
+  <script src="saved.js"></script>
   <script src="jobs-ui.js"></script>
   <script src="visitor.js"></script>
   <script src="api-config.js"></script>
@@ -172,9 +216,11 @@
   <script src="presets.js"></script>
   <script src="filter-drawer.js"></script>
   <script src="all.js"></script>
+  <script src="auth.js"></script>
+  <script src="resume-import.js"></script>
+  <script src="resume-match.js"></script>
   <script src="track.js"></script>
   <script src="viewed.js"></script>
-  <script src="counter.js"></script>
   <script src="featured.js"></script>
   <script src="feedback.js"></script>
 </body>

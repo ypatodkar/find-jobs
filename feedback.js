@@ -1,4 +1,4 @@
-// The feedback widget, sitting in the masthead under the theme toggle.
+// The feedback widget, sitting alongside the other masthead controls.
 //
 // A small button that nudges once in a while, opening a short form: say the thing,
 // optionally tag what it's about, optionally leave an address. Posts to the worker,
@@ -44,16 +44,17 @@
     try { localStorage.setItem(SENT_KEY, "1"); } catch (_) {}
   }
 
-  // Sits in the masthead directly under the theme toggle, so it stays inside the
-  // page's own left and right margins instead of floating over a corner of the
-  // viewport. Falls back to the body if a page has no masthead.
+  // Share the header actions row with the theme and account controls. Pages with
+  // only a masthead use that row; a page without either falls back to the body.
   function mount() {
     var el = document.getElementById(MOUNT_ID);
     if (el) return el;
     el = document.createElement("div");
     el.id = MOUNT_ID;
     var top = document.querySelector(".masthead-top");
-    if (top && top.parentNode) top.parentNode.insertBefore(el, top.nextSibling);
+    var actions = top && top.querySelector('.masthead-actions');
+    if (actions) actions.insertBefore(el, actions.querySelector('.masthead-link, #theme-toggle'));
+    else if (top) top.appendChild(el);
     else document.body.appendChild(el);
     return el;
   }
@@ -96,7 +97,7 @@
     el.innerHTML =
       '<div class="fb-wrap' + (open ? " is-open" : "") + '">' +
       '<button type="button" class="fb-btn' + (nudge ? " is-nudging" : "") +
-      '" aria-expanded="' + open + '">' + ICON + "<span>Feedback</span></button>" +
+      '" aria-label="Feedback" aria-expanded="' + open + '">' + ICON + "<span>Feedback</span></button>" +
       (open ? formHtml() : "") +
       "</div>";
 

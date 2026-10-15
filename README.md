@@ -299,3 +299,42 @@ To change cities, edit `LOCATIONS` and `CITY_MATCHERS` in the same file.
 
 `results.json` is a point-in-time snapshot. Job boards change constantly — re-run the
 refresh rather than trusting a stale file.
+
+
+## Resume matching production release
+
+The active site runs on Cloudflare Pages. `build.js` adds a small Pages worker that
+forwards `/api/auth/*`, `/api/sync*`, `/api/resumes*`, and `/api/match*` to the existing
+`find-jobs-api` Lambda. Static JSON and description shards stay with Pages. Account
+cookies are first party, HttpOnly, and Secure on HTTPS.
+
+The Lambda and development server share `account-api.cjs`, the Postgres stores, and
+`jev.js`. The Lambda needs outbound HTTPS access to Google, TypeSafe, and the site's
+published description shards. Its VPC must have dual-stack subnets and an IPv6 egress
+route when using the current deployment without an IPv4 NAT gateway.
+
+One-time configuration in AWS: set the existing Google web client ID, TypeSafe API
+key, Postgres credentials, `PGSSL=on`, and `SITE_ORIGIN=https://jobs.ypatodkar.com`.
+Register that site origin in the Google OAuth web client. Never put credentials in
+browser scripts or the static build. Lambda needs a 90-second timeout to accommodate
+the model request's bounded retry, and uses `aws/lambda/index.handler` (the archive
+also retains the previous `index.handler` entry during rollout).
+
+The main-branch workflow tests logic, packages and deploys the API, applies the
+additive `aws/schema.sql` through an IAM-authenticated Lambda invocation, then builds
+and publishes the frontend. Database migrations are not HTTP endpoints. The S3 /
+CloudFront copy is a static backup; the same-origin API proxy is deployed on Pages.
+
+Local release checks:
+
+```sh
+node --test test/*.test.js
+node test/match-feedback.integration.cjs  # isolated Postgres, initdb/pg_ctl required
+node test/jd-ux.e2e.cjs                   # installed Playwright + Chromium required
+node build.js
+```
+
+After deployment, check `/api/auth/config`, signed-out `/api/resumes` (401), actual
+Google sign-in, resume upload/removal, saved analyses, and analysis reviews. Use a
+synthetic resume when testing model calls. The previous Lambda archive/configuration
+should be retained privately for rollback; they may contain server secrets.

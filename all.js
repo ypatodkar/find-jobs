@@ -10,7 +10,6 @@
   const controls = document.getElementById("job-controls");
   const mobileFilterToggle = document.getElementById("mobile-filter-toggle");
   const mobileFilterBackdrop = document.getElementById("mobile-filter-backdrop");
-  const viewTabs = document.getElementById("job-view-tabs");
   const resultsBar = document.getElementById("job-results-bar");
   const jobList = document.getElementById("job-list");
   const pagination = document.getElementById("job-pagination");
@@ -30,7 +29,7 @@
     backdrop: mobileFilterBackdrop,
     closeBtn: document.getElementById("filter-drawer-close"),
     applyBtn: document.getElementById("filter-drawer-apply"),
-    countSource: document.getElementById("count-flat"),
+    countSource: document.getElementById("job-count"),
     titleId: "filter-drawer-title",
   });
 
@@ -40,7 +39,6 @@
 
   function showJobsUI() {
     controls.hidden = false;
-    viewTabs.hidden = false;
     resultsBar.hidden = false;
     jobList.hidden = false;
     if (drawer) drawer.reveal();
@@ -49,7 +47,6 @@
   function hideJobsUI() {
     if (drawer) drawer.teardown();
     controls.hidden = true;
-    viewTabs.hidden = true;
     resultsBar.hidden = true;
     jobList.hidden = true;
     pagination.hidden = true;

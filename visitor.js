@@ -135,6 +135,17 @@
   global.Visitor = {
     id: function () { return ensure().id; },
     name: function () { return (me && me.name) || null; },
+    // Signing in with Google answers "what should we call you?" when it is still open.
+    // A name the visitor typed themselves is never replaced.
+    adopt: function (name) {
+      ensure();
+      var v = clean(String(name || "").split(/\s+/)[0]);
+      if (me.name || !v) return;
+      me.name = v;
+      me.asked = true;
+      write();
+      renderGreeting();
+    },
     forget: function () {
       try { localStorage.removeItem(KEY); } catch (_) {}
       me = null;

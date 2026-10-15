@@ -10,6 +10,28 @@ const path = require("path");
 const { runScrape, failedPlatforms, failedBoards } = require("./pipeline");
 
 const RESULTS_FILE = path.join(__dirname, "results.json");
+const DESCRIPTIONS_FILE = path.join(__dirname, "descriptions.json");
+
+// Descriptions are most of the bytes a scrape collects and only the description pane
+// reads them, one job at a time. Kept in results.json they would ride along into every
+// payload built from it, so they are lifted out into their own file, keyed by job_id,
+// which build.js shards for the page. A job listed under several firms is one entry.
+function splitDescriptions(results) {
+  const out = {};
+  const source = {};
+  for (const firm of Object.values(results.firms || {})) {
+    for (const j of firm.jobs || []) {
+      const text = j.description;
+      delete j.description;
+      if (!text || !j.job_id) continue;
+      // The employer's own posting beats the copy on a VC board.
+      if (out[j.job_id] && !(source[j.job_id] !== "ats" && j.source === "ats")) continue;
+      out[j.job_id] = text;
+      source[j.job_id] = j.source;
+    }
+  }
+  return out;
+}
 
 async function main() {
   const started = Date.now();
@@ -46,8 +68,10 @@ async function main() {
     for (const [id, reason] of lost) console.warn(`  ${id.padEnd(24)} ${reason}`);
   }
 
+  const descriptions = splitDescriptions(results);
+  await fsp.writeFile(DESCRIPTIONS_FILE, JSON.stringify(descriptions));
   await fsp.writeFile(RESULTS_FILE, JSON.stringify(results, null, 2));
-  console.log(`Wrote results.json`);
+  console.log(`Wrote results.json and ${Object.keys(descriptions).length} descriptions`);
 }
 
 main().catch((err) => {

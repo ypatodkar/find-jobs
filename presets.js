@@ -56,13 +56,20 @@
     return p && typeof p === "object" && typeof p.id === "string" && p.filters && typeof p.filters === "object";
   }
 
-  function write() {
-    if (!persistent) return;
-    try {
-      localStorage.setItem(KEY, JSON.stringify(items));
-    } catch (_) {
-      persistent = false; // private mode / quota — keep working in memory
+  // `fromSync` marks a write that came from a signed-in account. Every other write is
+  // announced as "presets-change", which auth.js copies to the account; announcing the
+  // account's own list back to it would just send it straight home.
+  function write(fromSync) {
+    if (persistent) {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(items));
+      } catch (_) {
+        persistent = false; // private mode / quota — keep working in memory
+      }
     }
+    try {
+      global.dispatchEvent(new CustomEvent(fromSync ? "presets-sync" : "presets-change"));
+    } catch (_) { /* no DOM (tests) */ }
   }
 
   function uid() {
@@ -123,13 +130,11 @@
     }
 
     // Nothing categorical selected — fall back to the numeric filters, then describe
-    // the view/sort and firm context so saved filters do not all become "All roles."
+    // the sort and firm context so saved filters do not all become "All roles."
     if (filters.salary && filters.salary !== "all") return clip(view.salaryLabel(filters.salary));
     if (filters.range && filters.range !== "all") return clip(view.rangeLabel(filters.range));
     var mode = "";
-    if (filters.view === "grouped" && filters.sort === "count") mode = "Most roles by company";
-    else if (filters.view === "grouped") mode = "By company";
-    else if (filters.sort === "count") mode = "Most roles";
+    if (filters.sort === "count") mode = "Most roles";
     else if (filters.sort === "company") mode = "Company A–Z";
     else if (filters.sort === "title") mode = "Title A–Z";
     else if (filters.sort === "salary") mode = "Highest salary";
@@ -150,7 +155,7 @@
   function same(a, b) {
     if (!a || !b) return false;
     if ((a.query || "").trim() !== (b.query || "").trim()) return false;
-    if (a.range !== b.range || a.salary !== b.salary || a.sort !== b.sort || a.view !== b.view) return false;
+    if (a.range !== b.range || a.salary !== b.salary || a.sort !== b.sort) return false;
     var ka = Object.keys(a.selected || {}).filter(function (k) { return (a.selected[k] || []).length; });
     var kb = Object.keys(b.selected || {}).filter(function (k) { return (b.selected[k] || []).length; });
     if (ka.length !== kb.length) return false;
@@ -200,6 +205,13 @@
 
     clear: function () { items = []; write(); },
 
+    /** Replace the whole list with a signed-in account's copy. */
+    replaceAll: function (list) {
+      if (!Array.isArray(list)) return;
+      items = list.filter(valid).slice(-MAX);
+      write(true);
+    },
+
     encode: encode,
     decode: decode,
     describe: describe,
@@ -220,9 +232,11 @@
     var bar = document.createElement("div");
     bar.className = "preset-bar";
     bar.id = "preset-bar";
-    // Saved filters are a reusable starting point, so keep them above search and
-    // the rest of the controls rather than presenting them as an afterthought.
-    host.insertBefore(bar, host.firstChild);
+    // Pages with an advanced-filters panel give the bar a slot at its foot, with the
+    // filters it saves. Anything without one keeps it above the filters.
+    var slot = document.getElementById("preset-slot");
+    if (slot) slot.appendChild(bar);
+    else host.insertBefore(bar, host.firstChild);
 
     // null = not editing. { id: null } = naming a new one, { id: "f…" } = renaming.
     var editing = null;
@@ -379,6 +393,8 @@
     });
 
     view.onChange(function () { if (!editing) render(); }); // never yank the input away mid-type
+    // The account's list arrived (sign-in, or another device changed it).
+    global.addEventListener("presets-sync", function () { if (!editing) render(); });
     render();
 
     // A ?f= link wins over whatever the page would otherwise default to.

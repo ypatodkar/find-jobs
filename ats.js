@@ -11,6 +11,7 @@
 const { keep, deriveSeniority, isBlockedCompany } = require("./match");
 const { jobId } = require("./id");
 const { classifySponsorship, toPlainText } = require("./sponsorship");
+const { toDisplayHtml } = require("./description");
 
 const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36";
@@ -148,6 +149,8 @@ const ADAPTERS = {
       remote: j.isRemote === true || /remote/i.test(j.workplaceType || ""),
       salary: null,
       description: j.descriptionPlain || j.descriptionHtml || "",
+      // The HTML for display: it keeps the paragraphs and lists the plain text loses.
+      displayDescription: j.descriptionHtml || j.descriptionPlain || "",
     }));
   },
 
@@ -186,6 +189,11 @@ const ADAPTERS = {
           ...(j.lists || []).map((list) => `${list.text || ""}. ${toPlainText(list.content || "")}`),
           j.additionalPlain,
         ].filter(Boolean).join(". "),
+        displayDescription: [
+          j.description,
+          ...(j.lists || []).map((list) => `<h3>${list.text || ""}</h3><ul>${list.content || ""}</ul>`),
+          j.additional,
+        ].filter(Boolean).join(""),
       };
     });
   },
@@ -236,6 +244,8 @@ async function fetchCompany(entry) {
         logo: entry.meta.logo,
         source: "ats",
         ats: entry.ats,
+        // Moved out into descriptions.json by scrape.js before results.json is written.
+        description: toDisplayHtml(j.displayDescription ?? j.description),
       });
     }
     return { ...entry, ok: true, jobs, scanned: raw.length };

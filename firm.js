@@ -13,7 +13,6 @@
     controls: document.getElementById("job-controls"),
     mobileFilterToggle: document.getElementById("mobile-filter-toggle"),
     mobileFilterBackdrop: document.getElementById("mobile-filter-backdrop"),
-    viewTabs: document.getElementById("job-view-tabs"),
     resultsBar: document.getElementById("job-results-bar"),
     jobList: document.getElementById("job-list"),
     message: document.getElementById("firm-message"),
@@ -35,13 +34,12 @@
     backdrop: el.mobileFilterBackdrop,
     closeBtn: document.getElementById("filter-drawer-close"),
     applyBtn: document.getElementById("filter-drawer-apply"),
-    countSource: document.getElementById("count-flat"),
+    countSource: document.getElementById("job-count"),
     titleId: "filter-drawer-title",
   });
 
   function showJobsUI() {
     el.controls.hidden = false;
-    el.viewTabs.hidden = false;
     el.resultsBar.hidden = false;
     el.jobList.hidden = false;
     if (drawer) drawer.reveal();

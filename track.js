@@ -17,6 +17,9 @@
   var KEY = "vc-directory-seen";
   var MAX_ENTRIES = 5000; // ~250 KB of JSON; well inside the ~5 MB localStorage budget
   var SELECTOR = "a.job-title[data-job-id]";
+  // What counts as opening a role: a list title, or the description pane's Apply link.
+  // Only list titles are painted as seen, so painting keeps the narrower SELECTOR.
+  var OPENS = SELECTOR + ", a[data-track-open][data-job-id]";
 
   // ---- store ------------------------------------------------------------------
   // { job_id: timestamp }. Falls back to memory-only if localStorage is unavailable
@@ -63,6 +66,8 @@
     prune();
     revision++;
     write();
+    // auth.js listens and copies it to a signed-in account.
+    try { global.dispatchEvent(new CustomEvent("seen-change", { detail: { id: id, ts: seen[id] } })); } catch (_) {}
     return true;
   }
 
@@ -135,15 +140,20 @@
     document.addEventListener(
       "click",
       function (e) {
-        var a = e.target && e.target.closest && e.target.closest(SELECTOR);
+        var a = e.target && e.target.closest && e.target.closest(OPENS);
         if (!a) return;
+        // On pages with a description pane a plain click on a title selects the row
+        // and stays on the page; only a modified click actually opens the posting.
+        if (a.getAttribute("data-selects") != null && e.button === 0 && !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) return;
         var id = a.getAttribute("data-job-id");
         if (!id) return;
 
         // Mark first and paint this row immediately — the user opened a new tab, so
         // the row stays on screen and should update now, not on the next render.
         if (mark(id)) {
-          paint(a.parentNode || document);
+          // The whole document, not just around the link: from the pane's Apply link
+          // the row to mark is in the list, not next to it.
+          paint(document);
           if (global.Viewed) global.Viewed.refresh();
           // The "(N)" beside every company name is derived from this same set, and
           // the list is not re-rendered on a click — so nudge the badges that are
@@ -162,7 +172,7 @@
               user_id: global.Visitor ? global.Visitor.id() : null,
               user_name: global.Visitor ? global.Visitor.name() : null,
               company: a.getAttribute("data-company") || null,
-              title: a.textContent || null,
+              title: a.getAttribute("data-title") || a.textContent || null,
               city: a.getAttribute("data-city") || null,
               page: location.pathname.split("/").pop() || "index.html",
               firm: new URLSearchParams(location.search).get("id"),
@@ -192,6 +202,33 @@
       revision++;
       write();
       repaint();
+    },
+    /** A copy of the whole history, { job_id: ts }, for signing in. */
+    all: function () {
+      var out = {};
+      for (var k in seen) out[k] = seen[k];
+      return out;
+    },
+    /**
+     * Add history from a signed-in account (another device). A union that keeps the
+     * earliest time per job, so merging can only add stamps, never move or drop one.
+     */
+    merge: function (map) {
+      if (!map || typeof map !== "object") return;
+      var changed = false;
+      for (var id in map) {
+        var ts = Number(map[id]);
+        if (!id || !(ts > 0)) continue;
+        if (!seen[id]) { seen[id] = ts; seenCount++; changed = true; }
+        else if (ts < seen[id]) { seen[id] = ts; changed = true; }
+      }
+      if (!changed) return;
+      prune();
+      revision++;
+      write();
+      repaint();
+      if (global.Viewed) global.Viewed.refresh();
+      if (global.JobsUI && global.JobsUI.refreshOpenedCounts) global.JobsUI.refreshOpenedCounts();
     },
   };
 })(window);
