@@ -320,10 +320,23 @@ browser scripts or the static build. Lambda needs a 90-second timeout to accommo
 the model request's bounded retry, and uses `aws/lambda/index.handler` (the archive
 also retains the previous `index.handler` entry during rollout).
 
-The main-branch workflow tests logic, packages and deploys the API, applies the
-additive `aws/schema.sql` through an IAM-authenticated Lambda invocation, then builds
-and publishes the frontend. Database migrations are not HTTP endpoints. The S3 /
-CloudFront copy is a static backup; the same-origin API proxy is deployed on Pages.
+The main-branch workflow tests logic, then builds and publishes the frontend. Its
+existing CI user has static-site deployment permissions only. API releases are
+performed by an authorized operator, before publishing frontend changes that need
+new routes. Database migrations are IAM-authenticated Lambda invocations, never HTTP
+endpoints. The S3 / CloudFront copy is a static backup; the same-origin API proxy is
+deployed on Pages.
+
+To release API code after configuring the Lambda once:
+
+```sh
+npm ci --omit=dev --prefix aws/lambda
+node scripts/package-api.js
+aws lambda update-function-code --region us-east-1 --function-name find-jobs-api --zip-file fileb://aws/function.zip
+aws lambda wait function-updated --region us-east-1 --function-name find-jobs-api
+aws lambda invoke --region us-east-1 --function-name find-jobs-api --cli-binary-format raw-in-base64-out --payload '{"releaseAction":"migrate"}' /tmp/find-jobs-migration.json
+node -e 'const r=require("/tmp/find-jobs-migration.json"); if(!r.ok) process.exit(1)'
+```
 
 Local release checks:
 

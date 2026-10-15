@@ -44,22 +44,8 @@ jobs:
       - name: Test application logic
         run: node --test test/*.test.js
 
-      - name: Package API
-        run: |
-          npm ci --omit=dev --prefix aws/lambda
-          node scripts/package-api.js
-
-      - name: Deploy API and migrate database
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: us-east-1
-        run: |
-          aws lambda update-function-code --function-name find-jobs-api --zip-file fileb://aws/function.zip --query CodeSha256 --output text
-          aws lambda wait function-updated --function-name find-jobs-api
-          printf '%s' '{"releaseAction":"migrate"}' > /tmp/find-jobs-migrate.json
-          aws lambda invoke --function-name find-jobs-api --cli-binary-format raw-in-base64-out --payload file:///tmp/find-jobs-migrate.json /tmp/find-jobs-migrate-result.json
-          node -e 'const r=require("/tmp/find-jobs-migrate-result.json"); if(!r.ok) { console.error(r.errorMessage || "Migration failed"); process.exit(1); }'
+      # The CI user publishes static assets only. API releases use the approved
+      # operator path documented in README.md; no extra IAM access is needed here.
 
       - name: Scrape all boards
         run: node scrape.js
