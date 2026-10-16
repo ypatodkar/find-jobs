@@ -1,19 +1,22 @@
-// The all-jobs page. Stages 1–2a of the move to React: the list, its order and pages,
-// the selected role's description, and the filters with their URL and undo, all with
-// the markup of the current page so styles.css applies as it is. Saved filters, the
-// phone drawer, the Companies tab, the divider, keyboard browsing, resume matching and
-// the header's account controls follow in later stages.
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+// The all-jobs page, in React. Stages 1–3 of the move: the list and its pages, the
+// description pane, the filters with their URL, undo and saved filters, the Companies
+// tab, the divider, keyboard browsing, and the description as a sheet on narrow
+// screens, all with the markup of the current page so styles.css applies as it is.
+// Resume matching and the header's account controls follow in later stages.
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Masthead from "./components/Masthead.jsx";
 import Filters from "./components/Filters.jsx";
 import JobRow from "./components/JobRow.jsx";
+import CompanyCard from "./components/CompanyCard.jsx";
 import Pagination from "./components/Pagination.jsx";
 import DetailPane from "./components/DetailPane.jsx";
 import SelectMenu from "./components/SelectMenu.jsx";
 import { JOBS_PER_PAGE, loadJobs, sortJobs } from "./lib/jobs.js";
 import { DATE_RANGES, SALARY_FLOORS, countsFor, dimensions, filterJobs } from "./lib/filters.js";
+import { COMPANIES_PER_PAGE, buildGroups } from "./lib/groups.js";
 import { decode } from "./lib/presets.js";
 import { useFilterState } from "./lib/useFilterState.js";
+import { useColumns } from "./lib/useColumns.js";
 import { useSeen } from "./lib/seen.js";
 
 const SORTS = [
@@ -24,13 +27,12 @@ const SORTS = [
   { value: "company", label: "Company A–Z" },
   { value: "title", label: "Title A–Z" },
 ];
+const DETAIL_KEY = "findJobsDetail"; // the history entry a narrow-screen sheet adds
 
-// From 1100px the list and the description sit side by side (.is-split).
-const WIDE = "(min-width: 1100px)";
-function useWide() {
+function useMedia(query) {
   return useSyncExternalStore(
-    (cb) => { const m = matchMedia(WIDE); m.addEventListener("change", cb); return () => m.removeEventListener("change", cb); },
-    () => matchMedia(WIDE).matches,
+    (cb) => { const m = matchMedia(query); m.addEventListener("change", cb); return () => m.removeEventListener("change", cb); },
+    () => matchMedia(query).matches,
   );
 }
 
@@ -39,13 +41,21 @@ const firmLabel = (id) => {
   return f ? f.short || f.name : id;
 };
 
+const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 export default function App() {
   const [jobs, setJobs] = useState(null);
   const [error, setError] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
-  const wide = useWide();
+  const [sheetOpen, setSheetOpen] = useState(false); // the description over the list, under 1100px
+  const [expanded, setExpanded] = useState(() => new Set());
+  const wide = useMedia("(min-width: 1100px)");
+  const narrow = !wide;
   const dims = useMemo(() => dimensions({ showFirms: true, firmLabel }), []);
-  const { filters, setFilters, page, setPage, canUndo, undo, reset } = useFilterState(dims);
+  const { filters, setFilters, page, setPage, view, setView, canUndo, undo, reset } = useFilterState(dims);
+
+  const splitRef = useRef(null), dividerRef = useRef(null), paneRef = useRef(null), listRef = useRef(null);
+  const { style: columnStyle, dividerProps, narrowColumn } = useColumns(splitRef, dividerRef, wide);
 
   useEffect(() => { loadJobs().then(setJobs, setError); }, []);
 
@@ -55,7 +65,6 @@ export default function App() {
     if (shared) setFilters(shared);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // What a suggested saved-filter name reads from.
   const naming = useMemo(() => ({
     labelFor: (key, v) => (dims.find((d) => d.key === key) || { labelFor: (x) => x }).labelFor(v),
     salaryLabel: (k) => (SALARY_FLOORS.find((s) => s.k === k) || {}).label || k,
@@ -63,40 +72,183 @@ export default function App() {
     contextLabel: null,
   }), [dims]);
 
-  // Opened roles (track.js's store), for the two Hide filters.
+  // Opened roles (track.js's store): the Hide filters and the "N opened" notes.
   const seenMap = useSeen();
   const seen = useMemo(() => new Set(Object.keys(seenMap)), [seenMap]);
-  const openedCompanies = useMemo(() => {
-    const s = new Set();
-    for (const j of jobs || []) if (j.job_id && seen.has(j.job_id)) s.add(j.company);
-    return s;
+  const openedByCompany = useMemo(() => {
+    const m = new Map();
+    for (const j of jobs || []) if (j.job_id && seen.has(j.job_id)) m.set(j.company, (m.get(j.company) || 0) + 1);
+    return m;
   }, [jobs, seen]);
+  const openedCompanies = useMemo(() => new Set(openedByCompany.keys()), [openedByCompany]);
   const filterOpts = { seen, openedCompanies };
 
   const results = useMemo(() => (jobs ? filterJobs(jobs, filters, dims, filterOpts) : []), [jobs, filters, dims, seen, openedCompanies]); // eslint-disable-line react-hooks/exhaustive-deps
   const sorted = useMemo(() => sortJobs(results, filters.sort), [results, filters.sort]);
-  const pageCount = Math.max(1, Math.ceil(sorted.length / JOBS_PER_PAGE));
-  const current = Math.min(page, pageCount);
-  const start = (current - 1) * JOBS_PER_PAGE;
-  const visible = sorted.slice(start, start + JOBS_PER_PAGE);
-  const companies = useMemo(() => new Set(sorted.map((j) => j.company)).size, [sorted]);
+  const groups = useMemo(() => (view === "grouped" ? buildGroups(sorted, filters.sort) : []), [view, sorted, filters.sort]);
+  const companyCount = useMemo(() => new Set(sorted.map((j) => j.company)).size, [sorted]);
 
-  // Beside the list the pane is never left empty: on arrival, after the filters change
-  // (once typing pauses), or on a new page, the first role on screen is selected. Not
-  // under 1100px, where selecting opens a sheet over the list.
-  const firstId = visible[0] && visible[0].job_id;
-  useEffect(() => {
-    if (!wide || !firstId) return;
-    const t = setTimeout(() => setSelectedId(firstId), 250);
-    return () => clearTimeout(t);
-  }, [wide, firstId]);
+  const perPage = view === "grouped" ? COMPANIES_PER_PAGE : JOBS_PER_PAGE;
+  const total = view === "grouped" ? groups.length : sorted.length;
+  const pageCount = Math.max(1, Math.ceil(total / perPage));
+  const current = Math.min(page, pageCount);
+  const start = (current - 1) * perPage;
+  const visibleJobs = view === "flat" ? sorted.slice(start, start + perPage) : [];
+  const visibleGroups = view === "grouped" ? groups.slice(start, start + perPage) : [];
 
   const selected = selectedId ? (jobs || []).find((j) => j.job_id === selectedId) : null;
+  const open = wide ? !!selected : sheetOpen && !!selected;
 
-  const goTo = (n) => {
-    setPage(n);
-    document.getElementById("job-results-bar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  // ---- selecting and closing ----
+  // Beside the list, a click brings the workspace into view below the filters once;
+  // after that, browsing never moves the page. Under 1100px the description opens as a
+  // sheet with its own history entry, so Back closes it.
+  const revealWorkspace = () => {
+    const pane = paneRef.current;
+    if (!pane || narrow) return;
+    const top = pane.getBoundingClientRect().top;
+    const dock = parseFloat(getComputedStyle(pane).top) || 0;
+    if (top > dock + 1) scrollTo({ top: scrollY + top - dock, behavior: reducedMotion() ? "auto" : "smooth" });
   };
+
+  const selectJob = useCallback((id, { reveal = true, fromHistory = false } = {}) => {
+    if (narrow && !fromHistory) {
+      const state = { ...history.state, [DETAIL_KEY]: id };
+      // Switching roles inside an open sheet still needs only one Back to the list.
+      if (sheetOpen && history.state && history.state[DETAIL_KEY]) history.replaceState(state, "");
+      else history.pushState(state, "");
+    }
+    setSelectedId(id);
+    if (narrow) setSheetOpen(true);
+    else if (reveal) requestAnimationFrame(revealWorkspace);
+  }, [narrow, sheetOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Closing returns focus to the role's row, however the sheet was closed.
+  const selectedRef = useRef(selectedId);
+  selectedRef.current = selectedId;
+  const focusSelectedRow = () => requestAnimationFrame(() =>
+    document.querySelector(`#job-list .job[data-job-id="${CSS.escape(selectedRef.current || "")}"] .job-title`)?.focus({ preventScroll: true }));
+
+  const closeDetail = useCallback(({ fromHistory = false } = {}) => {
+    if (!narrow) return;
+    if (!fromHistory && history.state && history.state[DETAIL_KEY]) { history.back(); return; }
+    setSheetOpen(false);
+    focusSelectedRow();
+  }, [narrow]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Back and Forward through a sheet's history entry.
+  useEffect(() => {
+    const onPop = (e) => {
+      const id = e.state && e.state[DETAIL_KEY];
+      if (id) { setSelectedId(id); setSheetOpen(true); }
+      else { setSheetOpen((wasOpen) => { if (wasOpen) focusSelectedRow(); return false; }); }
+    };
+    addEventListener("popstate", onPop);
+    return () => removeEventListener("popstate", onPop);
+  }, []);
+
+  // The sheet is a dialog: focus goes into it, Escape closes it, Tab stays inside, and
+  // the page behind does not scroll.
+  useEffect(() => {
+    const on = narrow && open;
+    document.body.classList.toggle("detail-open", on);
+    if (!on) return;
+    requestAnimationFrame(() => document.getElementById("detail-title")?.focus({ preventScroll: true }));
+    const onKey = (e) => {
+      if (e.defaultPrevented) return;
+      if (e.key === "Escape") { closeDetail(); return; }
+      if (e.key !== "Tab") return;
+      const pane = paneRef.current;
+      const focusable = [...pane.querySelectorAll("a[href], button, input, select, summary, [tabindex='0']")]
+        .filter((n) => !n.disabled && n.getAttribute("tabindex") !== "-1" && n.getClientRects().length && !n.closest("[inert]"));
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !pane.contains(document.activeElement))) { e.preventDefault(); last && last.focus(); }
+      else if (!e.shiftKey && (document.activeElement === last || !pane.contains(document.activeElement))) { e.preventDefault(); first && first.focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("keydown", onKey); document.body.classList.remove("detail-open"); };
+  }, [narrow, open, closeDetail]);
+
+  // ---- the first role, selected ----
+  // Beside the list the pane is never empty: on arrival, after the filters change (once
+  // typing pauses), on a new page or tab, the first role on screen is selected — in the
+  // Companies tab, the first company opens and its first role is taken. Not under
+  // 1100px, where it would open a sheet over the list. Paging with the arrow keys picks
+  // its own row instead (`pickAfterPage`).
+  const pickAfterPage = useRef(null);
+  const firstGroup = visibleGroups[0] && visibleGroups[0].company;
+  const firstId = view === "grouped" ? (visibleGroups[0] && visibleGroups[0].jobs[0].job_id) : visibleJobs[0] && visibleJobs[0].job_id;
+  useEffect(() => {
+    if (!jobs) return;
+    if (pickAfterPage.current) {
+      const which = pickAfterPage.current;
+      pickAfterPage.current = null;
+      requestAnimationFrame(() => {
+        const rows = listRef.current ? [...listRef.current.querySelectorAll(".job[data-job-id]")] : [];
+        const row = which === "last" ? rows[rows.length - 1] : rows[0];
+        if (row) selectRow(row);
+      });
+      return;
+    }
+    if (!wide || !firstId) return;
+    const t = setTimeout(() => {
+      if (view === "grouped" && firstGroup) setExpanded((s) => (s.has(firstGroup) ? s : new Set(s).add(firstGroup)));
+      setSelectedId(firstId);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [jobs, wide, firstId, view, current]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---- ↑ / ↓ through the list ----
+  // Moves the selection without leaving the keyboard, past the last row onto the next
+  // page and before the first onto the previous one. Only while nothing else wants the
+  // arrows: focus on the list or nowhere, and no menu open.
+  const selectRow = (row) => {
+    selectJob(row.dataset.jobId, { reveal: false });
+    row.scrollIntoView({ block: "nearest" });
+    if (!narrow) row.querySelector(".job-title")?.focus({ preventScroll: true });
+  };
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (narrow && open) return; // the sheet covers the list
+      const a = document.activeElement;
+      const idle = !a || a === document.body || a === document.documentElement;
+      if (!idle && !(listRef.current && listRef.current.contains(a))) return;
+      if (document.querySelector("details.company-picker[open], details.preset-picker[open], details.account-menu[open], details.advanced-picker[open]")) return;
+      const rows = listRef.current ? [...listRef.current.querySelectorAll(".job[data-job-id]")] : [];
+      if (!rows.length) return;
+      e.preventDefault();
+      const down = e.key === "ArrowDown";
+      const at = rows.findIndex((r) => r.classList.contains("is-selected"));
+      const next = at === -1 ? (down ? 0 : rows.length - 1) : at + (down ? 1 : -1);
+      if (next >= rows.length) { if (current < pageCount) { pickAfterPage.current = "first"; setPage(current + 1); scrollToResults(false); } return; }
+      if (next < 0) { if (current > 1) { pickAfterPage.current = "last"; setPage(current - 1); scrollToResults(false); } return; }
+      selectRow(rows[next]);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }); // re-bound each render, so it always sees the current rows and page
+
+  const scrollToResults = (smooth = true) => document.getElementById("job-results-bar")?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
+  const goTo = (n) => { setPage(n); scrollToResults(); };
+
+  // When the filter bar is pinned, the pane docks under it: its height is published as
+  // --toolbar-height for styles.css.
+  useEffect(() => {
+    const controls = document.getElementById("job-controls");
+    if (!controls) return;
+    const update = () => {
+      const pinned = wide && getComputedStyle(controls).position === "sticky";
+      document.documentElement.style.setProperty("--toolbar-height", pinned ? controls.offsetHeight + "px" : "0px");
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(controls);
+    return () => ro.disconnect();
+  }, [wide, jobs]);
+
+  const toggleCompany = (company) => setExpanded((s) => { const n = new Set(s); if (n.has(company)) n.delete(company); else n.add(company); return n; });
 
   if (error) {
     return (
@@ -107,42 +259,54 @@ export default function App() {
     );
   }
 
+  const countText = view === "grouped"
+    ? (groups.length ? `Showing ${start + 1}–${start + visibleGroups.length} of ${groups.length} companies · ${sorted.length} roles` : "0 companies · 0 roles")
+    : (sorted.length ? `Showing ${start + 1}–${start + visibleJobs.length} of ${sorted.length} matching roles` : "0 matching roles");
+
   return (
     <div className="wrap">
       <Masthead />
       {jobs ? (
         <Filters dims={dims} filters={filters} onChange={setFilters} onReset={reset} canUndo={canUndo} onUndo={undo}
-          total={sorted.length} naming={naming}
-          countsFor={(d) => countsFor(jobs, filters, d, dims, filterOpts)} />
+          total={sorted.length} naming={naming} countsFor={(d) => countsFor(jobs, filters, d, dims, filterOpts)} />
       ) : null}
-      <div className={`results-split${wide ? " is-split" : ""}`} id="results-split"
-        style={{ "--job-list-width": "60fr", "--job-detail-width": "40fr" }}>
+      <div ref={splitRef} className={`results-split${wide ? " is-split" : ""}`} id="results-split" style={columnStyle}>
         <div className="results-main">
           <div className="results-bar" id="job-results-bar" hidden={!jobs}>
             <div className="list-head" id="list-head">
               <div className="view-tabs" id="job-view-tabs" role="group" aria-label="List view">
-                <button type="button" className="seg" id="view-flat" aria-pressed="true">All jobs<span className="seg-n" id="count-flat">{sorted.length.toLocaleString()}</span></button>
-                <button type="button" className="seg" id="view-grouped" aria-pressed="false" disabled title="Arrives in a later stage of the React move">Companies<span className="seg-n" id="count-grouped">{companies.toLocaleString()}</span></button>
+                <button type="button" className="seg" id="view-flat" aria-pressed={view === "flat"} onClick={() => view !== "flat" && setView("flat")}>
+                  All jobs<span className="seg-n" id="count-flat">{sorted.length.toLocaleString()}</span>
+                </button>
+                <button type="button" className="seg" id="view-grouped" aria-pressed={view === "grouped"} onClick={() => view !== "grouped" && setView("grouped")}>
+                  Companies<span className="seg-n" id="count-grouped">{companyCount.toLocaleString()}</span>
+                </button>
               </div>
               <div className="sort-wrap list-sort" id="list-sort"><span aria-hidden="true">Sort</span>
                 <SelectMenu id="sort-select" label="Sort roles" options={SORTS} value={filters.sort} onChange={(v) => setFilters({ ...filters, sort: v })} />
               </div>
             </div>
-            <p className="results-meta" id="job-count">
-              {sorted.length ? `Showing ${start + 1}–${start + visible.length} of ${sorted.length} matching roles` : "0 matching roles"}
-            </p>
+            <p className="results-meta" id="job-count" data-total={total.toLocaleString()}>{countText}</p>
+            <p className="results-hint" aria-hidden="true"><kbd>↑</kbd><kbd>↓</kbd> to move between jobs</p>
           </div>
           {!jobs ? <p className="results-meta">Loading roles…</p> : (
-            <div id="job-list" className="job-list">
-              {visible.length
-                ? visible.map((j) => <JobRow key={j.job_id} job={j} selected={j.job_id === selectedId} onSelect={setSelectedId} />)
-                : <p className="empty">No roles match those filters.</p>}
+            <div ref={listRef} id="job-list" className="job-list">
+              {view === "flat"
+                ? (visibleJobs.length
+                  ? visibleJobs.map((j) => <JobRow key={j.job_id} job={j} selected={j.job_id === selectedId} onSelect={selectJob} opened={openedByCompany.get(j.company) || 0} />)
+                  : <p className="empty">No roles match those filters.</p>)
+                : (visibleGroups.length
+                  ? visibleGroups.map((g) => (
+                    <CompanyCard key={g.company} group={g} open={expanded.has(g.company)} onToggle={toggleCompany}
+                      selectedId={selectedId} onSelect={selectJob} opened={openedByCompany.get(g.company) || 0} />
+                  ))
+                  : <p className="empty">No roles match those filters.</p>)}
             </div>
           )}
           <Pagination page={current} pageCount={jobs ? pageCount : 1} onPage={goTo} />
         </div>
-        <div className="column-resizer" aria-hidden="true" hidden={!wide}></div>
-        <DetailPane job={selected} open={!!selected} />
+        <div {...dividerProps}></div>
+        <DetailPane ref={paneRef} job={selected} open={open} sheet={narrow && open} narrowColumn={narrowColumn} onClose={() => closeDetail()} />
       </div>
     </div>
   );
