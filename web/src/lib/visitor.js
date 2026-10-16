@@ -1,0 +1,33 @@
+// This browser's anonymous id, as visitor.js keeps it (localStorage "vc-directory-visitor",
+// { id, name, asked }), so clicks and saved filters from either page belong to the same
+// visitor. Minted on first use.
+const KEY = "vc-directory-visitor";
+
+function read() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(KEY));
+    return raw && typeof raw === "object" && typeof raw.id === "string" ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function uuid() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+function ensure() {
+  let me = read();
+  if (!me) {
+    me = { id: uuid(), name: null, asked: false };
+    try { localStorage.setItem(KEY, JSON.stringify(me)); } catch { /* private mode: id lasts the visit */ }
+  }
+  return me;
+}
+
+export const visitorId = () => ensure().id;
+export const visitorName = () => (read() || {}).name || null;

@@ -1,10 +1,11 @@
 // The filter bar (#job-controls), with the markup of index.html so styles.css applies:
-// search, the four main filters, the Advanced filters panel, the Hide checkboxes, and
-// Undo and Reset. Saved filters and the phone drawer arrive in the next stage; their
-// slots are kept.
-import { useEffect, useRef, useState } from "react";
+// search, the four main filters, the Advanced filters panel, the Hide checkboxes, saved
+// filters, Undo and Reset. Under 720px the same block becomes a modal sheet behind a
+// "Filters" button, as filter-drawer.js does it.
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import FilterPicker from "./FilterPicker.jsx";
 import SelectMenu from "./SelectMenu.jsx";
+import SavedFilters from "./SavedFilters.jsx";
 import { DATE_RANGES, SALARY_FLOORS, activeCount, advancedCount } from "../lib/filters.js";
 
 const ADVANCED_ICON = (
@@ -48,7 +49,63 @@ function AdvancedPanel({ count, onReset, children }) {
   );
 }
 
-export default function Filters({ dims, filters, countsFor, onChange, onReset, canUndo, onUndo }) {
+// ---- the phone drawer ----
+const MOBILE = "(max-width: 720px)";
+function useMobile() {
+  return useSyncExternalStore(
+    (cb) => { const m = matchMedia(MOBILE); m.addEventListener("change", cb); return () => m.removeEventListener("change", cb); },
+    () => matchMedia(MOBILE).matches,
+  );
+}
+const FOCUSABLE = "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), summary, textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
+// offsetParent is null for anything hidden, including controls in a closed <details>.
+const tabbable = (root) => [...root.querySelectorAll(FOCUSABLE)].filter((el) => el.offsetParent !== null);
+
+/**
+ * The drawer's open state, scroll lock and keyboard handling. position:fixed on <body>
+ * is the one scroll lock iOS Safari honours mid-gesture, so the offset is saved and
+ * restored. Crossing the breakpoint never strands a locked page.
+ */
+function useDrawer(mobile, controls, toggle, closeBtn) {
+  const [open, setOpen] = useState(false);
+  const saved = useRef(0);
+  const isOpen = mobile && open;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    saved.current = scrollY;
+    Object.assign(document.body.style, { position: "fixed", top: `-${saved.current}px`, left: "0", right: "0", width: "100%" });
+    document.body.classList.add("filter-drawer-open");
+    // Not the search box: a text input would summon the keyboard over the filters.
+    requestAnimationFrame(() => (closeBtn.current || tabbable(controls.current)[0])?.focus());
+    const onKey = (e) => {
+      if (e.key === "Escape") { e.preventDefault(); setOpen(false); toggle.current?.focus(); return; }
+      if (e.key !== "Tab") return;
+      const items = tabbable(controls.current);
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      else if (!controls.current.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      Object.assign(document.body.style, { position: "", top: "", left: "", right: "", width: "" });
+      document.body.classList.remove("filter-drawer-open");
+      scrollTo({ top: saved.current, behavior: "instant" });
+    };
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { if (!mobile) setOpen(false); }, [mobile]);
+  return [isOpen, setOpen];
+}
+
+export default function Filters({ dims, filters, countsFor, onChange, onReset, canUndo, onUndo, total, naming }) {
+  const mobile = useMobile();
+  const controls = useRef(null), toggle = useRef(null), closeBtn = useRef(null);
+  const [drawerOpen, setDrawerOpen] = useDrawer(mobile, controls, toggle, closeBtn);
+  const closeDrawer = () => { setDrawerOpen(false); toggle.current?.focus(); };
   const set = (patch) => onChange({ ...filters, ...patch });
   const setDim = (key, values) => onChange({ ...filters, selected: { ...filters.selected, [key]: values } });
   const picker = (d) => (
@@ -57,7 +114,17 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
   const n = activeCount(filters, dims);
 
   return (
-    <div className="controls" id="job-controls" aria-label="Job filters">
+    <>
+      <div id="mobile-filter-backdrop" className="mobile-filter-backdrop" hidden={!drawerOpen} onClick={closeDrawer}></div>
+      <button type="button" ref={toggle} id="mobile-filter-toggle" className="mobile-filter-toggle" aria-controls="job-controls"
+        aria-expanded={drawerOpen} aria-label={`${drawerOpen ? "Hide" : "Show"} filters${n ? `, ${n} active` : ""}`}
+        onClick={() => mobile && setDrawerOpen(!drawerOpen)}>{n ? `Filters · ${n} active` : "Filters"}</button>
+    <div ref={controls} className={`controls${mobile && !drawerOpen ? " mobile-collapsed" : ""}`} id="job-controls" aria-label="Job filters"
+      role={mobile ? "dialog" : undefined} aria-modal={mobile || undefined} aria-labelledby={mobile ? "filter-drawer-title" : undefined}>
+      <div className="drawer-head">
+        <h2 className="drawer-title" id="filter-drawer-title">Filters</h2>
+        <button type="button" ref={closeBtn} className="drawer-close" id="filter-drawer-close" onClick={closeDrawer}>Done</button>
+      </div>
       <div className="filter-primary" id="filter-primary">
         <div className="search-wrap">
           <svg className="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
@@ -96,10 +163,18 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
           <input type="checkbox" id="hide-opened-companies" checked={filters.hideOpenedCompanies} onChange={(e) => set({ hideOpenedCompanies: e.target.checked })} />
           <span>Hide companies I’ve opened</span>
         </label>
-        <div className="tail-presets" id="preset-slot"></div>
+        <div className="tail-presets" id="preset-slot"><SavedFilters filters={filters} onApply={onChange} naming={naming} /></div>
         <button type="button" className="undo-btn" id="undo-filters" hidden={!canUndo} disabled={!canUndo} onClick={onUndo}>↩ Undo</button>
         <button type="button" className="reset-btn" id="reset-filters" hidden={n === 0} onClick={onReset}>{`Reset ${n} filter${n === 1 ? "" : "s"}`}</button>
       </div>
+
+      {/* The list is behind the sheet, so its footer says what the filters left. */}
+      <div className="drawer-foot">
+        <button type="button" className={`drawer-apply${total === 0 ? " is-empty" : ""}`} id="filter-drawer-apply" onClick={closeDrawer}>
+          {total === 0 ? "No matches — adjust filters" : `Show ${total.toLocaleString()} ${total === 1 ? "role" : "roles"}`}
+        </button>
+      </div>
     </div>
+    </>
   );
 }

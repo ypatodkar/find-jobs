@@ -11,7 +11,8 @@ import Pagination from "./components/Pagination.jsx";
 import DetailPane from "./components/DetailPane.jsx";
 import SelectMenu from "./components/SelectMenu.jsx";
 import { JOBS_PER_PAGE, loadJobs, sortJobs } from "./lib/jobs.js";
-import { countsFor, dimensions, filterJobs } from "./lib/filters.js";
+import { DATE_RANGES, SALARY_FLOORS, countsFor, dimensions, filterJobs } from "./lib/filters.js";
+import { decode } from "./lib/presets.js";
 import { useFilterState } from "./lib/useFilterState.js";
 import { useSeen } from "./lib/seen.js";
 
@@ -47,6 +48,20 @@ export default function App() {
   const { filters, setFilters, page, setPage, canUndo, undo, reset } = useFilterState(dims);
 
   useEffect(() => { loadJobs().then(setJobs, setError); }, []);
+
+  // A shared saved-filter link (?f=) applies once, over whatever the URL said.
+  useEffect(() => {
+    const shared = decode(new URLSearchParams(location.search).get("f") || "");
+    if (shared) setFilters(shared);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // What a suggested saved-filter name reads from.
+  const naming = useMemo(() => ({
+    labelFor: (key, v) => (dims.find((d) => d.key === key) || { labelFor: (x) => x }).labelFor(v),
+    salaryLabel: (k) => (SALARY_FLOORS.find((s) => s.k === k) || {}).label || k,
+    rangeLabel: (k) => (DATE_RANGES.find((r) => r.k === k) || {}).label || k,
+    contextLabel: null,
+  }), [dims]);
 
   // Opened roles (track.js's store), for the two Hide filters.
   const seenMap = useSeen();
@@ -97,6 +112,7 @@ export default function App() {
       <Masthead />
       {jobs ? (
         <Filters dims={dims} filters={filters} onChange={setFilters} onReset={reset} canUndo={canUndo} onUndo={undo}
+          total={sorted.length} naming={naming}
           countsFor={(d) => countsFor(jobs, filters, d, dims, filterOpts)} />
       ) : null}
       <div className={`results-split${wide ? " is-split" : ""}`} id="results-split"
