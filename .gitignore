@@ -38,3 +38,7 @@ job-labels.json
 
 # Original resume files saved by the dev server (aws/lambda/file-store.cjs); production keeps them in S3.
 .resume-files/
+
+# The React pages (web/): installed packages and build output.
+web/node_modules/
+web/dist/

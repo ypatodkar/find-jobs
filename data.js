@@ -91,3 +91,7 @@ const TIER_META = {
   "ai-native": { label: "AI-Native Specialists", short: "AI-Native" },
   "accelerator": { label: "Accelerators", short: "Accelerators" },
 };
+
+// The React pages (web/) import this file as a module, where a top-level const is not
+// a global; the plain-script pages keep reading VC_FIRMS and TIER_META as before.
+if (typeof window !== "undefined") Object.assign(window, { VC_FIRMS, TIER_META });
