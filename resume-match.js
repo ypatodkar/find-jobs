@@ -121,9 +121,7 @@
     const text = await global.ResumeImport.extract(file);
     if (identity !== accountVersion) throw new Error('The signed-in account changed. Please try again.');
     if (!text || text.length < 100) throw new Error('Too little text could be read. Try a text-based PDF or .docx.');
-    // The original goes up with the text; the server keeps both (file-store.cjs).
-    const original = await global.ResumeImport.encode(file);
-    const d = await call('/resumes', json('POST', { visitor: visitor(), label: (file.name || 'Resume').replace(/\.[^.]+$/, ''), fileName: file.name || null, text, file: original }));
+    const d = await call('/resumes', json('POST', { visitor: visitor(), label: (file.name || 'Resume').replace(/\.[^.]+$/, ''), fileName: file.name || null, text }));
     if (identity !== accountVersion) return null;
     items = [d.resume, ...items]; listing = Promise.resolve(items); setActive(d.resume.id);
     return d.resume;
