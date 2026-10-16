@@ -52,9 +52,25 @@ const keyFor = (accountId, resumeId, ext) => `resumes/${accountId}/${resumeId}.$
 
 function s3Store(bucket, region) {
   // eslint-disable-next-line global-require
-  const { S3Client, PutObjectCommand, DeleteObjectCommand, PutObjectTaggingCommand } = require("@aws-sdk/client-s3");
-  const s3 = new S3Client({ region });
+  const { S3Client, PutObjectCommand, DeleteObjectCommand, PutObjectTaggingCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
+  // Dual-stack: the Lambda sits in a VPC with no NAT gateway and reaches the internet
+  // over IPv6 only, and S3's plain regional endpoint has no IPv6 address — every write
+  // to it hung until the connection gave up (about 51 s). The timeouts make any future
+  // unreachability fail in seconds, with a message, instead.
+  const s3 = new S3Client({ region, useDualstackEndpoint: true, requestHandler: { connectionTimeout: 5000, requestTimeout: 20000 } });
   return {
+    /** Whether S3 answers at all: a read of an object that does not exist comes back
+     * 403/404 quickly when it is reachable, and times out when it is not. */
+    async ping() {
+      try {
+        await s3.send(new GetObjectCommand({ Bucket: bucket, Key: "resumes/_reachability-check" }));
+      } catch (err) {
+        const status = err && err.$metadata && err.$metadata.httpStatusCode;
+        if (status === 403 || status === 404) return true;
+        throw err;
+      }
+      return true;
+    },
     async put(key, bytes, type) {
       await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes, ContentType: type, ServerSideEncryption: "AES256" }));
     },

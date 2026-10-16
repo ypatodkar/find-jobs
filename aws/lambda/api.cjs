@@ -42,7 +42,9 @@ async function handle(event, context) {
     const [status, body, outHeaders] = await api.handle(req, event.rawPath.replace(/\.json$/, ''), query);
     return response(status, body, outHeaders);
   } catch (error) {
-    if (!error.status) console.error('account API:', error.message);
+    // name and code too: a network failure can carry an empty message (an
+    // AggregateError of every address tried), which once logged as a blank line.
+    if (!error.status) console.error('account API:', error.name, error.code || '', error.message || '', (error.errors || []).map((e) => e.message).join('; '));
     return response(error.status || 500, { error: error.status ? error.message : 'Something went wrong. Please try again.', ...(error.code ? { code: error.code } : {}), ...(error.usage ? { usage: error.usage } : {}) });
   }
 }
@@ -60,9 +62,12 @@ async function releaseAction(event, context) {
     await api.migrate('SELECT 1');
     const google = await fetch('https://www.googleapis.com/oauth2/v3/certs', { signal: AbortSignal.timeout(10000) });
     if (!google.ok || !(await google.json()).keys?.length) throw new Error('Google key fetch failed.');
+    // Original resume files: S3 must be reachable from inside the VPC (file-store.cjs).
+    const files = process.env.RESUME_BUCKET ? require('./file-store.cjs').createFileStore() : null;
+    if (files) await files.ping();
     const model = await fetch('https://api.typesafe.ai/v1/systemone', { signal: AbortSignal.timeout(10000) });
     if (model.status >= 500) throw new Error('Model API connectivity failed.');
-    return { ok: true, database: true, google: true, modelReachable: true, authConfigured: !!process.env.GOOGLE_CLIENT_ID, modelConfigured: !!process.env.TYPESAFE_API_KEY };
+    return { ok: true, database: true, google: true, resumeFiles: files ? true : 'not configured', modelReachable: true, authConfigured: !!process.env.GOOGLE_CLIENT_ID, modelConfigured: !!process.env.TYPESAFE_API_KEY };
   }
   throw new Error('Unknown release action.');
 }
