@@ -340,6 +340,16 @@ new routes. Database migrations are IAM-authenticated Lambda invocations, never 
 endpoints. The S3 / CloudFront copy is a static backup; the same-origin API proxy is
 deployed on Pages.
 
+Original resume files are kept in a private S3 bucket (`aws/lambda/file-store.cjs`).
+Set it up once, before the first API release that stores them; it is safe to re-run:
+
+```sh
+scripts/setup-resume-bucket.sh
+```
+
+Release the API before the site that uploads files: the previous API refuses
+requests over 256 KB, and an upload now carries the file.
+
 To release API code after configuring the Lambda once:
 
 ```sh

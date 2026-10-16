@@ -9,6 +9,9 @@
 // not enough to read, score or delete someone else's. visitor_id records which
 // browser a resume was uploaded from.
 //
+// Each row holds the extracted text (body, what matching reads) and, for uploads since
+// original files were kept, where that file is (file_key; see file-store.cjs).
+//
 // Deleting is a soft delete: the row stays, with active = 0 and its label prefixed
 // "delete_", and every read below asks for active = 1, so to the account it is gone.
 
@@ -64,34 +67,47 @@ function createStore(pool) {
   return {
     async list(accountId) {
       const { rows } = await q(
-        "SELECT id, label, file_name, created_at FROM resumes WHERE account_id = $1 AND active = 1 ORDER BY created_at DESC",
+        "SELECT id, label, file_name, file_key, created_at FROM resumes WHERE account_id = $1 AND active = 1 ORDER BY created_at DESC",
         [checkAccount(accountId)]
       );
-      return rows.map((r) => ({ id: r.id, label: r.label, fileName: r.file_name, createdAt: Number(r.created_at) }));
+      return rows.map((r) => ({ id: r.id, label: r.label, fileName: r.file_name, hasFile: !!r.file_key, createdAt: Number(r.created_at) }));
     },
 
-    async add(accountId, visitor, { label, fileName, body }) {
+    /** A fresh resume id, for a caller that has to store the file before the row. */
+    newId() {
+      return "r_" + crypto.randomBytes(12).toString("base64url");
+    },
+
+    /**
+     * Store a resume's extracted text and, when there is one, where its original file
+     * was put (`file`: { key, type, size }). `id` lets the caller name the row it
+     * already stored the file under.
+     */
+    async add(accountId, visitor, { id: givenId, label, fileName, body, file }) {
       const a = checkAccount(accountId);
       const text = typeof body === "string" ? body.trim().slice(0, MAX_BODY) : "";
       if (text.length < 100) throw fail(400, "Too little text could be read from that resume to compare. Try a text-based PDF or .docx.");
       const name = String(label || fileName || "Resume").trim().slice(0, MAX_LABEL) || "Resume";
       const { rows } = await q("SELECT count(*)::int AS n FROM resumes WHERE account_id = $1 AND active = 1", [a]);
       if (rows[0].n >= MAX_RESUMES) throw fail(409, `You can keep up to ${MAX_RESUMES} resumes. Remove one to add another.`);
-      const id = "r_" + crypto.randomBytes(12).toString("base64url");
+      const id = givenId ? checkResumeId(givenId) : this.newId();
       const createdAt = Date.now();
       await q(
-        "INSERT INTO resumes (id, account_id, visitor_id, label, file_name, body, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-        [id, a, visitorOrNull(visitor) || "", name, fileName ? String(fileName).slice(0, 200) : null, text, createdAt]
+        "INSERT INTO resumes (id, account_id, visitor_id, label, file_name, body, created_at, file_key, file_type, file_size) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+        [id, a, visitorOrNull(visitor) || "", name, fileName ? String(fileName).slice(0, 200) : null, text, createdAt,
+         file ? file.key : null, file ? file.type : null, file ? file.size : null]
       );
-      return { id, label: name, fileName: fileName || null, createdAt };
+      return { id, label: name, fileName: fileName || null, hasFile: !!file, createdAt };
     },
 
+    /** Soft-delete; returns the original file's key, if it has one, so it can be marked. */
     async remove(accountId, id) {
-      const { rowCount } = await q(
-        "UPDATE resumes SET active = 0, label = 'delete_' || label, deleted_at = $3 WHERE id = $1 AND account_id = $2 AND active = 1",
+      const { rows } = await q(
+        "UPDATE resumes SET active = 0, label = 'delete_' || label, deleted_at = $3 WHERE id = $1 AND account_id = $2 AND active = 1 RETURNING file_key",
         [checkResumeId(id), checkAccount(accountId), Date.now()]
       );
-      if (!rowCount) throw fail(404, "That resume could not be found.");
+      if (!rows.length) throw fail(404, "That resume could not be found.");
+      return rows[0].file_key || null;
     },
 
     async body(accountId, id) {

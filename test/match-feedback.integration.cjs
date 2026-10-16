@@ -95,7 +95,8 @@ async function main() {
     assert.equal(saved[0].result.score, 76);
     assert.equal(saved[1].result.score, 80);
     // Exercise the production Function URL adapter against the same real database.
-    Object.assign(process.env, env, { GOOGLE_CLIENT_ID: 'test-client' });
+    const fileDir = path.join(dir, 'resume-files');
+    Object.assign(process.env, env, { GOOGLE_CLIENT_ID: 'test-client', RESUME_FILE_DIR: fileDir });
     const lambda = require('../aws/lambda/api.cjs');
     const context = {};
     const invoke = (rawPath, method = 'GET', payload, cookie = 'fj_session=owner-feedback-test-session-token') => lambda.handle({
@@ -112,6 +113,32 @@ async function main() {
       const voted = await invoke('/api/match/feedback', 'POST', { ...body, checked_at: next.checkedAt, rating: 'down' });
       assert.equal(voted.statusCode, 200); assert.equal(JSON.parse(voted.body).feedback.rating, 'down');
       assert.equal((await lambda.releaseAction({ releaseAction: 'migrate' }, context)).ok, true);
+      // An upload keeps the original file beside the extracted text, in two places.
+      const pdf = Buffer.from('%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n%%EOF');
+      const text = 'Built and operated backend services in Go and Python. '.repeat(4);
+      const up = await invoke('/api/resumes', 'POST', { label: 'Uploaded', fileName: 'cv.pdf', text, file: pdf.toString('base64') });
+      assert.equal(up.statusCode, 200, up.body);
+      const uploaded = JSON.parse(up.body).resume;
+      assert.equal(uploaded.hasFile, true);
+      const [stored] = (await pool.query('SELECT body, file_key, file_type, file_size FROM resumes WHERE id = $1', [uploaded.id])).rows;
+      assert.equal(stored.body, text.trim(), 'the text column holds the extracted text');
+      assert.equal(stored.file_key, `resumes/owner/${uploaded.id}.pdf`);
+      assert.equal(stored.file_type, 'application/pdf'); assert.equal(stored.file_size, pdf.length);
+      assert.deepEqual(fs.readFileSync(path.join(fileDir, stored.file_key)), pdf, 'the original file is kept byte for byte');
+      // A file that is not a resume format is refused, and nothing is stored.
+      const bad = await invoke('/api/resumes', 'POST', { label: 'Bad', text, file: Buffer.from([0, 1, 2, 3]).toString('base64') });
+      assert.equal(bad.statusCode, 400);
+      // A row that cannot be written takes its file with it: too little text fails after the file is stored.
+      const before = fs.readdirSync(path.join(fileDir, 'resumes/owner')).length;
+      assert.equal((await invoke('/api/resumes', 'POST', { label: 'Short', text: 'too short', file: pdf.toString('base64') })).statusCode, 400);
+      assert.equal(fs.readdirSync(path.join(fileDir, 'resumes/owner')).length, before, 'no file is left behind without its row');
+      // Uploads without a file (an older page) still work.
+      const textOnly = JSON.parse((await invoke('/api/resumes', 'POST', { label: 'Text only', text })).body).resume;
+      assert.equal(textOnly.hasFile, false);
+      assert.equal((await invoke(`/api/resumes/${textOnly.id}`, 'DELETE')).statusCode, 200, 'a resume without a file deletes cleanly');
+      // Deleting marks the file for erasure.
+      assert.equal((await invoke(`/api/resumes/${uploaded.id}`, 'DELETE')).statusCode, 200);
+      assert.equal(fs.existsSync(path.join(fileDir, 'deleted', stored.file_key)), true, 'a deleted resume\'s file is set aside for erasure');
       // Deleting a resume is a soft delete: gone from the account, kept in the table.
       assert.equal((await invoke(`/api/resumes/${resume}`, 'DELETE', undefined, 'fj_session=other-feedback-test-session-token')).statusCode, 404, 'another account cannot delete it');
       assert.equal((await invoke(`/api/resumes/${resume}`, 'DELETE')).statusCode, 200);

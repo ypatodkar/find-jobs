@@ -243,3 +243,10 @@ CREATE INDEX IF NOT EXISTS idx_match_feedback_ts ON match_feedback (created_at);
 -- with it instead of being cascaded away. 0/1 like jobs.active.
 ALTER TABLE resumes ADD COLUMN IF NOT EXISTS active SMALLINT NOT NULL DEFAULT 1;
 ALTER TABLE resumes ADD COLUMN IF NOT EXISTS deleted_at BIGINT;
+
+-- The original file each résumé was extracted from, as uploaded (file-store.cjs):
+-- where it is kept, its type and its size. body stays the extracted text that matching
+-- reads. Résumés uploaded before this have no file and leave these NULL.
+ALTER TABLE resumes ADD COLUMN IF NOT EXISTS file_key TEXT;
+ALTER TABLE resumes ADD COLUMN IF NOT EXISTS file_type TEXT;
+ALTER TABLE resumes ADD COLUMN IF NOT EXISTS file_size INTEGER;
