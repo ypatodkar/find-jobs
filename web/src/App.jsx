@@ -1,21 +1,27 @@
-// The all-jobs page. Stage 1 of the move to React: the list, its order and pages, and
-// the selected role's description, with the markup of the current page so styles.css
-// applies as it is. Filters, the Companies tab, the resizable divider, keyboard
-// browsing, resume matching and the header's account controls follow in later stages.
+// The all-jobs page. Stages 1–2a of the move to React: the list, its order and pages,
+// the selected role's description, and the filters with their URL and undo, all with
+// the markup of the current page so styles.css applies as it is. Saved filters, the
+// phone drawer, the Companies tab, the divider, keyboard browsing, resume matching and
+// the header's account controls follow in later stages.
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Masthead from "./components/Masthead.jsx";
+import Filters from "./components/Filters.jsx";
 import JobRow from "./components/JobRow.jsx";
 import Pagination from "./components/Pagination.jsx";
 import DetailPane from "./components/DetailPane.jsx";
+import SelectMenu from "./components/SelectMenu.jsx";
 import { JOBS_PER_PAGE, loadJobs, sortJobs } from "./lib/jobs.js";
+import { countsFor, dimensions, filterJobs } from "./lib/filters.js";
+import { useFilterState } from "./lib/useFilterState.js";
+import { useSeen } from "./lib/seen.js";
 
 const SORTS = [
-  ["newest", "Newest first"],
-  ["oldest", "Oldest first"],
-  ["salary", "Highest salary"],
-  ["count", "Most roles"],
-  ["company", "Company A–Z"],
-  ["title", "Title A–Z"],
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+  { value: "salary", label: "Highest salary" },
+  { value: "count", label: "Most roles" },
+  { value: "company", label: "Company A–Z" },
+  { value: "title", label: "Title A–Z" },
 ];
 
 // From 1100px the list and the description sit side by side (.is-split).
@@ -27,30 +33,50 @@ function useWide() {
   );
 }
 
+const firmLabel = (id) => {
+  const f = (window.VC_FIRMS || []).find((x) => x.id === id);
+  return f ? f.short || f.name : id;
+};
+
 export default function App() {
   const [jobs, setJobs] = useState(null);
   const [error, setError] = useState(null);
-  const [sort, setSort] = useState("newest");
-  const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState(null);
   const wide = useWide();
+  const dims = useMemo(() => dimensions({ showFirms: true, firmLabel }), []);
+  const { filters, setFilters, page, setPage, canUndo, undo, reset } = useFilterState(dims);
 
   useEffect(() => { loadJobs().then(setJobs, setError); }, []);
 
-  const sorted = useMemo(() => (jobs ? sortJobs(jobs, sort) : []), [jobs, sort]);
+  // Opened roles (track.js's store), for the two Hide filters.
+  const seenMap = useSeen();
+  const seen = useMemo(() => new Set(Object.keys(seenMap)), [seenMap]);
+  const openedCompanies = useMemo(() => {
+    const s = new Set();
+    for (const j of jobs || []) if (j.job_id && seen.has(j.job_id)) s.add(j.company);
+    return s;
+  }, [jobs, seen]);
+  const filterOpts = { seen, openedCompanies };
+
+  const results = useMemo(() => (jobs ? filterJobs(jobs, filters, dims, filterOpts) : []), [jobs, filters, dims, seen, openedCompanies]); // eslint-disable-line react-hooks/exhaustive-deps
+  const sorted = useMemo(() => sortJobs(results, filters.sort), [results, filters.sort]);
   const pageCount = Math.max(1, Math.ceil(sorted.length / JOBS_PER_PAGE));
   const current = Math.min(page, pageCount);
   const start = (current - 1) * JOBS_PER_PAGE;
   const visible = sorted.slice(start, start + JOBS_PER_PAGE);
   const companies = useMemo(() => new Set(sorted.map((j) => j.company)).size, [sorted]);
 
-  // Beside the list the pane is never left empty: on arrival, a new order or a new
-  // page, the first role on screen is selected. Not under 1100px, where selecting
-  // opens a sheet over the list.
+  // Beside the list the pane is never left empty: on arrival, after the filters change
+  // (once typing pauses), or on a new page, the first role on screen is selected. Not
+  // under 1100px, where selecting opens a sheet over the list.
   const firstId = visible[0] && visible[0].job_id;
-  useEffect(() => { if (wide && firstId) setSelectedId(firstId); }, [wide, firstId]);
+  useEffect(() => {
+    if (!wide || !firstId) return;
+    const t = setTimeout(() => setSelectedId(firstId), 250);
+    return () => clearTimeout(t);
+  }, [wide, firstId]);
 
-  const selected = selectedId ? sorted.find((j) => j.job_id === selectedId) : null;
+  const selected = selectedId ? (jobs || []).find((j) => j.job_id === selectedId) : null;
 
   const goTo = (n) => {
     setPage(n);
@@ -69,6 +95,10 @@ export default function App() {
   return (
     <div className="wrap">
       <Masthead />
+      {jobs ? (
+        <Filters dims={dims} filters={filters} onChange={setFilters} onReset={reset} canUndo={canUndo} onUndo={undo}
+          countsFor={(d) => countsFor(jobs, filters, d, dims, filterOpts)} />
+      ) : null}
       <div className={`results-split${wide ? " is-split" : ""}`} id="results-split"
         style={{ "--job-list-width": "60fr", "--job-detail-width": "40fr" }}>
         <div className="results-main">
@@ -79,9 +109,7 @@ export default function App() {
                 <button type="button" className="seg" id="view-grouped" aria-pressed="false" disabled title="Arrives in a later stage of the React move">Companies<span className="seg-n" id="count-grouped">{companies.toLocaleString()}</span></button>
               </div>
               <div className="sort-wrap list-sort" id="list-sort"><span aria-hidden="true">Sort</span>
-                <select id="sort-select" aria-label="Sort roles" value={sort} onChange={(e) => { setSort(e.target.value); setPage(1); }}>
-                  {SORTS.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
-                </select>
+                <SelectMenu id="sort-select" label="Sort roles" options={SORTS} value={filters.sort} onChange={(v) => setFilters({ ...filters, sort: v })} />
               </div>
             </div>
             <p className="results-meta" id="job-count">
