@@ -245,7 +245,7 @@ async function matching() {
 // is stored too (only uploads made with ?upload=files so far). Counts only: no names,
 // emails or resume text.
 async function resumes() {
-  return query(`
+  const formats = await query(`
     SELECT COALESCE(LOWER(SUBSTRING(file_name FROM '\\.([A-Za-z0-9]+)$')), '(no file name)') AS format,
            COUNT(*)                                       AS total,
            COUNT(*) FILTER (WHERE active = 1)             AS active,
@@ -253,6 +253,33 @@ async function resumes() {
            COUNT(*) FILTER (WHERE file_key IS NOT NULL)   AS kept
     FROM resumes GROUP BY 1 ORDER BY total DESC, format
   `);
+  // Of everyone who uploaded a resume, how many went on to run Jev, and how often. A
+  // person is their account, or the browser for uploads from before sign-in existed.
+  // Analyses are the larger of the daily run counter (which started part-way, and
+  // counts re-analyses) and the stored results (which go back to the start).
+  const funnel = (await query(`
+    WITH up AS (
+      SELECT COALESCE(account_id, 'browser:' || visitor_id) AS who, BOOL_OR(account_id IS NOT NULL) AS signed_in
+      FROM resumes GROUP BY 1
+    ), runs AS (
+      SELECT account_id AS who, SUM(used) AS runs FROM match_usage GROUP BY 1
+    ), pairs AS (
+      SELECT COALESCE(r.account_id, 'browser:' || r.visitor_id) AS who, COUNT(*) AS pairs
+      FROM resume_matches m JOIN resumes r ON r.id = m.resume_id GROUP BY 1
+    ), per AS (
+      SELECT up.signed_in, GREATEST(COALESCE(runs.runs, 0), COALESCE(pairs.pairs, 0)) AS analyses
+      FROM up LEFT JOIN runs USING (who) LEFT JOIN pairs USING (who)
+    )
+    SELECT COUNT(*)                                         AS uploaders,
+           COUNT(*) FILTER (WHERE NOT signed_in)            AS before_sign_in,
+           COUNT(*) FILTER (WHERE analyses >= 1)            AS ran,
+           COUNT(*) FILTER (WHERE analyses >= 2)            AS ran_twice,
+           COUNT(*) FILTER (WHERE analyses = 1)             AS once,
+           COUNT(*) FILTER (WHERE analyses BETWEEN 2 AND 5) AS two_to_five,
+           COUNT(*) FILTER (WHERE analyses >= 6)            AS six_plus
+    FROM per
+  `))[0];
+  return { formats, funnel };
 }
 
 async function main() {
@@ -260,7 +287,7 @@ async function main() {
   const o = await overview();
   const a = want("accounts") ? await accounts() : [];
   const mt = want("matching") ? await matching() : null;
-  const rs = want("resumes") ? await resumes() : [];
+  const rs = want("resumes") ? await resumes() : null;
   const u = want("users") ? await users() : [];
   const j = want("jobs") ? await topJobs(LIMIT) : [];
 
@@ -337,14 +364,22 @@ async function main() {
     }
   }
 
-  if (want("resumes")) {
-    const sum = (k) => rs.reduce((n, r) => n + r[k], 0);
+  if (rs) {
+    const sum = (k) => rs.formats.reduce((n, r) => n + r[k], 0);
     console.log(`\n\nRESUMES BY FORMAT (${sum("total")} uploaded · ${sum("active")} active · ${sum("deleted")} deleted)\n`);
     console.log(`${pad("FORMAT", 16)}${num("TOTAL", 6)}${num("ACTIVE", 8)}${num("DELETED", 9)}${num("FILE KEPT", 11)}`);
     console.log("-".repeat(50));
-    rs.forEach((r) => console.log(pad(r.format, 16) + num(r.total, 6) + num(r.active, 8) + num(r.deleted, 9) + num(r.kept, 11)));
+    rs.formats.forEach((r) => console.log(pad(r.format, 16) + num(r.total, 6) + num(r.active, 8) + num(r.deleted, 9) + num(r.kept, 11)));
     console.log(`\nFormat is the uploaded file's type. Every resume's extracted text is stored;`);
     console.log(`FILE KEPT counts those whose original file is in S3 too (?upload=files uploads).`);
+
+    const f = rs.funnel;
+    const pct = (n) => (f.uploaders ? ` (${Math.round((n / f.uploaders) * 100)}%)` : "");
+    console.log(`\nWHO UPLOADED, AND WHO WENT ON TO RUN JEV\n`);
+    console.log(`  ${f.uploaders} people uploaded a resume${f.before_sign_in ? ` (${f.before_sign_in} of them before sign-in existed, counted by browser)` : ""}`);
+    console.log(`  ${f.ran}${pct(f.ran)} ran at least one analysis · ${f.uploaders - f.ran} never did`);
+    console.log(`  ${f.ran_twice}${pct(f.ran_twice)} ran more than one`);
+    console.log(`  analyses each: 1 → ${f.once} · 2–5 → ${f.two_to_five} · 6+ → ${f.six_plus}`);
   }
 
   if (want("users")) {
