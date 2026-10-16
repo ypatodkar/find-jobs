@@ -61,11 +61,26 @@ jobs:
       # so only postings new since the last run are put to it. Each run saves under its
       # own key and restores the newest by prefix; an evicted cache means reclassifying.
       - name: Restore job classifications
+        id: labels
         uses: actions/cache/restore@v4
         with:
           path: data/job-labels.json
           key: job-labels-${{ github.run_id }}
           restore-keys: job-labels-
+
+      # A cache belongs to its path as well as its key, so the copies saved before the
+      # file moved into data/ only restore to the old path. Brought across once; this
+      # and the next step can go after a run has saved under data/.
+      - name: Restore job classifications from the old location
+        if: steps.labels.outputs.cache-matched-key == ''
+        uses: actions/cache/restore@v4
+        with:
+          path: job-labels.json
+          key: job-labels-${{ github.run_id }}
+          restore-keys: job-labels-
+
+      - name: Move them into data/
+        run: if [ -f job-labels.json ]; then mkdir -p data && mv job-labels.json data/; fi
 
       - name: Scrape all boards
         env:
