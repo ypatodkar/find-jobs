@@ -624,7 +624,8 @@
 
     // The tag row and meta line, shared by a list row and the description pane.
     function jobParts(j) {
-      const roleTags = j.roles.map((r) => `<span class="role-tag${r === "ai" ? " ai" : ""}">${escapeHtml(ROLE_LABELS[r] || r)}</span>`).join("");
+      // || []: the downloaded list leaves out empty fields (pipeline.js publicJob).
+      const roleTags = (j.roles || []).map((r) => `<span class="role-tag${r === "ai" ? " ai" : ""}">${escapeHtml(ROLE_LABELS[r] || r)}</span>`).join("");
       const src = j.unlisted
         ? `<span class="src-tag" title="Saved earlier; no longer on the job boards">no longer listed</span>`
         : j.source === "ats"
