@@ -22,5 +22,18 @@ export default defineConfig({
     // featured.json is written by the /feature command at the repo root.
     proxy: { "/api": "http://localhost:4173", "/featured.json": "http://localhost:4173" },
   },
-  build: { outDir: "dist", emptyOutDir: true },
+  // One entry per page; shared code (React, the header, the job list) is split into
+  // chunks the pages share.
+  build: {
+    outDir: "dist",
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        index: fileURLToPath(new URL("index.html", import.meta.url)),
+        firm: fileURLToPath(new URL("firm.html", import.meta.url)),
+        firms: fileURLToPath(new URL("firms.html", import.meta.url)),
+        about: fileURLToPath(new URL("about.html", import.meta.url)),
+      },
+    },
+  },
 });

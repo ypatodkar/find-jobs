@@ -1,10 +1,11 @@
-// The all-jobs page, in React. Stages 1–3 of the move: the list and its pages, the
-// description pane, the filters with their URL, undo and saved filters, the Companies
-// tab, the divider, keyboard browsing, and the description as a sheet on narrow
-// screens, all with the markup of the current page so styles.css applies as it is.
-// Resume matching and the header's account controls follow in later stages.
+// The job list and its description, as jobs-ui.js createJobsView: the filters with
+// their URL, undo and saved filters, the list and its pages, the Companies tab, the
+// divider, keyboard browsing, and the description pane (a sheet on narrow screens), all
+// with the markup of the current pages so styles.css applies as it is.
+//
+// Shared by the all-jobs page and each investor's page, which load the jobs and
+// supply the header and footer around it. `jobs` is null while they load.
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import Masthead from "./components/Masthead.jsx";
 import Filters from "./components/Filters.jsx";
 import JobRow from "./components/JobRow.jsx";
 import CompanyCard from "./components/CompanyCard.jsx";
@@ -12,9 +13,8 @@ import Pagination from "./components/Pagination.jsx";
 import DetailPane from "./components/DetailPane.jsx";
 import SelectMenu from "./components/SelectMenu.jsx";
 import { ResumeSignInDialog } from "./components/Account.jsx";
-import Viewed from "./components/Viewed.jsx";
 import "./lib/track.js";
-import { JOBS_PER_PAGE, loadJobs, sortJobs } from "./lib/jobs.js";
+import { JOBS_PER_PAGE, sortJobs } from "./lib/jobs.js";
 import { DATE_RANGES, SALARY_FLOORS, countsFor, dimensions, filterJobs } from "./lib/filters.js";
 import { COMPANIES_PER_PAGE, buildGroups } from "./lib/groups.js";
 import { decode } from "./lib/presets.js";
@@ -46,21 +46,21 @@ const firmLabel = (id) => {
 
 const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-export default function App() {
-  const [jobs, setJobs] = useState(null);
-  const [error, setError] = useState(null);
+/**
+ * `showFirms`: offer the Investor filter (the all-jobs page). `contextLabel`: the
+ * investor a page is about, which names its saved filters.
+ */
+export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = null }) {
   const [selectedId, setSelectedId] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false); // the description over the list, under 1100px
   const [expanded, setExpanded] = useState(() => new Set());
   const wide = useMedia("(min-width: 1100px)");
   const narrow = !wide;
-  const dims = useMemo(() => dimensions({ showFirms: true, firmLabel }), []);
+  const dims = useMemo(() => dimensions({ showFirms, firmLabel }), [showFirms]);
   const { filters, setFilters, page, setPage, view, setView, canUndo, undo, reset } = useFilterState(dims);
 
   const splitRef = useRef(null), dividerRef = useRef(null), paneRef = useRef(null), listRef = useRef(null);
   const { style: columnStyle, dividerProps, narrowColumn } = useColumns(splitRef, dividerRef, wide);
-
-  useEffect(() => { loadJobs().then(setJobs, setError); }, []);
 
   // A shared saved-filter link (?f=) applies once, over whatever the URL said.
   useEffect(() => {
@@ -72,8 +72,8 @@ export default function App() {
     labelFor: (key, v) => (dims.find((d) => d.key === key) || { labelFor: (x) => x }).labelFor(v),
     salaryLabel: (k) => (SALARY_FLOORS.find((s) => s.k === k) || {}).label || k,
     rangeLabel: (k) => (DATE_RANGES.find((r) => r.k === k) || {}).label || k,
-    contextLabel: null,
-  }), [dims]);
+    contextLabel,
+  }), [dims, contextLabel]);
 
   // Opened roles (track.js's store): the Hide filters and the "N opened" notes.
   const seenMap = useSeen();
@@ -253,30 +253,12 @@ export default function App() {
 
   const toggleCompany = (company) => setExpanded((s) => { const n = new Set(s); if (n.has(company)) n.delete(company); else n.add(company); return n; });
 
-  if (error || (jobs && !jobs.length)) {
-    return (
-      <div className="wrap">
-        <Masthead />
-        <div id="viewed-slot"></div>
-        <div id="all-message" className="firm-message">
-          {error
-            ? <><p><strong>We couldn't load the job data.</strong></p><p>Please try again shortly. Listings are updated automatically twice daily.</p></>
-            : <><p><strong>No roles are available yet.</strong></p><p>Job boards are checked automatically twice daily. Please check back after the next update.</p></>}
-        </div>
-        <Footer jobs={null} />
-      </div>
-    );
-  }
-
   const countText = view === "grouped"
     ? (groups.length ? `Showing ${start + 1}–${start + visibleGroups.length} of ${groups.length} companies · ${sorted.length} roles` : "0 companies · 0 roles")
     : (sorted.length ? `Showing ${start + 1}–${start + visibleJobs.length} of ${sorted.length} matching roles` : "0 matching roles");
 
   return (
-    <div className="wrap">
-      <Masthead />
-      {/* Next to the filters it belongs with, rather than up in the header. */}
-      <Viewed jobs={jobs} seen={seenMap} />
+    <>
       {jobs ? (
         <Filters dims={dims} filters={filters} onChange={setFilters} onReset={reset} canUndo={canUndo} onUndo={undo}
           total={sorted.length} naming={naming} countsFor={(d) => countsFor(jobs, filters, d, dims, filterOpts)} />
@@ -319,34 +301,7 @@ export default function App() {
         <div {...dividerProps}></div>
         <DetailPane ref={paneRef} job={selected} open={open} sheet={narrow && open} narrowColumn={narrowColumn} onClose={() => closeDetail()} />
       </div>
-      <div id="all-message" className="firm-message" hidden></div>
-      <Footer jobs={jobs} />
       <ResumeSignInDialog />
-    </div>
-  );
-}
-
-function Footer({ jobs }) {
-  const multi = useMemo(() => (jobs ? jobs.filter((j) => (j.firms || []).length > 1).length : 0), [jobs]);
-  return (
-    <footer>
-      <div>
-        <h3>About this list</h3>
-        <p id="all-note">{jobs
-          ? `Merged across every tracked portfolio and deduplicated on company, title, and city — ${multi.toLocaleString()} of these roles are at companies backed by more than one investor. Where a company publishes to its own applicant tracking system, that live listing is preferred over the investor's board.`
-          : "Roles are merged across every tracked portfolio and deduplicated on company, title, and city. Where a company publishes to its own applicant tracking system, that live listing is preferred over the investor's board."}</p>
-      </div>
-      <div>
-        <h3>Fresh opportunities, automatically</h3>
-        <p>Portfolio and company job boards are checked twice daily, so new openings appear automatically.</p>
-      </div>
-      <p className="privacy-note">
-        Browsing preferences are saved in this browser. Optional Google sign-in saves your
-        account, resumes, saved jobs, and analysis results on our server. Resume analysis
-        sends extracted resume text and the job description to TypeSafe AI. Removing a resume
-        hides it from your account, but its stored text and match results stay on our server;
-        clearing browser data does not delete server records either. <a href="about.html">More about your data</a>.
-      </p>
-    </footer>
+    </>
   );
 }

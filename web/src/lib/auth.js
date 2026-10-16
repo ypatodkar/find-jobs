@@ -34,6 +34,7 @@ export function onAccountChange(fn) {
 }
 
 export function useAuth() {
+  start();
   return useSyncExternalStore((fn) => { listeners.add(fn); return () => listeners.delete(fn); }, () => state);
 }
 export const currentAccount = () => state.account;
@@ -179,7 +180,14 @@ if (typeof window !== "undefined") {
 }
 
 // ---- start ------------------------------------------------------------------
-export const authReady = (async () => {
+// Only once a page shows something that needs it (the account button, the resume
+// card): the investor directory and About never ask the server who you are.
+let started = null;
+function start() {
+  if (!started) started = load();
+  return started;
+}
+async function load() {
   let account = null;
   try {
     clientId = (await call("/auth/config")).clientId;
@@ -200,4 +208,4 @@ export const authReady = (async () => {
   set({ ready: true, enabled: !!clientId });
   signedIn(account);
   return account;
-})();
+}

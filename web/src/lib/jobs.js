@@ -108,3 +108,14 @@ export function sortJobs(jobs, sort) {
   else if (sort === "title") arr.sort(byTitle);
   return arr;
 }
+
+/**
+ * One investor's page: { status: "ok", jobs, host, totalOnBoard, ... } or
+ * { status: "unsupported" | "error", reason }. Rejects when the file cannot be read.
+ */
+export async function loadFirm(id) {
+  const r = await fetch("api/firm/" + encodeURIComponent(id) + ".json");
+  const data = await r.json();
+  if (!r.ok) throw data;
+  return { ...data, jobs: expand(data) };
+}
