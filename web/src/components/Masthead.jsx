@@ -1,6 +1,8 @@
-// The page header, as in index.html. The account button, likes, feedback, theme toggle
-// and click counter are their own scripts on the current page; they move over in a
-// later stage, and their slots are kept so the layout matches.
+// The page header, as in index.html. Likes, feedback, the theme toggle and the click
+// counter are their own scripts on the current page; they move over in a later stage,
+// and their slots are kept so the layout matches.
+import { AccountSlot } from "./Account.jsx";
+
 export default function Masthead() {
   return (
     <header className="masthead masthead-compact">
@@ -11,7 +13,7 @@ export default function Masthead() {
         </div>
         <div className="masthead-actions">
           <div id="visitor-slot"></div>
-          <div id="account-slot"></div>
+          <AccountSlot />
           <a className="masthead-link" href="https://lnkd.in/p/g2hge79J" target="_blank" rel="noopener noreferrer" aria-label="This project on LinkedIn" title="LinkedIn">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true" focusable="false">
               <path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM.22 8.02h4.56V24H.22zM8.34 8.02h4.37v2.18h.06c.61-1.15 2.1-2.37 4.32-2.37 4.62 0 5.47 3.04 5.47 6.99V24h-4.56v-7.28c0-1.74-.03-3.98-2.42-3.98-2.42 0-2.79 1.89-2.79 3.85V24H8.34z" />

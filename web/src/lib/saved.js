@@ -38,6 +38,8 @@ const snapshot = (j) => ({
   posted: j.posted || null,
 });
 
+export const savedItems = () => items;
+
 export const saved = {
   has: (id) => items.some((s) => s.id === id),
   toggle(job) {

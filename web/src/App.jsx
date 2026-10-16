@@ -11,6 +11,7 @@ import CompanyCard from "./components/CompanyCard.jsx";
 import Pagination from "./components/Pagination.jsx";
 import DetailPane from "./components/DetailPane.jsx";
 import SelectMenu from "./components/SelectMenu.jsx";
+import { ResumeSignInDialog } from "./components/Account.jsx";
 import { JOBS_PER_PAGE, loadJobs, sortJobs } from "./lib/jobs.js";
 import { DATE_RANGES, SALARY_FLOORS, countsFor, dimensions, filterJobs } from "./lib/filters.js";
 import { COMPANIES_PER_PAGE, buildGroups } from "./lib/groups.js";
@@ -308,6 +309,7 @@ export default function App() {
         <div {...dividerProps}></div>
         <DetailPane ref={paneRef} job={selected} open={open} sheet={narrow && open} narrowColumn={narrowColumn} onClose={() => closeDetail()} />
       </div>
+      <ResumeSignInDialog />
     </div>
   );
 }

@@ -31,3 +31,11 @@ function ensure() {
 
 export const visitorId = () => ensure().id;
 export const visitorName = () => (read() || {}).name || null;
+
+/** Take a signed-in account's first name, unless this browser already has one. */
+export function adoptName(name) {
+  const me = ensure();
+  const v = String(name || "").split(/\s+/)[0].trim().slice(0, 32);
+  if (me.name || !v) return;
+  try { localStorage.setItem(KEY, JSON.stringify({ ...me, name: v, asked: true })); } catch { /* fine */ }
+}
