@@ -5,6 +5,7 @@
 //   node scripts/stats.js                overview, Google accounts, resume matching, every user, top 20 jobs
 //   node scripts/stats.js --accounts     just the Google accounts
 //   node scripts/stats.js --matching     just resume matching: Jev runs, jobs analysed, ratings
+//   node scripts/stats.js --resumes      just the uploaded resumes, by file format (counts only)
 //   node scripts/stats.js --users        just the per-user table
 //   node scripts/stats.js --jobs         just the job table
 //   node scripts/stats.js --limit 50     how many jobs to list (default 20)
@@ -45,7 +46,7 @@ const REGION = "us-east-1";
 
 const args = process.argv.slice(2);
 const asJson = args.includes("--json");
-const only = ["--accounts", "--matching", "--users", "--jobs"].find((a) => args.includes(a));
+const only = ["--accounts", "--matching", "--resumes", "--users", "--jobs"].find((a) => args.includes(a));
 const want = (section) => !only || only === `--${section}`;
 const limitArg = args.indexOf("--limit");
 const LIMIT = limitArg > -1 && args[limitArg + 1] ? Number(args[limitArg + 1]) : 20;
@@ -239,16 +240,32 @@ async function matching() {
   return { totals, people: people.filter((r) => r.runs || r.pairs), days, bands, recent, unlockFeedback };
 }
 
+// Uploaded resumes by the format of the file that was uploaded (from its name). Every
+// resume's text is stored, whatever the format; `kept` counts those whose original file
+// is stored too (only uploads made with ?upload=files so far). Counts only: no names,
+// emails or resume text.
+async function resumes() {
+  return query(`
+    SELECT COALESCE(LOWER(SUBSTRING(file_name FROM '\\.([A-Za-z0-9]+)$')), '(no file name)') AS format,
+           COUNT(*)                                       AS total,
+           COUNT(*) FILTER (WHERE active = 1)             AS active,
+           COUNT(*) FILTER (WHERE active <> 1)            AS deleted,
+           COUNT(*) FILTER (WHERE file_key IS NOT NULL)   AS kept
+    FROM resumes GROUP BY 1 ORDER BY total DESC, format
+  `);
+}
+
 async function main() {
   pool = new Pool(connection());
   const o = await overview();
   const a = want("accounts") ? await accounts() : [];
   const mt = want("matching") ? await matching() : null;
+  const rs = want("resumes") ? await resumes() : [];
   const u = want("users") ? await users() : [];
   const j = want("jobs") ? await topJobs(LIMIT) : [];
 
   if (asJson) {
-    console.log(JSON.stringify({ overview: o, accounts: a, matching: mt, users: u, topJobs: j }, null, 2));
+    console.log(JSON.stringify({ overview: o, accounts: a, matching: mt, resumes: rs, users: u, topJobs: j }, null, 2));
     return;
   }
 
@@ -318,6 +335,16 @@ async function main() {
       console.log(`\nFEEDBACK GIVEN TO UNLOCK MORE RUNS (${mt.unlockFeedback.length}, average ${avg.toFixed(1)}/5)`);
       mt.unlockFeedback.forEach((f) => console.log(`  ${pad(ts(f.created_at), 18)}${f.rating}/5  ${pad(f.email, 30)}${String(f.message).replace(/\s+/g, " ").slice(0, 120)}`));
     }
+  }
+
+  if (want("resumes")) {
+    const sum = (k) => rs.reduce((n, r) => n + r[k], 0);
+    console.log(`\n\nRESUMES BY FORMAT (${sum("total")} uploaded · ${sum("active")} active · ${sum("deleted")} deleted)\n`);
+    console.log(`${pad("FORMAT", 16)}${num("TOTAL", 6)}${num("ACTIVE", 8)}${num("DELETED", 9)}${num("FILE KEPT", 11)}`);
+    console.log("-".repeat(50));
+    rs.forEach((r) => console.log(pad(r.format, 16) + num(r.total, 6) + num(r.active, 8) + num(r.deleted, 9) + num(r.kept, 11)));
+    console.log(`\nFormat is the uploaded file's type. Every resume's extracted text is stored;`);
+    console.log(`FILE KEPT counts those whose original file is in S3 too (?upload=files uploads).`);
   }
 
   if (want("users")) {
