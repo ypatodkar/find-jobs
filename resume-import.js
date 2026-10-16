@@ -1,8 +1,7 @@
 // Turn an uploaded resume into plain text, in the browser.
 //
-// Extraction happens here rather than on the server. The upload then sends both: the
-// extracted text, which matching reads, and the original file, which the server keeps
-// beside it (aws/lambda/file-store.cjs) so it can be read again later.
+// Extraction happens here rather than on the server. Choosing a valid file starts
+// matching, and only the extracted text goes to the backend, never the binary file.
 //
 // Four formats, three strategies:
 //
@@ -21,7 +20,7 @@
 
   // Resumes are short. Anything larger than this is not a CV, and reading it would
   // mean holding tens of megabytes in memory to produce text we would then truncate.
-  var MAX_BYTES = 4 * 1024 * 1024; // also the most the server keeps (file-store.cjs)
+  var MAX_BYTES = 10 * 1024 * 1024;
 
   function tidy(text) {
     return String(text || "")
@@ -138,7 +137,7 @@
 
   async function extract(file) {
     if (!file) throw new Error("No file chosen.");
-    if (file.size > MAX_BYTES) throw new Error("That file is larger than 4 MB. Resumes are rarely that big; try exporting it again.");
+    if (file.size > MAX_BYTES) throw new Error("That file is larger than 10 MB — it is unlikely to be a resume.");
     var name = (file.name || "").toLowerCase();
 
     if (/\.(txt|md|markdown|text)$/.test(name) || /^text\//.test(file.type || "")) {
@@ -160,16 +159,5 @@
     return text;
   }
 
-  // The original file as base64, for the upload.
-  function encode(file) {
-    if (file.size > MAX_BYTES) return Promise.reject(new Error("That file is larger than 4 MB. Resumes are rarely that big; try exporting it again."));
-    return new Promise(function (resolve, reject) {
-      var reader = new FileReader();
-      reader.onload = function () { resolve(String(reader.result).replace(/^data:[^,]*,/, "")); };
-      reader.onerror = function () { reject(new Error("That file could not be read.")); };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  global.ResumeImport = { extract: extract, encode: encode, tidy: tidy, ACCEPT: ".pdf,.docx,.txt,.md,.markdown,application/pdf,text/plain,text/markdown" };
+  global.ResumeImport = { extract: extract, tidy: tidy, ACCEPT: ".pdf,.docx,.txt,.md,.markdown,application/pdf,text/plain,text/markdown" };
 })(window);
