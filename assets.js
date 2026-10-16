@@ -18,4 +18,16 @@ const ASSETS = [
   "featured.js", "featured.json",
 ];
 
-module.exports = { ASSETS };
+// What build.js ships beside the React pages (web/dist, which brings its own HTML,
+// scripts, styles and fonts): the files that are not pages. 404.html is plain HTML
+// that still reads styles.css and its fonts. ASSETS above is what the local dev
+// server (server.js) hands out, so the plain-script pages stay available to compare
+// against until they are removed.
+const SITE_ASSETS = [
+  "og.png", "robots.txt", "sitemap.xml", "404.html", "styles.css",
+  "fonts/geist-sans-400.woff2", "fonts/geist-sans-500.woff2",
+  "fonts/geist-sans-600.woff2", "fonts/geist-sans-700.woff2",
+  "featured.json",
+];
+
+module.exports = { ASSETS, SITE_ASSETS };

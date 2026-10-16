@@ -1,6 +1,10 @@
 // Builds the deployable static site into dist/.
 //
+//   npm ci --prefix web && npm run build --prefix web   # the pages, into web/dist
 //   node build.js
+//
+// The pages are the React build (web/dist), copied in whole; beside them go the few
+// files that are not pages (assets.js SITE_ASSETS).
 //
 // Turns the three read endpoints server.js answers dynamically into real files at the
 // same relative paths, so the pages need no code change between local and hosted:
@@ -22,7 +26,12 @@ const DIST = path.join(ROOT, "dist");
 const RESULTS_FILE = path.join(ROOT, "results.json");
 const DESCRIPTIONS_FILE = path.join(ROOT, "descriptions.json");
 
-const { ASSETS } = require("./assets");
+const { SITE_ASSETS } = require("./assets");
+const PAGES_DIR = path.join(ROOT, "web", "dist");
+const PAGES = ["index.html", "firm.html", "firms.html", "about.html"];
+
+// Content-hashed by Vite, so a file under assets/ never changes under the same URL.
+const HEADERS = "/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n";
 
 async function writeJson(rel, body) {
   const full = path.join(DIST, rel);
@@ -38,12 +47,21 @@ async function main() {
   }
   const data = JSON.parse(await fsp.readFile(RESULTS_FILE, "utf8"));
 
+  const missingPages = PAGES.filter((p) => !fs.existsSync(path.join(PAGES_DIR, p)));
+  if (missingPages.length) {
+    console.error(`web/dist is missing ${missingPages.join(", ")} — run \`npm ci --prefix web && npm run build --prefix web\` first.`);
+    process.exit(1);
+  }
+
   await fsp.rm(DIST, { recursive: true, force: true });
   await fsp.mkdir(DIST, { recursive: true });
 
+  // --- the pages ---
+  await fsp.cp(PAGES_DIR, DIST, { recursive: true });
+
   // --- static assets ---
   const missing = [];
-  for (const rel of ASSETS) {
+  for (const rel of SITE_ASSETS) {
     const src = path.join(ROOT, rel);
     if (!fs.existsSync(src)) {
       missing.push(rel);
@@ -61,6 +79,8 @@ async function main() {
   // Tells GitHub Pages not to run the output through Jekyll, which would drop any
   // file or directory beginning with an underscore.
   await fsp.writeFile(path.join(DIST, ".nojekyll"), "");
+  // Cloudflare Pages' cache rules; S3 gets the same from the deploy workflow.
+  await fsp.writeFile(path.join(DIST, "_headers"), HEADERS);
 
   // Same-origin dynamic account routes on the production Cloudflare Pages host.
   await fsp.copyFile(path.join(ROOT, 'deploy/pages-worker.mjs'), path.join(DIST, '_worker.js'));
@@ -99,7 +119,7 @@ async function main() {
   console.log(`descriptions: ${shardCount} shard files, ${(descBytes / 1048576).toFixed(2)} MB uncompressed`);
 
   const jobs = allJobsPayload(data).jobs.length;
-  console.log(`dist/ built — ${ASSETS.length} assets, ${firmCount} firm files, ${jobs} roles`);
+  console.log(`dist/ built — the React pages, ${SITE_ASSETS.length} assets, ${firmCount} firm files, ${jobs} roles`);
   console.log(`data: ${(bytes / 1048576).toFixed(2)} MB uncompressed (hosts serve it gzipped)`);
   console.log(`scrapedAt: ${data.scrapedAt}`);
 }

@@ -7,10 +7,16 @@ roles across **19 US metros**.
 
 ```bash
 node scrape.js     # populate results.json
-node server.js
+node server.js     # the API and data on :4173
+npm ci --prefix web && npm run dev --prefix web
 ```
 
-Then open <http://localhost:4173>. No dependencies — Node 18+ only.
+Then open <http://localhost:5173>: the pages, in React (`web/`), with `api/*` forwarded
+to `server.js`. Only `web/` has dependencies; the API, scraper and scripts at the root
+need Node 18+ and nothing else.
+
+`server.js` on its own still serves the earlier plain-script pages at
+<http://localhost:4173>, kept to compare against until they are removed.
 
 ## Refresh the live feed
 
@@ -41,7 +47,8 @@ publish Pages from a private repo on a free plan. Cloudflare Pages will, and its
 bandwidth is unmetered.
 
 ```bash
-node build.js                                   # -> dist/
+npm ci --prefix web && npm run build --prefix web   # the pages -> web/dist
+node build.js                                       # -> dist/ (pages + data)
 npx wrangler pages deploy dist --project-name=find-jobs
 ```
 
@@ -72,8 +79,9 @@ private, and the twice-daily cron stays in one place. It needs two repository se
 That symmetry is the whole trick — the pages fetch one set of relative URLs and work
 unchanged in both places.
 
-`dist/` ships only browser files — `pipeline.js`, `scraper.js` and `ats.js` stay
-out of it.
+`dist/` ships only browser files: the React build from `web/dist` (pages, plus
+content-hashed scripts, styles and fonts under `assets/`) and the few non-page files
+in `assets.js` `SITE_ASSETS`. `pipeline.js`, `scraper.js` and `ats.js` stay out of it.
 
 Two things to know. GitHub disables cron workflows after 60 days of repository
 inactivity — it emails you, and re-enabling is one click. And scheduled runs on shared
@@ -282,9 +290,12 @@ Setup, once `vcjobs-clicks` from the click-tracking section above is deployed:
 - `boards.js` — board IDs, target cities, and the role-matching / exclusion patterns.
 - `match.js` — the shared keep/skip decision, so a role is judged the same whether it
   came from a VC board or a company's ATS.
-- `jobs-ui.js` — the browser-side job browser (all filters, the multi-select pickers,
-  the activity chart, the result list). Both `firm.html` and `all.html` use it, so a
-  fix to filtering lands on both pages at once.
+- `web/src/` — the pages, in React. `JobsWorkspace.jsx` is the job browser (filters,
+  list, description pane, resume match) that both `index.html` and `firm.html` use,
+  so a fix to filtering lands on both pages at once; `pages/` holds each page's
+  header and footer around it, and `lib/` the stores and API calls. `styles.css` at
+  the root is the one stylesheet. `jobs-ui.js` and the other plain scripts at the
+  root are the earlier version of the same pages, no longer deployed.
 - `scraper.js` — the two VC-board platform adapters.
 - `ats.js` — ATS detection, the three company-board adapters, and the company registry.
 - `pipeline.js` — the three-phase scrape and the three read payloads, with no HTTP or
@@ -366,7 +377,7 @@ Local release checks:
 ```sh
 node --test test/*.test.js
 node test/match-feedback.integration.cjs  # isolated Postgres, initdb/pg_ctl required
-node test/jd-ux.e2e.cjs                   # installed Playwright + Chromium required
+SITE_DIR=web/dist node test/jd-ux.e2e.cjs # installed Playwright + Chromium required; after building web/
 node build.js
 ```
 

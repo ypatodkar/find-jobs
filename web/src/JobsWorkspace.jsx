@@ -139,16 +139,38 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
     focusSelectedRow();
   }, [narrow]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Back and Forward through a sheet's history entry.
+  // Back, Forward and reload through a sheet's history entry. Restoring a role also
+  // opens its company in the Companies tab.
+  const jobsRef = useRef(jobs);
+  jobsRef.current = jobs;
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  const restoredOnLoad = useRef(false);
+  const restoreDetail = (id) => {
+    const job = (jobsRef.current || []).find((j) => j.job_id === id);
+    if (!job) { setSheetOpen(false); return false; }
+    if (viewRef.current === "grouped") setExpanded((s) => (s.has(job.company) ? s : new Set(s).add(job.company)));
+    setSelectedId(id);
+    setSheetOpen(true);
+    return true;
+  };
   useEffect(() => {
     const onPop = (e) => {
+      if (!jobsRef.current) return; // the data hasn't landed; the load below reads the state
       const id = e.state && e.state[DETAIL_KEY];
-      if (id) { setSelectedId(id); setSheetOpen(true); }
+      if (id) restoreDetail(id);
       else { setSheetOpen((wasOpen) => { if (wasOpen) focusSelectedRow(); return false; }); }
     };
     addEventListener("popstate", onPop);
     return () => removeEventListener("popstate", onPop);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!jobs || restoredOnLoad.current) return;
+    const id = history.state && history.state[DETAIL_KEY];
+    // Remember which first row was on screen, so arriving doesn't replace the restored
+    // role with it; a new filter, page or tab selects as usual.
+    restoredOnLoad.current = id && restoreDetail(id) ? { first: firstId } : true;
+  }, [jobs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The sheet is a dialog: focus goes into it, Escape closes it, Tab stays inside, and
   // the page behind does not scroll.
@@ -194,6 +216,11 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
       return;
     }
     if (!wide || !firstId) return;
+    // A role restored from history on arrival stays selected.
+    if (restoredOnLoad.current && restoredOnLoad.current.first !== undefined) {
+      if (restoredOnLoad.current.first === firstId) return;
+      restoredOnLoad.current = true; // the list has changed since: select as usual from now on
+    }
     const t = setTimeout(() => {
       if (view === "grouped" && firstGroup) setExpanded((s) => (s.has(firstGroup) ? s : new Set(s).add(firstGroup)));
       setSelectedId(firstId);

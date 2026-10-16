@@ -40,9 +40,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
 
       - name: Test application logic
         run: node --test test/*.test.js
+
+      # The pages are React (web/), the one part of the repo with dependencies. Built
+      # before the scrape so a broken build fails the run in seconds, not after it.
+      - name: Build pages
+        run: |
+          npm ci --prefix web
+          npm run build --prefix web
 
       # The CI user publishes static assets only. API releases use the approved
       # operator path documented in README.md; no extra IAM access is needed here.
@@ -94,10 +103,12 @@ jobs:
           # from cache until the invalidation below clears it.
           aws s3 sync dist/ s3://find-jobs-site-075521919080/ --delete \
             --cache-control "public, max-age=300, must-revalidate" \
-            --exclude "*.woff2" --only-show-errors
-          # Fonts are content-addressed by name and never change under the same URL.
+            --exclude "*.woff2" --exclude "assets/*" --only-show-errors
+          # Fonts, and the pages' scripts and styles under assets/, are content-addressed
+          # by name and never change under the same URL. Earlier builds' assets are left
+          # in place, so a page cached before this deploy can still load its scripts.
           aws s3 sync dist/ s3://find-jobs-site-075521919080/ \
-            --exclude "*" --include "*.woff2" \
+            --exclude "*" --include "*.woff2" --include "assets/*" \
             --cache-control "public, max-age=31536000, immutable" --only-show-errors
 
       # Both hosts, deliberately, until DNS moves. jobs.ypatodkar.com still resolves to
