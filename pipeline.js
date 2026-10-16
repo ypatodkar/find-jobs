@@ -211,18 +211,36 @@ function packCompanies(jobs) {
   return { companyFields: COMPANY_FIELDS, companies: order, jobs: packed };
 }
 
+// Kept in results.json for the scrape log, sync and feature-pick.js, but no page reads
+// them: `locations` duplicates `city` for display purposes nobody built, and the
+// sponsorship trio lost its last reader when the sponsorship filter was removed.
+// Together they were 1.7MB of all-jobs.json.
+const SERVER_ONLY_FIELDS = new Set(["locations", "sponsorship", "sponsorshipEvidence", "sponsorshipTypes", "staffCount", "domain"]);
+
+// What the browser gets for one job: no server-only fields, and no null, false or
+// empty values (8,000 `remote: false` and 4,800 null salary triples), since every
+// reader already treats a missing field as falsy. `city` stays even when null because
+// the location filter indexes on it directly.
+//
 // `described` is the set of job ids with a stored description (descriptions.json).
 // Each such job is marked, so the list can put roles you can read about first within
 // a day without fetching a single description to find out which those are.
-function markDescribed(job, described) {
-  return described && described.has(job.job_id) ? { ...job, described: true } : job;
+function publicJob(job, described) {
+  const out = {};
+  for (const [k, v] of Object.entries(job)) {
+    if (SERVER_ONLY_FIELDS.has(k)) continue;
+    if (k !== "city" && (v === false || v === "" || isEmpty(v))) continue;
+    out[k] = v;
+  }
+  if (described && described.has(job.job_id)) out.described = true;
+  return out;
 }
 
 /**
- * Every role across every firm, deduped. The same company can sit in several
- * portfolios, so a job carries the list of investors that back it.
+ * Every role across every firm, deduped, with every field intact. The same company
+ * can sit in several portfolios, so a job carries the list of investors that back it.
  */
-function allJobsPayload(data, described) {
+function mergeJobs(data) {
   const merged = new Map();
   for (const [firmId, r] of Object.entries(data.firms || {})) {
     if (r.status !== "ok") continue;
@@ -240,11 +258,12 @@ function allJobsPayload(data, described) {
       }
     }
   }
-  return {
-    scrapedAt: data.scrapedAt,
-    enrichment: data.enrichment || null,
-    ...packCompanies([...merged.values()].map((j) => markDescribed(j, described))),
-  };
+  return [...merged.values()];
+}
+
+/** What the all-jobs page downloads: the merged jobs, slimmed and company-packed. */
+function allJobsPayload(data, described) {
+  return packCompanies(mergeJobs(data).map((j) => publicJob(j, described)));
 }
 
 /**
@@ -253,12 +272,18 @@ function allJobsPayload(data, described) {
  */
 function firmPayload(data, id, described) {
   const firm = (data.firms || {})[id];
-  if (firm) return { scrapedAt: data.scrapedAt, ...firm, jobs: (firm.jobs || []).map((j) => markDescribed(j, described)) };
+  if (firm) {
+    // Only what firm.js reads; the rest of the firm record is scrape bookkeeping.
+    const { status, reason, host, totalOnBoard, atsCompanies, fromAts, fromBoard } = firm;
+    return {
+      status, reason, host, totalOnBoard, atsCompanies, fromAts, fromBoard,
+      jobs: (firm.jobs || []).map((j) => publicJob(j, described)),
+    };
+  }
 
   const cfg = BOARDS[id];
   if (cfg && !cfg.platform) {
     return {
-      scrapedAt: data.scrapedAt,
       firmId: id,
       status: "unsupported",
       reason: cfg.reason,
@@ -269,4 +294,4 @@ function firmPayload(data, id, described) {
   return null;
 }
 
-module.exports = { runScrape, summarize, failedPlatforms, failedBoards, resultsPayload, allJobsPayload, firmPayload };
+module.exports = { runScrape, summarize, failedPlatforms, failedBoards, resultsPayload, mergeJobs, packCompanies, allJobsPayload, firmPayload };

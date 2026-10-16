@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { BOARDS } = require("../boards");
-const { failedPlatforms, failedBoards } = require("../pipeline");
+const { failedPlatforms, failedBoards, allJobsPayload, firmPayload, mergeJobs } = require("../pipeline");
 
 function resultWith(statusFor) {
   const firms = {};
@@ -73,4 +73,58 @@ test("marks jobs that have a stored description, on both payloads", () => {
   assert.equal(firmPayload(data, "f1", described).jobs.find((j) => j.job_id === "a").described, true);
   // Without the set (no descriptions.json), nothing is marked.
   assert.ok(allJobsPayload(data).jobs.every((j) => j.described === undefined));
+});
+
+// What the browser downloads. Fields no page reads stay in results.json; empty values
+// are left out, since every reader treats a missing field as empty — except city, which
+// the location filter indexes on directly.
+const job = (over) => ({
+  job_id: "acme_ats_1", company: "Acme", title: "Software Engineer", city: "New York", url: "https://acme.test/jobs/1",
+  roles: ["swe"], seniority: "mid", posted: "2026-10-01", remote: false, salary: "", salaryMin: null, salaryMax: null,
+  locations: ["New York, NY"], sponsorship: "unknown", sponsorshipEvidence: "", sponsorshipTypes: [],
+  size: "51-200", stage: "Series A", markets: ["AI"], staffCount: 120, domain: "acme.test", logo: null, source: "ats",
+  ...over,
+});
+const scrape = (jobs, extra = {}) => ({
+  scrapedAt: "2026-10-16T00:00:00Z",
+  enrichment: { companies: 1, failures: [{ company: "Acme", reason: "board not found" }] },
+  firms: { a16z: { status: "ok", jobs, totalOnBoard: 3, atsCompanies: 1, fromAts: 1, fromBoard: 0, slugMap: { internal: true }, ...extra } },
+});
+
+test("the all-jobs download leaves out server-only fields and empty values", () => {
+  const out = allJobsPayload(scrape([job()]), new Set(["acme_ats_1"]));
+  assert.equal(out.enrichment, undefined, "scrape diagnostics are not published");
+  assert.equal(out.scrapedAt, undefined);
+  const [row] = out.jobs;
+  for (const k of ["locations", "sponsorship", "sponsorshipEvidence", "sponsorshipTypes", "staffCount", "domain"]) {
+    assert.equal(k in row, false, `${k} is not sent`);
+  }
+  for (const k of ["remote", "salary", "salaryMin", "salaryMax"]) assert.equal(k in row, false, `empty ${k} is left out`);
+  assert.equal(row.described, true);
+  assert.deepEqual(row.roles, ["swe"]);
+  assert.equal(row.title, "Software Engineer");
+  // Company facts are hoisted into the companies table, without the server-only ones.
+  const co = out.companies[row.c];
+  assert.equal(co.n, "Acme");
+  assert.equal(co.size, "51-200");
+  assert.equal("staffCount" in co || "domain" in co, false);
+});
+
+test("a job with no city keeps the field, so the location filter can still read it", () => {
+  const [row] = allJobsPayload(scrape([job({ city: null })])).jobs;
+  assert.equal("city" in row, true);
+  assert.equal(row.city, null);
+});
+
+test("mergeJobs keeps every field for the scripts that need them", () => {
+  const [merged] = mergeJobs(scrape([job()]));
+  assert.equal(merged.staffCount, 120);
+  assert.equal(merged.domain, "acme.test");
+  assert.deepEqual(merged.firms, ["a16z"]);
+});
+
+test("a firm's file carries only what the firm page reads", () => {
+  const out = firmPayload(scrape([job()]), "a16z");
+  assert.deepEqual(Object.keys(out).sort(), ["atsCompanies", "fromAts", "fromBoard", "host", "jobs", "reason", "status", "totalOnBoard"]);
+  assert.equal("locations" in out.jobs[0], false);
 });

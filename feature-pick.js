@@ -22,8 +22,12 @@
 const fs = require("fs");
 const path = require("path");
 
+const { mergeJobs, packCompanies } = require("./pipeline");
+
 const ROOT = __dirname;
-const ALL_JOBS = path.join(ROOT, "dist", "api", "all-jobs.json");
+// The scrape itself rather than dist/api/all-jobs.json: the published file drops
+// headcount and domain, which no page reads but eligibility and the card both need.
+const RESULTS = path.join(ROOT, "results.json");
 const FEATURED = path.join(ROOT, "featured.json");
 
 const DAY = 86400000;
@@ -48,12 +52,12 @@ function loadFeatured() {
 }
 
 function main() {
-  if (!fs.existsSync(ALL_JOBS)) {
-    console.error("No dist/api/all-jobs.json — run `node build.js` first.");
+  if (!fs.existsSync(RESULTS)) {
+    console.error("No results.json — run `node scrape.js` first.");
     process.exit(1);
   }
 
-  const data = JSON.parse(fs.readFileSync(ALL_JOBS, "utf8"));
+  const data = packCompanies(mergeJobs(JSON.parse(fs.readFileSync(RESULTS, "utf8"))));
   const companies = data.companies || [];
   const featured = loadFeatured();
 
