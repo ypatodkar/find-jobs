@@ -55,6 +55,10 @@ function forgetAccount() {
   cache.items = [];
   cache.scores.clear();
   cache.stale.clear();
+  // Today's allowance is the account's too: the next account (or nobody) must not
+  // see the last one's "N left today" or its limit.
+  cache.limitHit = null;
+  cache.lastUsage = null;
 }
 onAccountChange(forgetAccount);
 

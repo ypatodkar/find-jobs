@@ -68,6 +68,19 @@ export function useFilterState(dims) {
     pushNext.current = false;
   }, [filters, page, view, dims]);
 
+  // Once the jobs have arrived, the URL the visitor came in on is tidied in place, as
+  // jobs-ui.js does: the page clamped to the pages that exist, anything unreadable
+  // dropped, and the rest in the usual order. Only then is the page count known.
+  const settled = useRef(false);
+  const settle = useCallback((pageCount) => {
+    if (settled.current) return;
+    settled.current = true;
+    const clamped = Math.min(Math.max(1, page), Math.max(1, pageCount));
+    if (clamped !== page) { fromUrl.current = true; setPageState(clamped); }
+    const url = location.pathname + stateToSearch(location.search, dims, filters, clamped, view) + location.hash;
+    if (url !== location.pathname + location.search + location.hash) history.replaceState(history.state, "", url);
+  }, [page, filters, view, dims]);
+
   // Back and Forward bring the view the URL describes.
   useEffect(() => {
     const onPop = () => {
@@ -81,5 +94,5 @@ export function useFilterState(dims) {
     return () => removeEventListener("popstate", onPop);
   }, [dims]);
 
-  return { filters, setFilters, page, setPage, view, setView, canUndo, undo, reset };
+  return { filters, setFilters, page, setPage, view, setView, canUndo, undo, reset, settle };
 }

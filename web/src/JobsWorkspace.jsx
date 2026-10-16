@@ -5,7 +5,7 @@
 //
 // Shared by the all-jobs page and each investor's page, which load the jobs and
 // supply the header and footer around it. `jobs` is null while they load.
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Filters from "./components/Filters.jsx";
 import JobRow from "./components/JobRow.jsx";
 import CompanyCard from "./components/CompanyCard.jsx";
@@ -57,7 +57,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   const wide = useMedia("(min-width: 1100px)");
   const narrow = !wide;
   const dims = useMemo(() => dimensions({ showFirms, firmLabel }), [showFirms]);
-  const { filters, setFilters, page, setPage, view, setView, canUndo, undo, reset } = useFilterState(dims);
+  const { filters, setFilters, page, setPage, view, setView, canUndo, undo, reset, settle } = useFilterState(dims);
 
   const splitRef = useRef(null), dividerRef = useRef(null), paneRef = useRef(null), listRef = useRef(null);
   const { style: columnStyle, dividerProps, narrowColumn } = useColumns(splitRef, dividerRef, wide);
@@ -99,6 +99,8 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   const visibleJobs = view === "flat" ? sorted.slice(start, start + perPage) : [];
   const visibleGroups = view === "grouped" ? groups.slice(start, start + perPage) : [];
 
+  useEffect(() => { if (jobs) settle(pageCount); }, [jobs]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const selected = selectedId ? (jobs || []).find((j) => j.job_id === selectedId) : null;
   const open = wide ? !!selected : sheetOpen && !!selected;
 
@@ -123,20 +125,27 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
     }
     setSelectedId(id);
     if (narrow) setSheetOpen(true);
-    else if (reveal) requestAnimationFrame(revealWorkspace);
+    // At once, as jobs-ui.js does: the pane is always beside the list, so its place is
+    // known before the new role draws.
+    else if (reveal) revealWorkspace();
   }, [narrow, sheetOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Closing returns focus to the role's row, however the sheet was closed.
+  // Closing returns focus to the role's row, however the sheet was closed (Back, the
+  // button, Escape): as soon as the sheet is drawn closed, before anything else runs.
   const selectedRef = useRef(selectedId);
   selectedRef.current = selectedId;
-  const focusSelectedRow = () => requestAnimationFrame(() =>
-    document.querySelector(`#job-list .job[data-job-id="${CSS.escape(selectedRef.current || "")}"] .job-title`)?.focus({ preventScroll: true }));
+  const wasOpen = useRef(false);
+  useLayoutEffect(() => {
+    if (wasOpen.current && !sheetOpen && narrow) {
+      document.querySelector(`#job-list .job[data-job-id="${CSS.escape(selectedRef.current || "")}"] .job-title`)?.focus({ preventScroll: true });
+    }
+    wasOpen.current = sheetOpen;
+  }, [sheetOpen, narrow]);
 
   const closeDetail = useCallback(({ fromHistory = false } = {}) => {
     if (!narrow) return;
     if (!fromHistory && history.state && history.state[DETAIL_KEY]) { history.back(); return; }
     setSheetOpen(false);
-    focusSelectedRow();
   }, [narrow]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Back, Forward and reload through a sheet's history entry. Restoring a role also
@@ -159,7 +168,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
       if (!jobsRef.current) return; // the data hasn't landed; the load below reads the state
       const id = e.state && e.state[DETAIL_KEY];
       if (id) restoreDetail(id);
-      else { setSheetOpen((wasOpen) => { if (wasOpen) focusSelectedRow(); return false; }); }
+      else setSheetOpen(false);
     };
     addEventListener("popstate", onPop);
     return () => removeEventListener("popstate", onPop);
@@ -201,6 +210,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   // 1100px, where it would open a sheet over the list. Paging with the arrow keys picks
   // its own row instead (`pickAfterPage`).
   const pickAfterPage = useRef(null);
+  const lastFilters = useRef(null); // the filters the last automatic selection saw
   const firstGroup = visibleGroups[0] && visibleGroups[0].company;
   const firstId = view === "grouped" ? (visibleGroups[0] && visibleGroups[0].jobs[0].job_id) : visibleJobs[0] && visibleJobs[0].job_id;
   useEffect(() => {
@@ -221,12 +231,16 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
       if (restoredOnLoad.current.first === firstId) return;
       restoredOnLoad.current = true; // the list has changed since: select as usual from now on
     }
+    // After a filter change, a quarter second, so typing in the search box selects once
+    // it pauses, not per key; on arrival, a new page or a tab, at once.
+    const typing = lastFilters.current !== null && lastFilters.current !== filters;
+    lastFilters.current = filters;
     const t = setTimeout(() => {
       if (view === "grouped" && firstGroup) setExpanded((s) => (s.has(firstGroup) ? s : new Set(s).add(firstGroup)));
       setSelectedId(firstId);
-    }, 250);
+    }, typing ? 250 : 0);
     return () => clearTimeout(t);
-  }, [jobs, wide, firstId, view, current]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [jobs, wide, firstId, view, current, filters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- ↑ / ↓ through the list ----
   // Moves the selection without leaving the keyboard, past the last row onto the next
