@@ -2,6 +2,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "../../styles.css";
+import "./seen.css";
 import "../../data.js"; // the investor list, as window.VC_FIRMS
 import App from "./App.jsx";
 

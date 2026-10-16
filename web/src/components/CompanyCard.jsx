@@ -7,7 +7,7 @@ import JobRow, { AcquiredNote } from "./JobRow.jsx";
 
 const SIZE_LABELS = { "1-10": "1–10", "11-50": "11–50", "51-200": "51–200", "201-1000": "201–1,000", "1000+": "1,000+" };
 
-export default function CompanyCard({ group: g, open, onToggle, selectedId, onSelect, opened }) {
+export default function CompanyCard({ group: g, open, onToggle, selectedId, onSelect, opened, seen }) {
   const m = monogram(g.company);
   const [logoFailed, setLogoFailed] = useState(false);
   const n = g.jobs.length;
@@ -41,7 +41,7 @@ export default function CompanyCard({ group: g, open, onToggle, selectedId, onSe
       </button>
       {open ? (
         <div className="cg-body">
-          {g.jobs.map((j) => <JobRow key={j.job_id} job={j} inGroup selected={j.job_id === selectedId} onSelect={onSelect} />)}
+          {g.jobs.map((j) => <JobRow key={j.job_id} job={j} inGroup selected={j.job_id === selectedId} onSelect={onSelect} seen={!!seen[j.job_id]} />)}
         </div>
       ) : null}
     </section>

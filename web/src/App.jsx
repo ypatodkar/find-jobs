@@ -12,6 +12,8 @@ import Pagination from "./components/Pagination.jsx";
 import DetailPane from "./components/DetailPane.jsx";
 import SelectMenu from "./components/SelectMenu.jsx";
 import { ResumeSignInDialog } from "./components/Account.jsx";
+import Viewed from "./components/Viewed.jsx";
+import "./lib/track.js";
 import { JOBS_PER_PAGE, loadJobs, sortJobs } from "./lib/jobs.js";
 import { DATE_RANGES, SALARY_FLOORS, countsFor, dimensions, filterJobs } from "./lib/filters.js";
 import { COMPANIES_PER_PAGE, buildGroups } from "./lib/groups.js";
@@ -251,11 +253,17 @@ export default function App() {
 
   const toggleCompany = (company) => setExpanded((s) => { const n = new Set(s); if (n.has(company)) n.delete(company); else n.add(company); return n; });
 
-  if (error) {
+  if (error || (jobs && !jobs.length)) {
     return (
       <div className="wrap">
         <Masthead />
-        <div className="firm-message"><p><strong>We couldn't load the job list.</strong></p><p>{String(error.message || error)}</p></div>
+        <div id="viewed-slot"></div>
+        <div id="all-message" className="firm-message">
+          {error
+            ? <><p><strong>We couldn't load the job data.</strong></p><p>Please try again shortly. Listings are updated automatically twice daily.</p></>
+            : <><p><strong>No roles are available yet.</strong></p><p>Job boards are checked automatically twice daily. Please check back after the next update.</p></>}
+        </div>
+        <Footer jobs={null} />
       </div>
     );
   }
@@ -267,6 +275,8 @@ export default function App() {
   return (
     <div className="wrap">
       <Masthead />
+      {/* Next to the filters it belongs with, rather than up in the header. */}
+      <Viewed jobs={jobs} seen={seenMap} />
       {jobs ? (
         <Filters dims={dims} filters={filters} onChange={setFilters} onReset={reset} canUndo={canUndo} onUndo={undo}
           total={sorted.length} naming={naming} countsFor={(d) => countsFor(jobs, filters, d, dims, filterOpts)} />
@@ -294,12 +304,12 @@ export default function App() {
             <div ref={listRef} id="job-list" className="job-list">
               {view === "flat"
                 ? (visibleJobs.length
-                  ? visibleJobs.map((j) => <JobRow key={j.job_id} job={j} selected={j.job_id === selectedId} onSelect={selectJob} opened={openedByCompany.get(j.company) || 0} />)
+                  ? visibleJobs.map((j) => <JobRow key={j.job_id} job={j} selected={j.job_id === selectedId} onSelect={selectJob} opened={openedByCompany.get(j.company) || 0} seen={!!seenMap[j.job_id]} />)
                   : <p className="empty">No roles match those filters.</p>)
                 : (visibleGroups.length
                   ? visibleGroups.map((g) => (
                     <CompanyCard key={g.company} group={g} open={expanded.has(g.company)} onToggle={toggleCompany}
-                      selectedId={selectedId} onSelect={selectJob} opened={openedByCompany.get(g.company) || 0} />
+                      selectedId={selectedId} onSelect={selectJob} opened={openedByCompany.get(g.company) || 0} seen={seenMap} />
                   ))
                   : <p className="empty">No roles match those filters.</p>)}
             </div>
@@ -309,7 +319,34 @@ export default function App() {
         <div {...dividerProps}></div>
         <DetailPane ref={paneRef} job={selected} open={open} sheet={narrow && open} narrowColumn={narrowColumn} onClose={() => closeDetail()} />
       </div>
+      <div id="all-message" className="firm-message" hidden></div>
+      <Footer jobs={jobs} />
       <ResumeSignInDialog />
     </div>
+  );
+}
+
+function Footer({ jobs }) {
+  const multi = useMemo(() => (jobs ? jobs.filter((j) => (j.firms || []).length > 1).length : 0), [jobs]);
+  return (
+    <footer>
+      <div>
+        <h3>About this list</h3>
+        <p id="all-note">{jobs
+          ? `Merged across every tracked portfolio and deduplicated on company, title, and city — ${multi.toLocaleString()} of these roles are at companies backed by more than one investor. Where a company publishes to its own applicant tracking system, that live listing is preferred over the investor's board.`
+          : "Roles are merged across every tracked portfolio and deduplicated on company, title, and city. Where a company publishes to its own applicant tracking system, that live listing is preferred over the investor's board."}</p>
+      </div>
+      <div>
+        <h3>Fresh opportunities, automatically</h3>
+        <p>Portfolio and company job boards are checked twice daily, so new openings appear automatically.</p>
+      </div>
+      <p className="privacy-note">
+        Browsing preferences are saved in this browser. Optional Google sign-in saves your
+        account, resumes, saved jobs, and analysis results on our server. Resume analysis
+        sends extracted resume text and the job description to TypeSafe AI. Removing a resume
+        hides it from your account, but its stored text and match results stay on our server;
+        clearing browser data does not delete server records either. <a href="about.html">More about your data</a>.
+      </p>
+    </footer>
   );
 }

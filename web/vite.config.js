@@ -19,7 +19,8 @@ export default defineConfig({
   server: {
     port: 5173,
     fs: { allow: [repoRoot] },
-    proxy: { "/api": "http://localhost:4173" },
+    // featured.json is written by the /feature command at the repo root.
+    proxy: { "/api": "http://localhost:4173", "/featured.json": "http://localhost:4173" },
   },
   build: { outDir: "dist", emptyOutDir: true },
 });

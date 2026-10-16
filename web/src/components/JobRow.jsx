@@ -8,8 +8,11 @@ export function AcquiredNote({ company }) {
   return by ? <> <span className="acquired-note">(acquired by {by})</span></> : null;
 }
 
-/** `inGroup`: inside a company card, where the card already names the company. */
-export default function JobRow({ job, selected, onSelect, inGroup = false, opened = 0 }) {
+/**
+ * `inGroup`: inside a company card, where the card already names the company.
+ * `seen`: this role has been opened before, which stamps the row "clicked" (seen.css).
+ */
+export default function JobRow({ job, selected, onSelect, inGroup = false, opened = 0, seen = false }) {
   const pay = compactPay(job);
   const place = [job.unlisted ? "No longer listed" : null, job.city, job.remote ? "Remote OK" : null].filter(Boolean).join(" · ");
   const when = job.posted ? relativeDate(job.posted) : "";
@@ -23,11 +26,12 @@ export default function JobRow({ job, selected, onSelect, inGroup = false, opene
   };
 
   return (
-    <article className={`job${selected ? " is-selected" : ""}`} data-job-id={job.job_id} onClick={onClick}>
+    <article className={`job${seen ? " row-seen" : ""}${selected ? " is-selected" : ""}`} data-job-id={job.job_id} onClick={onClick}>
       <div className="job-main">
         {job.url ? (
-          <a className="job-title" href={job.url} target="_blank" rel="noopener noreferrer"
-            data-job-id={job.job_id} data-company={job.company} data-city={job.city || ""} data-selects="">
+          <a className={`job-title${seen ? " is-seen" : ""}`} href={job.url} target="_blank" rel="noopener noreferrer"
+            data-job-id={job.job_id} data-company={job.company} data-city={job.city || ""} data-selects=""
+            title={seen ? "You've opened this one" : undefined}>
             {job.title}
           </a>
         ) : <span className="job-title">{job.title}</span>}
