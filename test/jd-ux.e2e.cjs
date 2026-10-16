@@ -25,7 +25,7 @@ const resumes = [{id:'r_systems',label:'Systems resume'},{id:'r_data',label:'Dat
 const jobs = Array.from({length:140},(_,i)=>({job_id:`job_${i}`,title:i===0?'Senior Software Engineer':i===1?'Senior Data Engineer':`Software Engineer, Platform ${i+1}`,company:i===0?'Telescope':i===1?'Re:Build Manufacturing':'Engineering Company',city:'New York',remote:true,roles:['backend'],firms:['a16z'],seniority:'senior',source:'ats',ats:'Greenhouse',salary:'$160,000–$210,000',salaryMin:160000,salaryMax:210000,posted:new Date(Date.now()-i*60000).toISOString(),url:'https://example.com/job',described:true}));
 let mode='normal',postCalls=0,getCalls=0,postScore=20,lastPost=null;
 let reviewCalls=0,lastReview=null,reviewFailure=false;
-let resumePostCalls=0,resumeDeleteCalls=0,resumeWriteError=false;
+let lastResumePost=null,resumePostCalls=0,resumeDeleteCalls=0,resumeWriteError=false;
 let uploadedResumes=[];
 const removedResumeIds=new Set();
 const reviews=new Map();
@@ -42,11 +42,13 @@ const server=http.createServer((req,res)=>{
   if(url.pathname==='/api/resumes') {
     if(mode==='error') return json({error:'Storage temporarily unavailable.'},503);
     if(req.method==='POST') {
-      resumePostCalls++;
-      if(resumeWriteError)return json({error:'Resume upload temporarily unavailable.'},503);
-      const uploaded={id:'r_uploaded',label:'Uploaded resume'};
-      uploadedResumes=[uploaded,...uploadedResumes.filter(r=>r.id!==uploaded.id)];removedResumeIds.delete(uploaded.id);
-      return json({resume:uploaded});
+      resumePostCalls++;let body='';req.on('data',chunk=>body+=chunk);req.on('end',()=>{
+        lastResumePost=JSON.parse(body);
+        if(resumeWriteError)return json({error:'Resume upload temporarily unavailable.'},503);
+        const uploaded={id:'r_uploaded',label:'Uploaded resume'};
+        uploadedResumes=[uploaded,...uploadedResumes.filter(r=>r.id!==uploaded.id)];removedResumeIds.delete(uploaded.id);
+        json({resume:uploaded});
+      });return;
     }
     return json({resumes:mode==='no-resume'?uploadedResumes:[...uploadedResumes,...resumes].filter(r=>!removedResumeIds.has(r.id))});
   }
@@ -602,6 +604,8 @@ async function main(){
     await page.locator('#detail-match input[type="file"]').setInputFiles(fixtureFile);
     await waitScore(postScore);
     assert.equal(resumePostCalls,beforeUploads+1);
+    assert.equal(Buffer.from(lastResumePost.file,'base64').toString(),fixtureFile.buffer.toString(),'the original file is uploaded with the text');
+    assert.ok(lastResumePost.text.startsWith('Built and operated backend services'),'the extracted text is uploaded too');
     assert.equal(await activeResume(),'r_uploaded','a new upload becomes the active resume');
     assert.equal(await page.locator('#detail-match [data-act="choose"]').count(),4,'adding a resume updates the dropdown');
     const beforeDeletes=resumeDeleteCalls;

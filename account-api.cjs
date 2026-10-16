@@ -3,12 +3,16 @@ const { createStore, poolFromEnv } = require('./aws/lambda/match-store.cjs');
 const { createAccountStore } = require('./aws/lambda/account-store.cjs');
 const { createUsageStore } = require('./aws/lambda/usage-store.cjs');
 const { verifyGoogleIdToken } = require('./aws/lambda/google-id.cjs');
+const { createFileStore, readUpload, keyFor } = require('./aws/lambda/file-store.cjs');
 const { toPlainText } = require('./description');
 const jev = require('./jev');
 
 function createAccountApi({ getDescription, env = process.env }) {
   const jobDescription = getDescription;
   const MAX_BODY = 256 * 1024;
+  // A resume upload carries its original file, base64, up to 4 MB (file-store.cjs);
+  // the Lambda Function URL itself refuses requests over 6 MB.
+  const MAX_UPLOAD_BODY = 5.8 * 1024 * 1024;
   const COOKIE = "fj_session";
   let budget = { hour: -1, used: 0 };
   let pool = null;
@@ -19,9 +23,11 @@ function createAccountApi({ getDescription, env = process.env }) {
   const accountStore = () => accounts || (accounts = createAccountStore(db()));
   let usage = null;
   const usageStore = () => usage || (usage = createUsageStore(db(), env));
+  let files = null;
+  const fileStore = () => (files === null ? (files = createFileStore(env) || false) : files) || null;
   const httpError = (status, message) => Object.assign(new Error(message), { status });
 
-  function readBody(req) {
+  function readBody(req, limit = MAX_BODY) {
     return new Promise((resolve, reject) => {
       if (!/^application\/json\b/i.test(req.headers["content-type"] || "")) {
         reject(httpError(415, "Requests must be JSON."));
@@ -31,7 +37,7 @@ function createAccountApi({ getDescription, env = process.env }) {
       const chunks = [];
       req.on("data", (c) => {
         size += c.length;
-        if (size > MAX_BODY) {
+        if (size > limit) {
           reject(httpError(413, "That request is too large."));
           req.destroy();
         } else chunks.push(c);
@@ -147,12 +153,29 @@ function createAccountApi({ getDescription, env = process.env }) {
       return [200, { ok: true }];
     }
     if (route === "/api/resumes" && m === "GET") return [200, { resumes: await matchStore().list(account.id) }];
+    // The original file and the text the browser extracted from it arrive together.
+    // The file is stored first, under the id the row will have; if the row then cannot
+    // be written, the file is removed again, so no file is ever kept without its row.
     if (route === "/api/resumes" && m === "POST") {
-      const b = await readBody(req);
-      return [200, { resume: await matchStore().add(account.id, b?.visitor, { label: b?.label, fileName: b?.fileName, body: b?.text }) }];
+      const b = await readBody(req, MAX_UPLOAD_BODY);
+      const store = matchStore();
+      const upload = b?.file && fileStore() ? readUpload(b.file) : null;
+      const id = store.newId();
+      const file = upload ? { key: keyFor(account.id, id, upload.ext), type: upload.type, size: upload.size } : null;
+      if (file) await fileStore().put(file.key, upload.bytes, file.type);
+      try {
+        return [200, { resume: await store.add(account.id, b?.visitor, { id, label: b?.label, fileName: b?.fileName, body: b?.text, file }) }];
+      } catch (err) {
+        if (file) await fileStore().remove(file.key).catch(() => {});
+        throw err;
+      }
     }
+    // The row stays (soft delete); its file is tagged so the bucket erases it in 30 days.
+    // A failed tag does not undo the delete the person asked for, but it is logged,
+    // since that file would then be kept indefinitely.
     if (route.startsWith("/api/resumes/") && m === "DELETE") {
-      await matchStore().remove(account.id, decodeURIComponent(route.slice("/api/resumes/".length)));
+      const key = await matchStore().remove(account.id, decodeURIComponent(route.slice("/api/resumes/".length)));
+      if (key && fileStore()) await fileStore().markDeleted(key).catch((err) => console.error(`Could not mark ${key} deleted: ${err.message}`));
       return [200, { ok: true }];
     }
     if (route === "/api/match" && m === "GET") {

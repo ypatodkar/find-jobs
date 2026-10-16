@@ -118,7 +118,7 @@ const trimJson = (p) => p.replace(/\.json$/, "");
 //   PUT    /api/sync/filters { items }
 //   PUT    /api/sync/saved { items }
 //   GET    /api/resumes                         the account's resumes (no text)
-//   POST   /api/resumes { visitor, label, fileName, text }
+//   POST   /api/resumes { visitor, label, fileName, text, file }  file: the original, base64
 //   DELETE /api/resumes/<resume id>
 //   GET    /api/match?resume=&job=              the stored score, or { match: null }
 //   POST   /api/match { resume_id, job_id, title, force }

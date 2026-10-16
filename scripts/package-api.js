@@ -6,7 +6,7 @@ const { execFileSync } = require('node:child_process');
 const root = path.resolve(__dirname, '..');
 const output = path.join(root, 'aws/function.zip');
 const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'find-jobs-api-'));
-const files = ['account-api.cjs', 'jev.js', 'requirements.js', 'description.js', 'aws/schema.sql', 'aws/lambda/index.mjs', 'aws/lambda/api.cjs', 'aws/lambda/package.json', 'aws/lambda/account-store.cjs', 'aws/lambda/google-id.cjs', 'aws/lambda/match-store.cjs', 'aws/lambda/usage-store.cjs'];
+const files = ['account-api.cjs', 'jev.js', 'requirements.js', 'description.js', 'aws/schema.sql', 'aws/lambda/index.mjs', 'aws/lambda/api.cjs', 'aws/lambda/package.json', 'aws/lambda/account-store.cjs', 'aws/lambda/google-id.cjs', 'aws/lambda/match-store.cjs', 'aws/lambda/file-store.cjs', 'aws/lambda/usage-store.cjs'];
 try {
   for (const rel of files) {
     fs.mkdirSync(path.dirname(path.join(stage, rel)), { recursive: true });
