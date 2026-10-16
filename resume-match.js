@@ -15,6 +15,7 @@
   "use strict";
 
   const ACTIVE = "find-jobs-active-resume";
+  const UPLOAD_FILES = "find-jobs-upload-files";
   const API = (global.MATCH_API || "api").replace(/\/$/, "");
 
   // The "sparkles" mark that has come to mean AI-assisted (Lucide, ISC licence),
@@ -45,11 +46,12 @@
 
   // A static host answers 404 or 405 for these paths: the endpoints simply are not
   // there, which is a different message from the server refusing.
-  async function call(path, init) {
+  async function call(path, init, timeoutMs) {
     let res;
     try {
-      res = await fetch(API + path, init);
-    } catch {
+      res = await fetch(API + path, timeoutMs ? { ...init, signal: AbortSignal.timeout(timeoutMs) } : init);
+    } catch (err) {
+      if (err && (err.name === "TimeoutError" || err.name === "AbortError")) throw new Error("The upload took too long and was stopped. Please try again.");
       throw new Error("Could not reach the server. Check your connection and try again.");
     }
     let data = null;
@@ -115,13 +117,31 @@
   const stale = new Map();  // "resumeId|jobId" -> "description" | "rubric": checked before a change
   const key = (r, j) => r + "|" + j;
 
-  async function addResume(file) {
+  // Sending the original file with the text (the server keeps both, file-store.cjs) is
+  // on only with ?upload=files, or once that has been visited in this browser, while
+  // it is tried on the live site: the first release of it stalled uploads there.
+  // ?upload=text turns it back off.
+  function sendsFiles() {
+    const flag = new URLSearchParams(global.location.search).get("upload");
+    try {
+      if (flag === "files") localStorage.setItem(UPLOAD_FILES, "1");
+      if (flag === "text") localStorage.removeItem(UPLOAD_FILES);
+      return localStorage.getItem(UPLOAD_FILES) === "1";
+    } catch { return flag === "files"; }
+  }
+  sendsFiles(); // read the switch on arrival, so ?upload=text takes effect at once
+
+  // `onStage` hears "uploading" once the file is read, so the card can say which step
+  // it is on; a stall then names its step.
+  async function addResume(file, onStage) {
     if (!global.ResumeImport) throw new Error('Resume upload could not load. Refresh and try again.');
     const identity = accountVersion;
     const text = await global.ResumeImport.extract(file);
     if (identity !== accountVersion) throw new Error('The signed-in account changed. Please try again.');
     if (!text || text.length < 100) throw new Error('Too little text could be read. Try a text-based PDF or .docx.');
-    const d = await call('/resumes', json('POST', { visitor: visitor(), label: (file.name || 'Resume').replace(/\.[^.]+$/, ''), fileName: file.name || null, text }));
+    const original = sendsFiles() && global.ResumeImport.encode ? await global.ResumeImport.encode(file) : undefined;
+    if (onStage) onStage("uploading");
+    const d = await call('/resumes', json('POST', { visitor: visitor(), label: (file.name || 'Resume').replace(/\.[^.]+$/, ''), fileName: file.name || null, text, file: original }), 60000);
     if (identity !== accountVersion) return null;
     items = [d.resume, ...items]; listing = Promise.resolve(items); setActive(d.resume.id);
     return d.resume;
@@ -550,7 +570,7 @@
       } else if (message?.kind === 'error' && !listing) {
         content = `<div class="analysis-entry"><h3>${SPARKLE} Resume match</h3><p class="match-msg">Analysis unavailable</p></div>`;
       } else if (!items.length) {
-        content = `<div class="analysis-entry analysis-entry-upload"><h3>${SPARKLE} Resume match</h3><button type="button" class="match-run analysis-primary" data-act="upload"${controlsBusy ? ' disabled' : ''}>${SPARKLE}${busy === 'reading' ? 'Reading resume…' : 'Upload resume'}</button><p class="match-msg">Add a resume to analyse this job.</p></div>`;
+        content = `<div class="analysis-entry analysis-entry-upload"><h3>${SPARKLE} Resume match</h3><button type="button" class="match-run analysis-primary" data-act="upload"${controlsBusy ? ' disabled' : ''}>${SPARKLE}${busy === 'reading' ? 'Reading resume…' : busy === 'uploading' ? 'Uploading resume…' : 'Upload resume'}</button><p class="match-msg">Add a resume to analyse this job.</p></div>`;
       } else if (showResumeToolbar) {
         content = `${toolbar}${busy === 'checking' || busy === 'loading' ? `<p class="analysis-loading" role="status"><span class="analysis-spinner" aria-hidden="true"></span>${busy === 'checking' ? 'Analyzing resume…' : 'Loading saved analysis…'}</p>` : `<p class="match-msg">Analyze this resume against the selected job.</p>`}`;
       } else {
@@ -639,10 +659,14 @@
       busy = "reading"; message = null; breakdownOpen = false; breakdownFilter = 'all'; expandedRows.clear(); remark(); render();
       let uploaded = false;
       try {
-        const resume = await addResume(file);
+        const resume = await addResume(file, (stage) => {
+          if (version === revision && host.isConnected) { busy = stage; render(); }
+        });
+        // The account changed mid-upload: start() has already redrawn the card.
         if (identity !== accountVersion || !resume) return;
         scores.set(key(resume.id, job.job_id), null); uploaded = true;
       } catch (err) {
+        console.error(`Resume upload failed while ${busy === "uploading" ? "uploading" : "reading"}:`, err);
         if (err.signedOut) signedOut = true;
         message = { kind: "error", text: err.message || "That file could not be read." };
       }
