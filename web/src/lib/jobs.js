@@ -1,6 +1,4 @@
-// Loading, unpacking and ordering the job list: the React side of all.js and of the
-// sorting and formatting helpers in jobs-ui.js. Same rules, so the two pages agree
-// while both exist.
+// Loading, unpacking, ordering and formatting the job list.
 
 export const JOBS_PER_PAGE = 45;
 const DAY_MS = 86400000;
@@ -21,7 +19,8 @@ export const ROLE_LABELS = {
 };
 
 // Companies since acquired, whose apply links now lead to the acquirer's board.
-// Only acquisitions belong here; see the note on ACQUIRED_BY in jobs-ui.js.
+// Only acquisitions belong here: a company bought outright, whose roles now sit under
+// the buyer's name on some boards.
 const ACQUIRED_BY = {
   prepared: "Axon",
   elementai: "ServiceNow",
@@ -80,7 +79,7 @@ export function expand(data) {
   });
 }
 
-/** Every role, from the same path server.js answers, build.js writes and Pages serves. */
+/** Every role, from the path the dev server answers, the build writes and Pages serves. */
 export async function loadJobs() {
   const r = await fetch("api/all-jobs.json");
   if (!r.ok) throw new Error(`Job data request failed (${r.status})`);
@@ -88,7 +87,7 @@ export async function loadJobs() {
 }
 
 /**
- * The list orders, as jobs-ui.js sortJobs. Both date orders group by posting day and,
+ * The list orders. Both date orders group by posting day and,
  * within a day, put roles with a description first; ties keep arrival order.
  */
 export function sortJobs(jobs, sort) {

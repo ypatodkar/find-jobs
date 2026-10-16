@@ -1,4 +1,4 @@
-// Match highlights in the job description, as resume-match.js draws them: a small
+// Match highlights in the job description: a small
 // ✓ / ◐ / ? button after each requirement the analysis found in the text, which opens
 // the resume evidence beneath it; and "Find in JD", which scrolls to a requirement and
 // flashes it.

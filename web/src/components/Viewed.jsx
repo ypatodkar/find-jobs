@@ -1,4 +1,4 @@
-// "Companies you've opened", as viewed.js: your own opened roles, grouped by company,
+// "Companies you've opened": your own opened roles, grouped by company,
 // most recent first. Joined against the job list already loaded, so it needs no
 // network call and works signed out. Nothing here is sent anywhere.
 import { Fragment, useMemo, useRef, useState } from "react";

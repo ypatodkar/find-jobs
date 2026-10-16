@@ -1,6 +1,5 @@
-// Resume match, in the description pane, as resume-match.js mount(): the chosen
-// resume, an option to add another, and "Analyze resume", which scores it against the
-// open job. A job opened again shows the score it already has, read back from the
+// Resume match, in the description pane: the chosen resume, an option to add another,
+// and "Analyze resume", which scores it against the open job. A job opened again shows the score it already has, read back from the
 // database, without calling the model.
 //
 // Signed out, adding a resume asks for sign-in first. Mounted once per job (DetailPane
@@ -68,7 +67,7 @@ function pickerKeydown(event) {
 }
 
 // One dropdown for everything about resumes: pick one, delete any from its own row, or
-// add another from the foot of the list. Drawn like the select-menu.js pickers, but by
+// add another from the foot of the list. Drawn like the SelectMenu pickers, but by
 // hand, since a <select> cannot hold the buttons.
 function ResumePicker({ selected, disabled, onChoose, onRemove, onAdd }) {
   const ref = useRef(null);
@@ -76,7 +75,7 @@ function ResumePicker({ selected, disabled, onChoose, onRemove, onAdd }) {
   const active = items.find((r) => r.id === selected);
   const label = active ? active.label : items.length ? "Select resume" : "No resumes yet";
   const close = () => { if (ref.current) ref.current.open = false; };
-  // Opening the dropdown puts focus on the chosen resume, as select-menu.js does.
+  // Opening the dropdown puts focus on the chosen resume, as SelectMenu does.
   const onToggle = () => {
     const p = ref.current;
     if (!p || !p.open) return;
@@ -207,7 +206,6 @@ export default function ResumeMatch({ job, paneRef, description }) {
 
   async function upload(file) {
     if (signedOutNow()) { requestResumeSignIn(); return; }
-    if (!Import) { update({ message: { kind: "error", text: "Resume upload could not load. Refresh and try again." } }); return; }
     const version = ++revision.current, identity = cache.accountVersion;
     update({ busy: "reading", message: null, breakdownOpen: false, breakdownFilter: "all", expanded: new Set() });
     let uploaded = false;
@@ -605,7 +603,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
           {hasDescription === false ? <p className="match-msg">This job has no description to compare against.</p> : null}
           {outdated && !result ? <p className="match-msg">{outdated === "description" ? "The job description has changed." : "The analysis has been updated."} Analyze your resume for current results.</p> : null}
         </div>
-        <input ref={input} type="file" accept={Import ? Import.ACCEPT : ".pdf,.docx,.txt,.md"} hidden
+        <input ref={input} type="file" accept={Import.ACCEPT} hidden
           onChange={(e) => { const file = e.target.files && e.target.files[0]; e.target.value = ""; if (file) upload(file); }} />
       </section>
       <div className="description-controls" hidden={!result || !hasBreakdown || hasDescription !== true}>

@@ -1,14 +1,12 @@
-// The investor directory (firms.html), as app.js: every tracked firm as a card, grouped
+// The investor directory (firms.html): every tracked firm as a card, grouped
 // by how central AI is to its thesis, with each firm's live role count. Only firms
 // with roles to show are clickable; the rest would open a page that could only
 // apologise.
-import "../../../data.js"; // the investors, as window.VC_FIRMS and TIER_META
+import { TIER_META as TIERS, VC_FIRMS as FIRMS } from "../data.js";
 import { useEffect, useState } from "react";
 import Masthead, { PRIVACY_NOTE } from "../components/Masthead.jsx";
 
 const TIER_ORDER = ["ai-mega", "generalist", "ai-native", "accelerator"];
-const FIRMS = window.VC_FIRMS || [];
-const TIERS = window.TIER_META || {};
 
 function Signal({ signal }) {
   const label = `AI investment signal: ${signal} of 3`;

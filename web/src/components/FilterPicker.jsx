@@ -1,5 +1,5 @@
-// A multi-select filter dropdown: the React form of createPicker in jobs-ui.js, with
-// the same markup and ids (pick-, sum-, q-, sa-, clr-, list-<key>).
+// A multi-select filter dropdown, with the ids styles.css and the tests use (pick-,
+// sum-, q-, sa-, clr-, list-<key>).
 //
 // The order of the list is fixed when the menu opens or its search changes, never on a
 // tick: re-sorting under the cursor mid-selection is disorienting. Counts are always

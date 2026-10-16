@@ -1,5 +1,4 @@
-// One role in the list, with the markup and classes of jobs-ui.js jobHtml so
-// styles.css applies unchanged.
+// One role in the list.
 import { acquirerOf, compactPay, relativeDate } from "../lib/jobs.js";
 import { openedLabel } from "../lib/groups.js";
 
@@ -18,7 +17,7 @@ export default function JobRow({ job, selected, onSelect, inGroup = false, opene
   const when = job.posted ? relativeDate(job.posted) : "";
 
   // A plain click selects the row instead of leaving the page; data-selects tells
-  // track.js that click is not an "opened". Modified clicks keep their browser meaning.
+  // lib/track.js that click is not an "opened". Modified clicks keep their browser meaning.
   const onClick = (e) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();

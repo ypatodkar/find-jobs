@@ -5,9 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require('playwright');
 const root = path.resolve(__dirname, '..');
-// The pages under test: the repo root by default, or a build such as web/dist (SITE_DIR=web/dist).
-const site = path.resolve(root, process.env.SITE_DIR || '.');
-const artifactDir = path.join(root, '.catalogue/one-click-match');
+// The pages under test: the page build (npm run build --prefix web), or SITE_DIR.
+const site = path.resolve(root, process.env.SITE_DIR || 'web/dist');
+const artifactDir = path.join(root, 'test/artifacts/jd-ux');
 fs.mkdirSync(artifactDir, { recursive: true });
 const requirements = [
   'Build and operate reliable distributed systems in production.',
@@ -726,9 +726,7 @@ async function main(){
     assert.equal(await filters.locator('.picker-label').count(),0,'no duplicate labels above filters');
     assert.equal(await filters.locator('#sum-role').textContent(),'Role');
     assert.equal(await filters.locator('#sum-company').textContent(),'Company');
-    // A dropdown menu: beside its hidden <select> on the current pages, or on its own as
-    // #menu-<id> in the React pages.
-    const menu=(id)=>filters.locator(`#${id} + details, details#menu-${id}`);
+    const menu=(id)=>filters.locator(`details#menu-${id}`);
     const posted=menu('date-select').locator('> summary');
     const salary=menu('salary-select').locator('> summary');
     assert.equal(await posted.textContent(),'Posted');

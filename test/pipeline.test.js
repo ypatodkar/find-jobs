@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { BOARDS } = require("../boards");
-const { failedPlatforms, failedBoards, allJobsPayload, firmPayload, mergeJobs } = require("../pipeline");
+const { BOARDS } = require("../scraper/boards");
+const { failedPlatforms, failedBoards, allJobsPayload, firmPayload, mergeJobs } = require("../scraper/pipeline");
 
 function resultWith(statusFor) {
   const firms = {};
@@ -61,7 +61,7 @@ test("does not report boards that are configured as unsupported", () => {
 });
 
 test("marks jobs that have a stored description, on both payloads", () => {
-  const { allJobsPayload, firmPayload } = require("../pipeline");
+  const { allJobsPayload, firmPayload } = require("../scraper/pipeline");
   const data = { scrapedAt: "t", firms: { f1: { status: "ok", jobs: [
     { job_id: "a", company: "Acme", title: "Engineer", city: "SF" },
     { job_id: "b", company: "Acme", title: "Designer", city: "SF" },

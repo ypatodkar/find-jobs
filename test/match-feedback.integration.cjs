@@ -9,7 +9,7 @@ const crypto = require('node:crypto');
 const { spawn, spawnSync } = require('node:child_process');
 const { once } = require('node:events');
 const { createStore, poolFromEnv } = require('../aws/lambda/match-store.cjs');
-const { RUBRIC_VERSION } = require('../jev');
+const { RUBRIC_VERSION } = require('../shared/jev');
 const root = path.resolve(__dirname, '..');
 
 async function freePort() {
@@ -49,7 +49,7 @@ async function main() {
     const original = await store.saveMatch(resume, 'fixture_job', { score: 76, model: 'test-model', rubricVersion: RUBRIC_VERSION, findings: [{ text: 'Test requirement', status: 'shown', evidence: 'Test excerpt' }] }, 'fixture-hash');
 
     const appPort = await freePort();
-    app = spawn(process.execPath, ['server.js'], { cwd: root, env: { ...env, PORT: String(appPort), HOST: '127.0.0.1', GOOGLE_CLIENT_ID: 'test-client' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    app = spawn(process.execPath, ['scripts/dev-server.js'], { cwd: root, env: { ...env, PORT: String(appPort), HOST: '127.0.0.1', GOOGLE_CLIENT_ID: 'test-client' }, stdio: ['ignore', 'pipe', 'pipe'] });
     let output = '';
     app.stdout.on('data', chunk => { output += chunk; });
     app.stderr.on('data', chunk => { output += chunk; });

@@ -1,5 +1,5 @@
-// The roles this browser has opened, as track.js records them (localStorage
-// "vc-directory-seen", { job_id: timestamp }). Written by lib/track.js on each open;
+// The roles this browser has opened (localStorage "vc-directory-seen",
+// { job_id: timestamp }). Written by lib/track.js on each open;
 // read by the Hide-opened filters, the "N opened" notes, the clicked stamp and
 // "Companies you've opened"; merged into by sign-in, when the account's history
 // arrives. Updates from other tabs arrive as storage events.

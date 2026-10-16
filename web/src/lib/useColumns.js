@@ -1,6 +1,6 @@
 // The divider between the list and the description, from 1100px: drag it, or focus it
 // and use ←/→ (Shift for bigger steps), Home/End for the limits, Enter or double-click
-// to reset. The width is remembered ("find-jobs-column-ratio", as jobs-ui.js keeps it).
+// to reset. The width is remembered (localStorage "find-jobs-column-ratio").
 //
 // The list never gets narrower than its header (tabs and Sort side by side) or 350px,
 // and the description never narrower than 440px. Below 560px the description is marked

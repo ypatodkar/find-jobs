@@ -1,6 +1,5 @@
 // Google's sign-in button, the account menu in the header, and the popup that asks for
-// sign-in before a resume upload. Markup as auth.js renderButton, renderHeader and
-// requestResumeSignIn.
+// sign-in before a resume upload.
 import { useEffect, useRef, useState } from "react";
 import { closeResumeSignIn, onButtonThemeChange, renderGoogleButton, signOut, useAuth } from "../lib/auth.js";
 

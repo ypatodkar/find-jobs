@@ -1,4 +1,4 @@
-// Filter state, its undo history, and the address bar, as in jobs-ui.js:
+// Filter state, its undo history, and the address bar:
 //
 //   - The URL describes the view, so a filtered list survives a reload and can be
 //     shared. Filters and sort replace the current history entry (refining one view);
@@ -68,8 +68,8 @@ export function useFilterState(dims) {
     pushNext.current = false;
   }, [filters, page, view, dims]);
 
-  // Once the jobs have arrived, the URL the visitor came in on is tidied in place, as
-  // jobs-ui.js does: the page clamped to the pages that exist, anything unreadable
+  // Once the jobs have arrived, the URL the visitor came in on is tidied in place: the
+  // page clamped to the pages that exist, anything unreadable
   // dropped, and the rest in the usual order. Only then is the page count known.
   const settled = useRef(false);
   const settle = useCallback((pageCount) => {

@@ -1,6 +1,5 @@
-// What the filters are and how they narrow the list: the React side of the DIMENSIONS,
-// filtered(), counts, activeCount and URL handling in jobs-ui.js, with the same rules
-// and the same URL parameters, so a link made on either page opens the same view.
+// What the filters are and how they narrow the list: the dimensions, filtering, the
+// counts beside each option, and the URL parameters a filtered view is shared with.
 import { ROLE_LABELS } from "./jobs.js";
 
 const DAY_MS = 86400000;

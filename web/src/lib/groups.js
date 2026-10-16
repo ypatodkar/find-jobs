@@ -1,5 +1,4 @@
-// The Companies tab: the same filtered roles, one card per company. Ported from
-// buildGroups and monogram in jobs-ui.js.
+// The Companies tab: the same filtered roles, one card per company.
 
 export const COMPANIES_PER_PAGE = 40;
 const MONOGRAM_TINTS = 6;

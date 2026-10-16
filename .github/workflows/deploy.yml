@@ -43,26 +43,27 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
-      - name: Test application logic
-        run: node --test test/*.test.js
-
       # The pages are React (web/), the one part of the repo with dependencies. Built
-      # before the scrape so a broken build fails the run in seconds, not after it.
+      # before the scrape so a broken build fails the run in seconds, not after it, and
+      # before the tests, some of which read web/src.
       - name: Build pages
         run: |
           npm ci --prefix web
           npm run build --prefix web
 
+      - name: Test application logic
+        run: node --test test/*.test.js
+
       # The CI user publishes static assets only. API releases use the approved
       # operator path documented in README.md; no extra IAM access is needed here.
 
-      # Jev's answers from earlier runs (job-labels.json, see classify.js), so only
-      # postings new since the last run are put to it. Each run saves under its own key
-      # and restores the newest by prefix; an evicted cache triggers reclassification.
+      # Jev's answers from earlier runs (data/job-labels.json, see scraper/classify.js),
+      # so only postings new since the last run are put to it. Each run saves under its
+      # own key and restores the newest by prefix; an evicted cache means reclassifying.
       - name: Restore job classifications
         uses: actions/cache/restore@v4
         with:
-          path: job-labels.json
+          path: data/job-labels.json
           key: job-labels-${{ github.run_id }}
           restore-keys: job-labels-
 
@@ -70,16 +71,16 @@ jobs:
         env:
           # Without it the scrape still runs; new postings are just left unlabelled.
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
-        run: node scrape.js
+        run: node scraper/scrape.js
 
       - name: Save job classifications
         uses: actions/cache/save@v4
         with:
-          path: job-labels.json
+          path: data/job-labels.json
           key: job-labels-${{ github.run_id }}
 
       - name: Build static site
-        run: node build.js
+        run: node scripts/build.js
 
       # The D1 sync is gone rather than ported. It existed so a click could be joined
       # back to a job title, but the /click handler already writes company, title and

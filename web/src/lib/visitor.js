@@ -1,6 +1,5 @@
-// This browser's anonymous id, as visitor.js keeps it (localStorage "vc-directory-visitor",
-// { id, name, asked }), so clicks and saved filters from either page belong to the same
-// visitor. Minted on first use.
+// This browser's anonymous id (localStorage "vc-directory-visitor", { id, name, asked }),
+// attached to clicks, likes, feedback and saved-filter reports. Minted on first use.
 const KEY = "vc-directory-visitor";
 
 function read() {

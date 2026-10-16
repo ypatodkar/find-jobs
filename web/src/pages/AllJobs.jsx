@@ -1,5 +1,4 @@
-// The all-jobs page (index.html), as all.js: every role, with the Investor filter.
-import "../../../data.js"; // the investors, as window.VC_FIRMS and TIER_META
+// The all-jobs page (index.html): every role, with the Investor filter.
 import { useEffect, useMemo, useState } from "react";
 import Masthead, { PRIVACY_NOTE } from "../components/Masthead.jsx";
 import { Featured } from "../components/HeaderExtras.jsx";

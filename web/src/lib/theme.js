@@ -1,4 +1,4 @@
-// Light or dark, as theme.js: the OS decides unless the visitor says otherwise. The
+// Light or dark: the OS decides unless the visitor says otherwise. The
 // default is CSS (prefers-color-scheme); index.html's inline script applies a stored
 // override before first paint. This owns the toggle.
 //

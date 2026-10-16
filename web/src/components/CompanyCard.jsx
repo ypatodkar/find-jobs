@@ -1,5 +1,5 @@
 // One company in the Companies tab: its logo (or a monogram), facts, role count and
-// where it is hiring; opened, its roles as rows. Markup as jobs-ui.js groupHtml.
+// where it is hiring; opened, its roles as rows.
 import { Fragment, useState } from "react";
 import { relativeDate } from "../lib/jobs.js";
 import { monogram, openedLabel } from "../lib/groups.js";

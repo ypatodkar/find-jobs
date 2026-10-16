@@ -1,26 +1,25 @@
-// The React pages. `npm run dev` serves them on :5173 and forwards api/* to the dev
-// server at the repo root (node server.js, :4173), which answers the same paths the
-// static build writes and the Lambda serves. `npm run build` writes web/dist.
+// The site's pages. `npm run dev` serves them on :5173 and forwards api/* to the dev
+// server (node scripts/dev-server.js, :4173), which answers the same paths the static
+// build writes and the Lambda serves. `npm run build` writes web/dist.
 //
-// styles.css, the fonts and the shared plain scripts (description.js, data.js) stay
-// at the repo root, where the current pages and the server use them too, so the React
-// pages import them from there rather than keeping copies.
+// public/ (og.png, robots.txt, sitemap.xml, featured.json) is copied into the build
+// as is. shared/description.js sits outside web/ because the scraper and the API use it
+// too, hence the wider fs.allow.
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
+const page = (name) => fileURLToPath(new URL(name, import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
-  // Relative, as the current pages are: Pages and S3 serve the site from the root,
-  // but nothing here should assume it.
+  // Relative: Pages and S3 serve the site from the root, but nothing here assumes it.
   base: "./",
   server: {
     port: 5173,
     fs: { allow: [repoRoot] },
-    // featured.json is written by the /feature command at the repo root.
-    proxy: { "/api": "http://localhost:4173", "/featured.json": "http://localhost:4173" },
+    proxy: { "/api": "http://localhost:4173" },
   },
   // One entry per page; shared code (React, the header, the job list) is split into
   // chunks the pages share.
@@ -29,10 +28,11 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        index: fileURLToPath(new URL("index.html", import.meta.url)),
-        firm: fileURLToPath(new URL("firm.html", import.meta.url)),
-        firms: fileURLToPath(new URL("firms.html", import.meta.url)),
-        about: fileURLToPath(new URL("about.html", import.meta.url)),
+        index: page("index.html"),
+        firm: page("firm.html"),
+        firms: page("firms.html"),
+        about: page("about.html"),
+        404: page("404.html"),
       },
     },
   },

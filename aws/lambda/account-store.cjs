@@ -39,7 +39,7 @@ function cleanSeen(map) {
   return out;
 }
 
-// A saved-filter list as presets.js keeps it: [{ id, name, filters, createdAt }].
+// A saved-filter list as the site keeps it (web/src/lib/presets.js): [{ id, name, filters, createdAt }].
 function cleanFilters(items) {
   if (!Array.isArray(items)) throw fail(400, "Saved filters must be a list.");
   const list = items
@@ -50,7 +50,7 @@ function cleanFilters(items) {
   return list;
 }
 
-// A saved-jobs list as saved.js keeps it: [{ id, at, job: { title, company, … } }].
+// A saved-jobs list as the site keeps it (web/src/lib/saved.js): [{ id, at, job: { title, company, … } }].
 function cleanSaved(items) {
   if (!Array.isArray(items)) throw fail(400, "Saved jobs must be a list.");
   const str = (v, n) => (typeof v === "string" ? v.slice(0, n) : null);

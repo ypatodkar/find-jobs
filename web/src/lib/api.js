@@ -1,5 +1,4 @@
-// Where the analytics API lives (clicks, likes, feedback, the click counter), from the
-// shared api-config.js. The fallback is the literal each old script kept.
-import "../../../api-config.js";
-
-export const ENDPOINT = (typeof window !== "undefined" && window.API_ENDPOINT) || "https://vcjobs-clicks.ypatodkar.workers.dev";
+// Where the analytics API lives: clicks, likes, feedback, saved-filter reports and the
+// click counter. A Lambda behind a Function URL, beside the Postgres database.
+// (Accounts, sync and resume matching are same-origin, under api/.)
+export const ENDPOINT = "https://v7ogkcujy5bcq6hhyygjrs6v5y0xygut.lambda-url.us-east-1.on.aws";

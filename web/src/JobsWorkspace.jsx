@@ -1,7 +1,6 @@
-// The job list and its description, as jobs-ui.js createJobsView: the filters with
-// their URL, undo and saved filters, the list and its pages, the Companies tab, the
-// divider, keyboard browsing, and the description pane (a sheet on narrow screens), all
-// with the markup of the current pages so styles.css applies as it is.
+// The job list and its description: the filters with their URL, undo and saved
+// filters, the list and its pages, the Companies tab, the divider, keyboard browsing,
+// and the description pane (a sheet on narrow screens).
 //
 // Shared by the all-jobs page and each investor's page, which load the jobs and
 // supply the header and footer around it. `jobs` is null while they load.
@@ -21,6 +20,7 @@ import { decode } from "./lib/presets.js";
 import { useFilterState } from "./lib/useFilterState.js";
 import { useColumns } from "./lib/useColumns.js";
 import { useSeen } from "./lib/seen.js";
+import { firmLabel } from "./data.js";
 
 const SORTS = [
   { value: "newest", label: "Newest first" },
@@ -38,11 +38,6 @@ function useMedia(query) {
     () => matchMedia(query).matches,
   );
 }
-
-const firmLabel = (id) => {
-  const f = (window.VC_FIRMS || []).find((x) => x.id === id);
-  return f ? f.short || f.name : id;
-};
 
 const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -75,7 +70,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
     contextLabel,
   }), [dims, contextLabel]);
 
-  // Opened roles (track.js's store): the Hide filters and the "N opened" notes.
+  // Opened roles (lib/seen.js): the Hide filters and the "N opened" notes.
   const seenMap = useSeen();
   const seen = useMemo(() => new Set(Object.keys(seenMap)), [seenMap]);
   const openedByCompany = useMemo(() => {
@@ -125,7 +120,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
     }
     setSelectedId(id);
     if (narrow) setSheetOpen(true);
-    // At once, as jobs-ui.js does: the pane is always beside the list, so its place is
+    // At once: the pane is always beside the list, so its place is
     // known before the new role draws.
     else if (reveal) revealWorkspace();
   }, [narrow, sheetOpen]); // eslint-disable-line react-hooks/exhaustive-deps

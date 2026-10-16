@@ -1,4 +1,4 @@
-// The selected role: its header, then its description, as jobs-ui.js renderDetail.
+// The selected role: its header, then its description.
 //
 // As on LinkedIn, the full header scrolls away with the description, and once it is out
 // of view a slim bar (title, company, Save, Apply) takes its place at the top of the
@@ -108,7 +108,7 @@ const DetailPane = forwardRef(function DetailPane({ job, open, sheet, narrowColu
     : job.source === "ats"
       ? <span className="src-tag ats" title={`Fetched live from ${job.ats || "the company"}'s job board`}>{job.ats || "ats"}</span>
       : <span className="src-tag" title="From the VC's portfolio board">vc board</span>;
-  // data-track-open: track.js counts this as opening the role.
+  // data-track-open: lib/track.js counts this as opening the role.
   const apply = job.url ? (
     <a className="detail-apply" href={job.url} target="_blank" rel="noopener noreferrer" data-track-open=""
       data-job-id={job.job_id} data-company={job.company} data-city={job.city || ""} data-title={job.title}>

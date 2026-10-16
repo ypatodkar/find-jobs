@@ -1,7 +1,6 @@
-// The filter bar (#job-controls), with the markup of index.html so styles.css applies:
-// search, the four main filters, the Advanced filters panel, the Hide checkboxes, saved
-// filters, Undo and Reset. Under 720px the same block becomes a modal sheet behind a
-// "Filters" button, as filter-drawer.js does it.
+// The filter bar (#job-controls): search, the four main filters, the Advanced filters
+// panel, the Hide checkboxes, saved filters, Undo and Reset. Under 720px the same block
+// becomes a modal sheet behind a "Filters" button.
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import FilterPicker from "./FilterPicker.jsx";
 import SelectMenu from "./SelectMenu.jsx";

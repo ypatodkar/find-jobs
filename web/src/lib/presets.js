@@ -1,8 +1,8 @@
-// Saved filters: the React side of presets.js, with the same storage key, link format
-// (?f=) and events, so filters saved on the current page appear here and a signed-in
-// account's copy (auth.js listens for "presets-change") keeps working.
+// Saved filters, in this browser (localStorage "vc-directory-filters"), shareable as a
+// ?f= link. Changes are announced as "presets-change" for lib/auth.js to copy to a
+// signed-in account.
 import { useSyncExternalStore } from "react";
-import "../../../api-config.js"; // window.API_ENDPOINT
+import { ENDPOINT } from "./api.js";
 import { visitorId, visitorName } from "./visitor.js";
 
 const KEY = "vc-directory-filters";
@@ -41,10 +41,9 @@ if (typeof window !== "undefined") {
 
 // Which slices get saved, for the site owner: no identifier beyond the browser's id.
 function report(action, name, filters) {
-  const endpoint = window.API_ENDPOINT;
-  if (!endpoint || !navigator.sendBeacon) return;
+  if (!navigator.sendBeacon) return;
   try {
-    navigator.sendBeacon(endpoint + "/filter", JSON.stringify({
+    navigator.sendBeacon(ENDPOINT + "/filter", JSON.stringify({
       action, user_id: visitorId(), user_name: visitorName(), name: name || null, filters: filters || {},
       page: location.pathname.split("/").pop() || "index.html", firm: new URLSearchParams(location.search).get("id"),
     }));

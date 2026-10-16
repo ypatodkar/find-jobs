@@ -1,367 +1,137 @@
 # Find Jobs
 
-Tracks 37 US venture firms and scrapes their portfolio job boards for engineering
-roles across **19 US metros**.
+Engineering roles at venture-backed companies, in one list: jobs.ypatodkar.com.
 
-## Run it
+It tracks 70 US venture firms, reads the portfolio job boards of the 55 that have one,
+then goes to each company's own job board (Ashby, Greenhouse, Lever) for the live
+listing. Roles are kept for 19 US metros plus remote, deduplicated, and classified so
+that only computing roles stay.
+
+## Where things are
+
+```
+web/        the site: React pages (Vite). src/pages/ is one file per page,
+            src/JobsWorkspace.jsx the job list and description pane both job pages use,
+            src/components/ and src/lib/ the parts, src/styles/ the stylesheets,
+            public/ files served as they are (og.png, robots.txt, featured.json).
+scraper/    the scrape: VC boards, company ATS boards, classification (Jev), the
+            payloads the site reads. scrape.js runs it.
+shared/     code the scraper, the API and the site all use: description handling
+            (description.js) and the Jev client (jev.js, requirements.js).
+aws/        the API: a Lambda (aws/lambda/) on Postgres, for accounts, saved state,
+            resumes, matching and analytics. schema.sql and migrations/ are its database.
+deploy/     the Cloudflare Pages worker that forwards /api/auth, /api/sync, /api/resumes
+            and /api/match to the Lambda.
+scripts/    dev-server.js (local API), build.js (the deployable site), refresh.js,
+            stats.js, feature-pick.js, package-api.js, and the validation scripts.
+test/       unit tests (*.test.js), the browser test (jd-ux.e2e.cjs) and a database
+            integration test.
+docs/       the change log and the database diagram.
+data/       not in git: the latest scrape (results.json, descriptions.json) and the
+            Jev classification cache (job-labels.json).
+```
+
+## Run it locally
 
 ```bash
-node scrape.js     # populate results.json
-node server.js     # the API and data on :4173
+node scraper/scrape.js                      # fills data/ (a few minutes)
+node scripts/dev-server.js                  # the API and data on :4173
 npm ci --prefix web && npm run dev --prefix web
 ```
 
-Then open <http://localhost:5173>: the pages, in React (`web/`), with `api/*` forwarded
-to `server.js`. Only `web/` has dependencies; the API, scraper and scripts at the root
-need Node 18+ and nothing else.
+Then open <http://localhost:5173>: the pages, with `api/*` forwarded to the dev server.
+Only `web/` has dependencies; everything else needs Node 18+ and nothing more.
+Sign-in and resume matching also need a local Postgres (`findjobs_dev`) and the keys
+in `.env` (`GOOGLE_CLIENT_ID`, `TYPESAFE_API_KEY`); without them the rest works.
 
-`server.js` on its own still serves the earlier plain-script pages at
-<http://localhost:4173>, kept to compare against until they are removed.
+`node scripts/dev-server.js` on its own also serves the last page build (web/dist) at
+<http://localhost:4173>, which is how the site will look deployed.
 
 ## Refresh the live feed
 
-Between the twice-daily crons, to scrape and redeploy on demand:
+The scrape runs twice a day on GitHub Actions. To run one now:
 
 ```bash
-./refresh.js              # dispatch, then watch it to completion
-./refresh.js --no-watch   # dispatch and get your prompt back
-./refresh.js --status     # last few runs, dispatch nothing
+scripts/refresh.js              # dispatch, then watch it to completion
+scripts/refresh.js --no-watch   # dispatch and get your prompt back
+scripts/refresh.js --status     # last few runs, dispatch nothing
 ```
 
-The scrape runs on GitHub's runners and lands on Cloudflare Pages — `refresh.js`
-duplicates none of the pipeline, it just fires the `workflow_dispatch` on
-`deploy.yml` and reports each step back. Needs `gh auth login` once.
-
-Not on Cloudflare itself, despite that being where the site lives: one pass makes
-~1,245 outbound requests (70 VC boards + 1,175 company ATS boards) and `results.json`
-needs ~121 MB of heap to parse, against a Worker's 1,000 subrequests and 128 MB.
-Landing it there means Workflows, chunked steps and R2 — a port, not a button.
+It fires `workflow_dispatch` on `.github/workflows/deploy.yml`. Needs `gh auth login`.
 
 ## Deploy
 
-Hosted on **Cloudflare Pages**, scraped and redeployed by GitHub Actions twice daily
-(`.github/workflows/deploy.yml`).
-
-Cloudflare rather than GitHub Pages because this repo is private, and GitHub will not
-publish Pages from a private repo on a free plan. Cloudflare Pages will, and its
-bandwidth is unmetered.
+Every push to `main`, and each scheduled run, does the same
+(`.github/workflows/deploy.yml`):
 
 ```bash
 npm ci --prefix web && npm run build --prefix web   # the pages -> web/dist
-node build.js                                       # -> dist/ (pages + data)
-npx wrangler pages deploy dist --project-name=find-jobs
+node --test test/*.test.js
+node scraper/scrape.js                               # -> data/
+node scripts/build.js                                # pages + data -> dist/
 ```
 
-| | |
-|---|---|
-| Project | `find-jobs` |
-| Default URL | <https://find-jobs-cf5.pages.dev> |
-| Custom domain | <https://jobs.ypatodkar.com> |
+and publishes `dist/` to Cloudflare Pages (which jobs.ypatodkar.com points at) and to
+S3 behind CloudFront (a copy, ready for a DNS move).
 
-The workflow uploads `dist/` directly rather than using Cloudflare's Git integration —
-a direct upload needs no OAuth link between Cloudflare and GitHub, so the repo stays
-private, and the twice-daily cron stays in one place. It needs two repository secrets:
-
-| Secret | |
-|---|---|
-| `CLOUDFLARE_API_TOKEN` | token with **Cloudflare Pages: Edit** |
-| `CLOUDFLARE_ACCOUNT_ID` | `3fcdcde298fb0fbf4c9ba274e19bb40f` |
-
-`build.js` writes the three read endpoints as real files at the *same relative paths*
-`server.js` answers dynamically:
+`scripts/build.js` writes the data the dev server answers dynamically as real files at
+the same paths, so the pages work the same in both places:
 
 | | |
 |---|---|
-| `api/results.json` | firm index + role counts |
-| `api/all-jobs.json` | every role, deduped |
-| `api/firm/<id>.json` | one per firm, all 37 |
+| `api/results.json` | every firm and its role count |
+| `api/all-jobs.json` | every role, deduplicated |
+| `api/firm/<id>.json` | one per firm |
+| `api/desc/<shard>.json` | job descriptions, a few per file |
 
-That symmetry is the whole trick — the pages fetch one set of relative URLs and work
-unchanged in both places.
+Schedule: `0 18,0 * * *` UTC, which is 11am/5pm PDT in summer and 10am/4pm PST in
+winter. GitHub disables cron workflows after 60 days without a push.
 
-`dist/` ships only browser files: the React build from `web/dist` (pages, plus
-content-hashed scripts, styles and fonts under `assets/`) and the few non-page files
-in `assets.js` `SITE_ASSETS`. `pipeline.js`, `scraper.js` and `ats.js` stay out of it.
+## The pages
 
-Two things to know. GitHub disables cron workflows after 60 days of repository
-inactivity — it emails you, and re-enabling is one click. And scheduled runs on shared
-runners are routinely 5–20 minutes late, so the scrape times are approximate.
+- `index.html`: every role, 45 per page, or grouped by company. A company backed by
+  several investors appears once, tagged with each.
+- `firms.html`: the 70 investors and their role counts.
+- `firm.html?id=<firm>`: one investor's roles, or why its board cannot be read.
+- `about.html`.
 
-The schedule is `0 18,0 * * *` — 18:00 and 00:00 UTC, i.e. late morning and end of the
-working day on the US west coast. GitHub cron is UTC-only with no timezone support, so
-those land at 11am/5pm PDT in summer and 10am/4pm PST in winter.
-
-## Pages
-
-- `index.html` — **home.** Every role across every portfolio in one deduplicated list.
-  A company backed by several investors appears once, tagged with each of them.
-  Results are paginated at 65 roles per page.
-- `firms.html` — the 37 investors, with a role count per firm. Clicking anywhere on a
-  card opens that firm's page; links inside the card still open the external board.
-- `firm.html?id=<firm>` — one page per firm listing just its roles.
-
-Every firm has a page, including the 21 with no scrapeable board — those explain why
-and link to the firm's own site.
-
-## Filters
-
-Both job pages share one filter bar: eight multi-select dropdowns — **City, Role,
-Seniority, Company, Industry, Company size, Funding, Investor** (Investor only on
-`index.html`) — plus **Posted**, **Salary**, and **Sort**.
-
-Cities come from `METROS` in `boards.js` — 19 metros, each with the query values the
-two board platforms accept plus a pattern that buckets raw location strings (so
-`Bellevue, WA` lands under Seattle and `Palo Alto` under Bay Area). No city is
-pre-selected: an empty City filter means all tracked metros. Add or retire a metro by
-editing that array.
-
-Filters combine with **AND** across dropdowns and **OR** within one, and they
-**cascade**: each dropdown only offers values that still return rows under every other
-active filter. Picking `City = San Diego` collapses Company from 389 to the 5 companies
-hiring there, Industry from 685 to 63, Investor from 16 to 7. Counts on each option show
-what you would get. A selected value stays listed at count 0 so it can always be
-unticked, and long lists (Industry) show the top 60 with search reaching the rest.
-
-Every firm has a page, including the 21 with no scrapeable board — those explain why
-and link to the firm's own site.
+Filters combine with AND across filters and OR within one, and each offers only values
+that still return roles under the others, with counts. The URL describes the view, so
+a filtered list can be shared; saved filters can be shared as a `?f=` link.
 
 ## How scraping works
 
-Two phases per refresh:
+1. **VC portfolio boards** (`scraper/scraper.js`): Consider and Getro boards list each
+   firm's portfolio companies and their roles.
+2. **Company boards** (`scraper/ats.js`): each apply link tells which ATS a company
+   uses; its roles are then read straight from Ashby, Greenhouse or Lever, which are
+   fresher than the VC board and carry salaries. Companies on other systems keep their
+   VC-board listing.
+3. **Classification** (`scraper/classify.js`): new postings go to TypeSafe's Jev in
+   batches of 30 to tell computing roles from the rest and to read career stage.
+   Answers are cached by posting content in `data/job-labels.json`, so each posting is
+   asked about once. Without a key, everything stays listed.
 
-**1. Discovery — VC portfolio boards.** 16 of the 37 firms have a scrapeable board:
+Cities, role patterns and exclusions are in `scraper/boards.js`; the keep/skip rule is
+`scraper/match.js`. Every role has a stable id (`scraper/id.js`) from the ATS's own
+posting id where there is one.
 
-| Platform | Firms |
-|---|---|
-| Consider | a16z, Sequoia, Lightspeed, NEA, Norwest, Bessemer, Kleiner Perkins, Greylock |
-| Getro | Khosla, General Catalyst, Insight, Menlo, Redpoint, Craft, Notable Capital, Thrive |
+## Accounts, resumes and analytics
 
-The rest are marked unscrapeable in the UI with the reason (Accel is behind Cloudflare;
-Founders Fund and the AI-native specialists publish no job listings; Y Combinator needs a login).
+Google sign-in (optional) keeps opened jobs, saved jobs and saved filters on the
+account, and enables resume matching: a resume is read in the browser
+(`web/src/lib/resume-import.js`), its text is stored in Postgres, and Jev scores it
+against a job's description. Each account gets a daily number of checks. Keeping the
+original file as well (in a private S3 bucket) is on only for browsers that have
+visited with `?upload=files`, while it is tried out.
 
-**2. Enrichment — each company's own job board.** VC boards lag and drop roles, so
-every apply URL from phase 1 is parsed to work out which ATS that company uses
-(`ats.js`), then its openings are fetched straight from the source:
+Clicks, likes, feedback and saved-filter reports go to the same Lambda's analytics
+routes and Postgres. `node scripts/stats.js` reports on them (it reads the database
+credentials from the Lambda's configuration, so it runs from an allowed IP).
 
-| ATS | Coverage | Endpoint |
-|---|---|---|
-| Ashby | ~58% of companies | `api.ashbyhq.com/posting-api/job-board/{slug}` |
-| Greenhouse | ~22% | `boards-api.greenhouse.io/v1/boards/{slug}/jobs` |
-| Lever | ~3% | `api.lever.co/v0/postings/{slug}` |
+## Releasing the API
 
-Companies on any other ATS (Workday, Gem, Rippling, custom sites) keep their
-VC-board listing rather than being dropped. Each role is tagged in the UI with where
-it came from — an `ashby`/`greenhouse`/`lever` tag, or a dotted `vc board` tag.
-
-Going direct roughly **doubles** the results (2,861 → 5,022 roles) and adds salary
-ranges where the ATS publishes them. Requests run 6-at-a-time with one retry on
-timeouts; a 404 is treated as permanent. Failures are recorded in
-`results.json` under `enrichment.failures`.
-
-## Click tracking
-
-Records which roles get opened. **Nothing is rendered on the site** — the numbers are
-for you, via SQL.
-
-Every job carries a `job_id` (`id.js`), built from the ATS's own posting id where one
-exists and a hash of company/title/city otherwise:
-
-```
-whatnot_ashby_aefd0c4d-6324-4ca0-8ebc-00ddfc722079
-mistral_vc_7a3f9c21
-```
-
-The posting id is what makes a count survive a re-scrape — the `company|title|city`
-dedupe key does not, because boards edit titles. It also correctly collapses the same
-posting listed by several investors with drifting titles: a16z and Lightspeed both
-carry Whatnot's "Senior Software Engineer, CX" where Redpoint has the current
-"Software Engineer, CX", and all three resolve to one id. Two consequences worth
-knowing: a posting open in both NY and SF is two rows in the UI sharing one counter,
-and a company migrating between ATSes restarts its ids.
-
-Storage is Cloudflare D1 (`schema.sql`) behind a Worker (`worker/`):
-
-| Route | Purpose | Access |
-|---|---|---|
-| `POST /click` | one click → a row in `clicks` + `jobs.clicks + 1` | origin-allowlisted |
-| `GET /counts` | `{ job_id: clicks }` | `ADMIN_TOKEN` — the site never calls it |
-
-`track.js` is the browser half — a single delegated listener, `sendBeacon`, and a
-hard rule that it can never interfere with the link. It is **inert until you set
-`ENDPOINT`** to your deployed Worker.
-
-Setup:
-
-```bash
-npx wrangler d1 create vcjobs                             # id → worker/wrangler.toml
-npx wrangler d1 execute vcjobs --remote --file=schema.sql
-cd worker
-npx wrangler secret put ADMIN_TOKEN                       # guards GET /counts
-npx wrangler deploy                                       # URL → ENDPOINT in track.js
-```
-
-Then set `ALLOWED_ORIGINS` in `worker/wrangler.toml` to your site's URL, and after
-your first sync flip `STRICT = "1"` so that no request can create a row in `jobs` —
-clicks are then only counted against jobs the sync has loaded.
-
-`/click` is a public write endpoint and its URL is in the page source, so treat it as
-known. It holds no credentials and no personal data — no IP, no cookie, no identifier,
-only a country code derived at the edge and discarded. The realistic abuse is someone
-spamming writes to skew counts or burn the D1 free write quota; the origin check,
-the `job_id` pattern and `STRICT` bound that, and a Cloudflare rate-limiting rule on
-`/click` is the next step if it ever actually happens.
-
-Then after each scrape, push job metadata into D1:
-
-```bash
-node sync-jobs.js
-npx wrangler d1 execute vcjobs --remote --file=sync.sql
-```
-
-`sync-jobs.js` never writes `clicks` or `first_seen`, and never deletes: a role that
-comes off the boards is marked `active = 0` so a click recorded last week still
-resolves to a company and a title. `results.json` is overwritten every scrape, so this
-table is the only place posting history survives.
-
-```sql
--- most wanted roles
-SELECT company, title, city, clicks FROM jobs WHERE clicks > 0
-ORDER BY clicks DESC LIMIT 20;
-
--- which investor's page actually drives clicks
-SELECT COALESCE(firm, '(all roles)') AS page, COUNT(*) FROM clicks GROUP BY 1 ORDER BY 2 DESC;
-```
-
-Counts are raw — your own clicks and reloads inflate them.
-
-## Accounts
-
-Sign in with GitHub or Google to carry your "opened" history (`track.js`'s Seen store)
-across devices. Same Worker and D1 database as click tracking above — no second
-backend. `auth.js` is the browser half; like `track.js` it is **inert until you set
-`ENDPOINT`**.
-
-| Route | Purpose | Access |
-|---|---|---|
-| `GET /auth/:provider/start` | redirect to GitHub/Google's consent screen | public |
-| `GET /auth/:provider/callback` | exchange the code, open a session, redirect back | public, state-checked |
-| `GET /auth/me` | `{ user: {...} \| null }` for the current session | cookie |
-| `POST /auth/logout` | end the session | cookie |
-| `GET`/`POST /auth/seen` | the signed-in user's server-side "seen" map | cookie |
-
-Accounts are keyed by `(provider, provider_user_id)` and never merged by email — see
-the comment in `schema.sql`. Sessions are opaque tokens checked against the `sessions`
-table on every request, not signed/decoded, so revoking one is just deleting the row.
-
-Setup, once `vcjobs-clicks` from the click-tracking section above is deployed:
-
-1. **Register an OAuth app with each provider**, using the Worker's URL (its
-   `*.workers.dev` address, or your custom domain once step 3 is done):
-   - GitHub → Settings → Developer settings → OAuth Apps → New OAuth App.
-     Authorization callback URL: `https://<worker-domain>/auth/github/callback`.
-   - Google → Cloud Console → APIs & Services → Credentials → Create OAuth client ID
-     (type: Web application). Authorized redirect URI:
-     `https://<worker-domain>/auth/google/callback`.
-2. **Set the four values each provider gives you**, in `worker/wrangler.toml`
-   (`GITHUB_CLIENT_ID`, `GOOGLE_CLIENT_ID` — not secret, they're visible in the
-   redirect URL anyway) and via Wrangler (the two client secrets):
-   ```bash
-   cd worker
-   npx wrangler secret put GITHUB_CLIENT_SECRET
-   npx wrangler secret put GOOGLE_CLIENT_SECRET
-   ```
-3. **Put the Worker on a custom domain that's a subdomain of your site** (Cloudflare
-   dashboard: Workers & Pages → `vcjobs-clicks` → Settings → Domains & Routes → Add
-   Custom Domain, e.g. `clicks.ypatodkar.com`). This isn't optional in practice: the
-   session cookie needs to be first-party to survive browsers' third-party-cookie
-   blocking. Once set, update `SITE_ORIGIN` and `COOKIE_DOMAIN` in
-   `worker/wrangler.toml` (`COOKIE_DOMAIN = ".ypatodkar.com"`, leading dot) and update
-   both OAuth apps' callback URLs to the new domain.
-4. **Apply the schema and deploy**:
-   ```bash
-   npx wrangler d1 execute vcjobs --remote --file=schema.sql
-   npx wrangler deploy
-   ```
-5. Set `ENDPOINT` in `auth.js` to the same URL you set in `track.js`.
-
-## Editing
-
-- `data.js` — firm metadata (name, tier, AI signal, links). Shared by both pages.
-- `boards.js` — board IDs, target cities, and the role-matching / exclusion patterns.
-- `match.js` — the shared keep/skip decision, so a role is judged the same whether it
-  came from a VC board or a company's ATS.
-- `web/src/` — the pages, in React. `JobsWorkspace.jsx` is the job browser (filters,
-  list, description pane, resume match) that both `index.html` and `firm.html` use,
-  so a fix to filtering lands on both pages at once; `pages/` holds each page's
-  header and footer around it, and `lib/` the stores and API calls. `styles.css` at
-  the root is the one stylesheet. `jobs-ui.js` and the other plain scripts at the
-  root are the earlier version of the same pages, no longer deployed.
-- `scraper.js` — the two VC-board platform adapters.
-- `ats.js` — ATS detection, the three company-board adapters, and the company registry.
-- `pipeline.js` — the three-phase scrape and the three read payloads, with no HTTP or
-  filesystem in them. `server.js` (live, SSE progress) and `scrape.js`/`build.js`
-  (headless, for CI) are both thin wrappers, so there is one implementation to fix.
-- `id.js` — stable job ids. See [Click tracking](#click-tracking).
-
-To widen or narrow which roles match, edit `ROLE_PATTERNS` and `EXCLUDE_TITLE` in `boards.js`.
-To change cities, edit `LOCATIONS` and `CITY_MATCHERS` in the same file.
-
-## Note
-
-`results.json` is a point-in-time snapshot. Job boards change constantly — re-run the
-refresh rather than trusting a stale file.
-
-
-## Resume matching production release
-
-Job classification runs during `scrape.js`, using the same TypeSafe service as resume
-matching. Configure the encrypted `TYPESAFE_API_KEY` repository secret for the Actions
-workflow. Only public job titles, company names, and short description excerpts are
-sent by this step; resumes are not involved. Requests batch 30 distinct postings and
-`job-labels.json` caches answers by posting content and rubric version between runs.
-Confident non-computing roles are excluded, and career stage becomes a filter. If the
-key is absent or the service fails, unclassified postings remain visible. Validate
-classification against the labeled examples with `node scripts/validate-classify.js`.
-
-Resume removal marks a record inactive and hides it from account and matching APIs.
-The server retains its extracted text, analyses, and reviews. Deploy the additive
-`active` / `deleted_at` schema migration before the API version that queries them.
-
-The active site runs on Cloudflare Pages. `build.js` adds a small Pages worker that
-forwards `/api/auth/*`, `/api/sync*`, `/api/resumes*`, and `/api/match*` to the existing
-`find-jobs-api` Lambda. Static JSON and description shards stay with Pages. Account
-cookies are first party, HttpOnly, and Secure on HTTPS.
-
-The Lambda and development server share `account-api.cjs`, the Postgres stores, and
-`jev.js`. The Lambda needs outbound HTTPS access to Google, TypeSafe, and the site's
-published description shards. Its VPC must have dual-stack subnets and an IPv6 egress
-route when using the current deployment without an IPv4 NAT gateway.
-
-One-time configuration in AWS: set the existing Google web client ID, TypeSafe API
-key, Postgres credentials, `PGSSL=on`, and `SITE_ORIGIN=https://jobs.ypatodkar.com`.
-Register that site origin in the Google OAuth web client. Never put credentials in
-browser scripts or the static build. Lambda needs a 90-second timeout to accommodate
-the model request's bounded retry, and uses `aws/lambda/index.handler` (the archive
-also retains the previous `index.handler` entry during rollout).
-
-The main-branch workflow tests logic, then builds and publishes the frontend. Its
-existing CI user has static-site deployment permissions only. API releases are
-performed by an authorized operator, before publishing frontend changes that need
-new routes. Database migrations are IAM-authenticated Lambda invocations, never HTTP
-endpoints. The S3 / CloudFront copy is a static backup; the same-origin API proxy is
-deployed on Pages.
-
-Original resume files are kept in a private S3 bucket (`aws/lambda/file-store.cjs`).
-Set it up once, before the first API release that stores them; it is safe to re-run:
-
-```sh
-scripts/setup-resume-bucket.sh
-```
-
-Release the API before the site that uploads files: the previous API refuses
-requests over 256 KB, and an upload now carries the file.
-
-To release API code after configuring the Lambda once:
+The site deploys itself; the API is released by hand.
 
 ```sh
 npm ci --omit=dev --prefix aws/lambda
@@ -372,16 +142,20 @@ aws lambda invoke --region us-east-1 --function-name find-jobs-api --cli-binary-
 node -e 'const r=require("/tmp/find-jobs-migration.json"); if(!r.ok) process.exit(1)'
 ```
 
-Local release checks:
+The Lambda's handler is `aws/lambda/index.handler`. It needs a 90-second timeout,
+outbound HTTPS (Google, TypeSafe, the site's description files) over IPv6 from its
+VPC, and these settings: the Google web client ID, the TypeSafe key, the Postgres
+credentials, `PGSSL=on`, `SITE_ORIGIN=https://jobs.ypatodkar.com` and `RESUME_BUCKET`.
+The resume bucket is created once with `scripts/setup-resume-bucket.sh`. Release the
+API before a site change that needs a new route.
+
+Checks before a release:
 
 ```sh
 node --test test/*.test.js
-node test/match-feedback.integration.cjs  # isolated Postgres, initdb/pg_ctl required
-SITE_DIR=web/dist node test/jd-ux.e2e.cjs # installed Playwright + Chromium required; after building web/
-node build.js
+node test/match-feedback.integration.cjs   # isolated Postgres; needs initdb/pg_ctl
+node test/jd-ux.e2e.cjs                    # the page build in a browser; needs Playwright
 ```
 
-After deployment, check `/api/auth/config`, signed-out `/api/resumes` (401), actual
-Google sign-in, resume upload/removal, saved analyses, and analysis reviews. Use a
-synthetic resume when testing model calls. The previous Lambda archive/configuration
-should be retained privately for rollback; they may contain server secrets.
+After a release, check `/api/auth/config`, a signed-out `/api/resumes` (401), a real
+Google sign-in, a resume upload and removal, and one analysis with a test resume.

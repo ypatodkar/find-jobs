@@ -1,6 +1,5 @@
-// The small things in the header, each as its own old script had it: the theme toggle
-// (theme.js), the like heart (heart.js), the live click counter (counter.js), the
-// feedback form (feedback.js) and the startup of the day (featured.js).
+// The small things in the header: the theme toggle, the like heart, the live click
+// counter, the feedback form and the startup of the day.
 //
 // All of them are quiet about failure: no endpoint, an unreachable API or a missing
 // featured.json means the piece is simply absent, never a broken or empty one. The one

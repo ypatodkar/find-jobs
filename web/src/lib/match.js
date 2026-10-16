@@ -1,17 +1,17 @@
-// Resume matching's data, as resume-match.js keeps it: the account's resumes, the scores
-// already fetched this visit, and today's allowance. One copy per page view, shared by
-// every job opened, so moving between jobs never flickers through "loading". Signing in
-// or out changes whose resumes these are, so everything is forgotten then
-// (`accountVersion` lets a request that started before the change throw its answer away).
-import "../../../resume-import.js"; // window.ResumeImport: extract, encode, ACCEPT
+// Resume matching's data: the account's resumes, the scores already fetched this
+// visit, and today's allowance. One copy per page view, shared by every job opened, so
+// moving between jobs never flickers through "loading". Signing in or out changes
+// whose resumes these are, so everything is forgotten then (`accountVersion` lets a
+// request that started before the change throw its answer away).
+import * as Import from "./resume-import.js";
 import { visitorId } from "./visitor.js";
 import { onAccountChange } from "./auth.js";
+
+export { Import };
 
 const ACTIVE = "find-jobs-active-resume";
 const UPLOAD_FILES = "find-jobs-upload-files";
 const API = "api";
-
-export const Import = typeof window !== "undefined" ? window.ResumeImport : null;
 
 // A static host answers 404 or 405 for these paths: the endpoints simply are not
 // there, which is a different message from the server refusing.
@@ -101,12 +101,11 @@ if (typeof window !== "undefined") sendsFiles(); // read the switch on arrival
 // `onStage` hears "uploading" once the file is read, so the card can say which step
 // it is on; a stall then names its step.
 export async function addResume(file, onStage) {
-  if (!Import) throw new Error("Resume upload could not load. Refresh and try again.");
   const identity = cache.accountVersion;
   const text = await Import.extract(file);
   if (identity !== cache.accountVersion) throw new Error("The signed-in account changed. Please try again.");
   if (!text || text.length < 100) throw new Error("Too little text could be read. Try a text-based PDF or .docx.");
-  const original = sendsFiles() && Import.encode ? await Import.encode(file) : undefined;
+  const original = sendsFiles() ? await Import.encode(file) : undefined;
   if (onStage) onStage("uploading");
   const d = await call("/resumes", json("POST", { visitor: visitorId(), label: (file.name || "Resume").replace(/\.[^.]+$/, ""), fileName: file.name || null, text, file: original }), 60000);
   if (identity !== cache.accountVersion) return null;

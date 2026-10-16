@@ -1,5 +1,4 @@
-// A single-choice menu drawn like the filter dropdowns: the React form of select-menu.js
-// (Sort, Posted, Salary). With a placeholder, the summary shows it while the default
+// A single-choice menu drawn like the filter dropdowns (Sort, Posted, Salary). With a placeholder, the summary shows it while the default
 // is chosen, and the menu is marked as having a selection otherwise.
 import { useEffect, useRef, useState } from "react";
 

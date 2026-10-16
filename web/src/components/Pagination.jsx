@@ -1,4 +1,4 @@
-// Page controls, as jobs-ui.js renderPagination: Previous / Next, page numbers in blocks
+// Page controls: Previous / Next, page numbers in blocks
 // of ten, a status line for screen readers, and a "Go to page" box.
 import { useState, useEffect } from "react";
 

@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { classifySponsorship, toPlainText } = require("../sponsorship");
+const { classifySponsorship, toPlainText } = require("../scraper/sponsorship");
 
 test("detects explicit sponsorship availability", () => {
   const result = classifySponsorship("Visa sponsorship is available for qualified candidates.");

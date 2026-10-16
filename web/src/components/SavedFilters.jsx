@@ -1,9 +1,9 @@
-// The saved-filters bar, as presets.js draws it: "Save this filter", and once anything
+// The saved-filters bar: "Save this filter", and once anything
 // is saved, a dropdown of them to apply, rename or remove. Naming takes a suggested
 // name, focused and selected, so Enter accepts it and typing replaces it.
 import { useEffect, useRef, useState } from "react";
 import { MAX_NAME, describe, presets, same, usePresets } from "../lib/presets.js";
-import "../presets.css";
+import "../styles/presets.css";
 
 const PENCIL = (
   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

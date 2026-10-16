@@ -33,11 +33,11 @@ for (const line of fs.existsSync(path.join(ROOT, ".env")) ? fs.readFileSync(path
   if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
 }
 
-const jev = require(path.join(ROOT, "jev"));
+const jev = require(path.join(ROOT, "shared", "jev"));
 const { requestFor } = jev;
 
 function band(score) {
-  // Must match verdict() in resume-match.js.
+  // The score bands used when reviewing matches by hand.
   if (score >= 80) return "Strong";
   if (score >= 60) return "Good";
   if (score >= 40) return "Partial";
@@ -45,7 +45,7 @@ function band(score) {
 }
 
 const readReviews = () => (fs.existsSync(REVIEWS) ? JSON.parse(fs.readFileSync(REVIEWS, "utf8")) : []);
-const descriptions = () => JSON.parse(fs.readFileSync(path.join(ROOT, "descriptions.json"), "utf8"));
+const descriptions = () => JSON.parse(fs.readFileSync(path.join(ROOT, "data", "descriptions.json"), "utf8"));
 const isDemonstrated = (s) => s === "shown" || s === "partial";
 
 function template(jobId, resumeFile, name) {

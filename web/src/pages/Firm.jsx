@@ -1,6 +1,6 @@
-// One investor's page (firm.html?id=…), as firm.js: that portfolio's roles, without the
+// One investor's page (firm.html?id=…): that portfolio's roles, without the
 // Investor filter, or a plain explanation when its board cannot be read.
-import "../../../data.js"; // the investors, as window.VC_FIRMS and TIER_META
+import { TIER_META, VC_FIRMS } from "../data.js";
 import { useEffect, useState } from "react";
 import Masthead, { PRIVACY_NOTE } from "../components/Masthead.jsx";
 import Viewed from "../components/Viewed.jsx";
@@ -12,8 +12,8 @@ const UNAVAILABLE = "Listings for this investor are temporarily unavailable; its
 
 export default function Firm() {
   const firmId = new URLSearchParams(location.search).get("id");
-  const firm = (window.VC_FIRMS || []).find((f) => f.id === firmId);
-  const meta = firm && window.TIER_META[firm.tier];
+  const firm = VC_FIRMS.find((f) => f.id === firmId);
+  const meta = firm && TIER_META[firm.tier];
   const [data, setData] = useState(null); // the loaded file, or { failed: true }
   const seen = useSeen();
 
