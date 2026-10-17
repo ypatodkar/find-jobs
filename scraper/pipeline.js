@@ -266,6 +266,39 @@ function allJobsPayload(data, described) {
   return packCompanies(mergeJobs(data).map((j) => publicJob(j, described)));
 }
 
+// The job list in two pieces, so the first screen does not wait for all of it: the
+// newest share of roles by posting time (ties kept together), enough to draw page 1 of
+// "Newest first", and the rest. The company table is shared: the newest piece carries
+// the companies its roles use, the rest only those not sent already, under the same
+// indexes, so the page joins the two into the list all-jobs.json gives. Both carry
+// `version` (the scrape's time), so the page can tell two pieces from different
+// deploys apart, which a browser cache could otherwise hand it.
+const RECENT_SHARE = 0.1;
+
+function splitJobsPayload(payload, { share = RECENT_SHARE, version = null } = {}) {
+  const { companyFields, companies, jobs } = payload;
+  const time = (j) => Date.parse(j.posted) || 0;
+  const times = jobs.map(time).sort((a, b) => b - a);
+  const cutoff = times.length ? times[Math.max(0, Math.ceil(times.length * share) - 1)] : 0;
+  const isRecent = (j) => cutoff > 0 && time(j) >= cutoff;
+  const recentJobs = jobs.filter(isRecent);
+  const restJobs = jobs.filter((j) => !isRecent(j));
+  const companiesOf = (list, sent = {}) => {
+    const out = {};
+    for (const j of list) if (!(j.c in out) && !(j.c in sent)) out[j.c] = companies[j.c];
+    return out;
+  };
+  const recentCompanies = companiesOf(recentJobs);
+  return {
+    recent: {
+      version, companyFields, companies: recentCompanies, jobs: recentJobs,
+      total: jobs.length, totalCompanies: companies.length,
+      since: cutoff ? new Date(cutoff).toISOString() : null,
+    },
+    rest: { version, companyFields, companies: companiesOf(restJobs, recentCompanies), jobs: restJobs },
+  };
+}
+
 /**
  * One firm's payload, or null if that id isn't a firm at all. Firms that have never
  * been scrapeable still get a real page explaining why, from the board config.
@@ -294,4 +327,4 @@ function firmPayload(data, id, described) {
   return null;
 }
 
-module.exports = { runScrape, summarize, failedPlatforms, failedBoards, resultsPayload, mergeJobs, packCompanies, allJobsPayload, firmPayload };
+module.exports = { runScrape, summarize, failedPlatforms, failedBoards, resultsPayload, mergeJobs, packCompanies, allJobsPayload, splitJobsPayload, firmPayload };

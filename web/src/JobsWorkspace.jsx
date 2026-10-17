@@ -4,6 +4,12 @@
 //
 // Shared by the all-jobs page and each investor's page, which load the jobs and
 // supply the header and footer around it. `jobs` is null while they load.
+//
+// `preview` is the newest piece of the list, with the whole list's totals, while the
+// rest is still on its way (lib/jobs.js loadJobs). It draws the default view only, page
+// 1 of "Newest first" with no filters, which the newest piece gets exactly right;
+// anything else waits for the whole list. Filter counts and the "N opened" notes wait
+// too, rather than counting a tenth of the roles.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Filters from "./components/Filters.jsx";
 import JobRow from "./components/JobRow.jsx";
@@ -14,7 +20,7 @@ import SelectMenu from "./components/SelectMenu.jsx";
 import { ResumeSignInDialog } from "./components/Account.jsx";
 import "./lib/track.js";
 import { JOBS_PER_PAGE, sortJobs } from "./lib/jobs.js";
-import { DATE_RANGES, SALARY_FLOORS, countsFor, dimensions, filterJobs } from "./lib/filters.js";
+import { DATE_RANGES, SALARY_FLOORS, countsFor, dimensions, emptyFilters, filterJobs, sameFilters } from "./lib/filters.js";
 import { COMPANIES_PER_PAGE, buildGroups } from "./lib/groups.js";
 import { decode } from "./lib/presets.js";
 import { useFilterState } from "./lib/useFilterState.js";
@@ -45,7 +51,7 @@ const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").match
  * `showFirms`: offer the Investor filter (the all-jobs page). `contextLabel`: the
  * investor a page is about, which names its saved filters.
  */
-export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = null }) {
+export default function JobsWorkspace({ jobs, preview = null, showFirms = false, contextLabel = null }) {
   const [selectedId, setSelectedId] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false); // the description over the list, under 1100px
   const [expanded, setExpanded] = useState(() => new Set());
@@ -81,13 +87,21 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   const openedCompanies = useMemo(() => new Set(openedByCompany.keys()), [openedByCompany]);
   const filterOpts = { seen, openedCompanies };
 
-  const results = useMemo(() => (jobs ? filterJobs(jobs, filters, dims, filterOpts) : []), [jobs, filters, dims, seen, openedCompanies]); // eslint-disable-line react-hooks/exhaustive-deps
+  // What the list is drawn from: everything, or the newest piece on the default view.
+  const usePreview = !jobs && !!preview && view === "flat" && page === 1 && sameFilters(filters, emptyFilters());
+  const data = jobs || (usePreview ? preview.jobs : null);
+  const partial = !jobs && !!data;
+
+  const results = useMemo(() => (data ? filterJobs(data, filters, dims, filterOpts) : []), [data, filters, dims, seen, openedCompanies]); // eslint-disable-line react-hooks/exhaustive-deps
   const sorted = useMemo(() => sortJobs(results, filters.sort), [results, filters.sort]);
   const groups = useMemo(() => (view === "grouped" ? buildGroups(sorted, filters.sort) : []), [view, sorted, filters.sort]);
   const companyCount = useMemo(() => new Set(sorted.map((j) => j.company)).size, [sorted]);
+  // Totals of the whole list, which the preview carries.
+  const roleCount = partial ? preview.total : sorted.length;
+  const companyTotal = partial ? preview.totalCompanies : companyCount;
 
   const perPage = view === "grouped" ? COMPANIES_PER_PAGE : JOBS_PER_PAGE;
-  const total = view === "grouped" ? groups.length : sorted.length;
+  const total = view === "grouped" ? groups.length : roleCount;
   const pageCount = Math.max(1, Math.ceil(total / perPage));
   const current = Math.min(page, pageCount);
   const start = (current - 1) * perPage;
@@ -96,7 +110,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
 
   useEffect(() => { if (jobs) settle(pageCount); }, [jobs]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const selected = selectedId ? (jobs || []).find((j) => j.job_id === selectedId) : null;
+  const selected = selectedId ? (data || []).find((j) => j.job_id === selectedId) : null;
   const open = wide ? !!selected : sheetOpen && !!selected;
 
   // ---- selecting and closing ----
@@ -209,7 +223,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   const firstGroup = visibleGroups[0] && visibleGroups[0].company;
   const firstId = view === "grouped" ? (visibleGroups[0] && visibleGroups[0].jobs[0].job_id) : visibleJobs[0] && visibleJobs[0].job_id;
   useEffect(() => {
-    if (!jobs) return;
+    if (!data) return;
     if (pickAfterPage.current) {
       const which = pickAfterPage.current;
       pickAfterPage.current = null;
@@ -235,7 +249,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
       setSelectedId(firstId);
     }, typing ? 250 : 0);
     return () => clearTimeout(t);
-  }, [jobs, wide, firstId, view, current, filters]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [data, wide, firstId, view, current, filters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- ↑ / ↓ through the list ----
   // Moves the selection without leaving the keyboard, past the last row onto the next
@@ -285,30 +299,30 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
     const ro = new ResizeObserver(update);
     ro.observe(controls);
     return () => ro.disconnect();
-  }, [wide, jobs]);
+  }, [wide, jobs, preview]);
 
   const toggleCompany = (company) => setExpanded((s) => { const n = new Set(s); if (n.has(company)) n.delete(company); else n.add(company); return n; });
 
   const countText = view === "grouped"
     ? (groups.length ? `Showing ${start + 1}–${start + visibleGroups.length} of ${groups.length} companies · ${sorted.length} roles` : "0 companies · 0 roles")
-    : (sorted.length ? `Showing ${start + 1}–${start + visibleJobs.length} of ${sorted.length} matching roles` : "0 matching roles");
+    : (roleCount ? `Showing ${start + 1}–${start + visibleJobs.length} of ${roleCount} matching roles` : "0 matching roles");
 
   return (
     <>
-      {jobs ? (
+      {jobs || preview ? (
         <Filters dims={dims} filters={filters} onChange={setFilters} onReset={reset} canUndo={canUndo} onUndo={undo}
-          total={sorted.length} naming={naming} countsFor={(d) => countsFor(jobs, filters, d, dims, filterOpts)} />
+          total={roleCount} naming={naming} countsFor={(d) => (jobs ? countsFor(jobs, filters, d, dims, filterOpts) : null)} />
       ) : null}
       <div ref={splitRef} className={`results-split${wide ? " is-split" : ""}`} id="results-split" style={columnStyle}>
         <div className="results-main">
-          <div className="results-bar" id="job-results-bar" hidden={!jobs}>
+          <div className="results-bar" id="job-results-bar" hidden={!data}>
             <div className="list-head" id="list-head">
               <div className="view-tabs" id="job-view-tabs" role="group" aria-label="List view">
                 <button type="button" className="seg" id="view-flat" aria-pressed={view === "flat"} onClick={() => view !== "flat" && setView("flat")}>
-                  All jobs<span className="seg-n" id="count-flat">{sorted.length.toLocaleString()}</span>
+                  All jobs<span className="seg-n" id="count-flat">{roleCount.toLocaleString()}</span>
                 </button>
                 <button type="button" className="seg" id="view-grouped" aria-pressed={view === "grouped"} onClick={() => view !== "grouped" && setView("grouped")}>
-                  Companies<span className="seg-n" id="count-grouped">{companyCount.toLocaleString()}</span>
+                  Companies<span className="seg-n" id="count-grouped">{companyTotal.toLocaleString()}</span>
                 </button>
               </div>
               <div className="sort-wrap list-sort" id="list-sort"><span aria-hidden="true">Sort</span>
@@ -318,7 +332,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
             <p className="results-meta" id="job-count" data-total={total.toLocaleString()}>{countText}</p>
             <p className="results-hint" aria-hidden="true"><kbd>↑</kbd><kbd>↓</kbd> to move between jobs</p>
           </div>
-          {!jobs ? <p className="results-meta">Loading roles…</p> : (
+          {!data ? <p className="results-meta">Loading roles…</p> : (
             <div ref={listRef} id="job-list" className="job-list">
               {view === "flat"
                 ? (visibleJobs.length
@@ -332,7 +346,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
                   : <p className="empty">No roles match those filters.</p>)}
             </div>
           )}
-          <Pagination page={current} pageCount={jobs ? pageCount : 1} onPage={goTo} />
+          <Pagination page={current} pageCount={data ? pageCount : 1} onPage={goTo} />
         </div>
         <div {...dividerProps}></div>
         <DetailPane ref={paneRef} job={selected} open={open} sheet={narrow && open} narrowColumn={narrowColumn} onClose={() => closeDetail()} />

@@ -9,8 +9,9 @@ import { useSeen } from "../lib/seen.js";
 
 export default function AllJobs() {
   const [jobs, setJobs] = useState(null);
+  const [preview, setPreview] = useState(null); // the newest piece, until the rest lands
   const [error, setError] = useState(null);
-  useEffect(() => { loadJobs().then(setJobs, setError); }, []);
+  useEffect(() => { loadJobs(setPreview).then(setJobs, setError); }, []);
   const seen = useSeen();
   const empty = !!error || (jobs && !jobs.length);
   const multi = useMemo(() => (jobs ? jobs.filter((j) => (j.firms || []).length > 1).length : 0), [jobs]);
@@ -28,7 +29,7 @@ export default function AllJobs() {
       </Masthead>
       {/* Next to the filters it belongs with, rather than up in the header. */}
       <Viewed jobs={jobs} seen={seen} />
-      {empty ? null : <JobsWorkspace jobs={jobs} showFirms />}
+      {empty ? null : <JobsWorkspace jobs={jobs} preview={preview} showFirms />}
       <div id="all-message" className="firm-message" hidden={!empty}>
         {error
           ? <><p><strong>We couldn't load the job data.</strong></p><p>Please try again shortly. Listings are updated automatically twice daily.</p></>

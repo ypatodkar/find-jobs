@@ -4,6 +4,8 @@
 // The order of the list is fixed when the menu opens or its search changes, never on a
 // tick: re-sorting under the cursor mid-selection is disorienting. Counts are always
 // current, and a selected value stays listed even at zero so it can be unticked.
+// `counts` gives null while only part of the list has loaded; the menu says so, and
+// fills in when the rest arrives.
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const MAX_OPTIONS = 60; // the long tail (hundreds of industry tags) is reached by searching
@@ -19,7 +21,7 @@ export default function FilterPicker({ dim, selected, counts, onChange }) {
   // Ordinal filters (size, seniority, career) keep their own scale; the rest lead with
   // what is selected, then by number of roles.
   const sortEntries = () => {
-    const m = new Map(counts());
+    const m = new Map(counts() || []);
     chosen.forEach((v) => { if (!m.has(v)) m.set(v, 0); });
     const rank = dim.order ? (v) => { const i = dim.order.indexOf(v); return i < 0 ? Infinity : i; } : null;
     return [...m.keys()].sort((a, b) => {
@@ -29,8 +31,11 @@ export default function FilterPicker({ dim, selected, counts, onChange }) {
     });
   };
 
-  // Re-ordered on opening and on a new search, not on a tick.
-  useEffect(() => { if (open) setOrder(sortEntries()); }, [open, query]); // eslint-disable-line react-hooks/exhaustive-deps
+  const live = open ? counts() : null;
+  const ready = !open || live !== null;
+
+  // Re-ordered on opening, on a new search, and once the whole list is in; not on a tick.
+  useEffect(() => { if (open) setOrder(sortEntries()); }, [open, query, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open) return;
@@ -39,7 +44,7 @@ export default function FilterPicker({ dim, selected, counts, onChange }) {
     return () => document.removeEventListener("click", close);
   }, [open]);
 
-  const current = open ? new Map(counts()) : new Map();
+  const current = new Map(live || []);
   const q = query.trim().toLowerCase();
   const matching = q ? order.filter((v) => dim.labelFor(v).toLowerCase().includes(q)) : order;
   const capped = !q && order.length > MAX_OPTIONS;
@@ -69,7 +74,8 @@ export default function FilterPicker({ dim, selected, counts, onChange }) {
             <button type="button" className="linkish" id={`clr-${dim.key}`} hidden={n === 0} onClick={() => onChange([])}>Clear</button>
           </div>
           <div className="company-list" id={`list-${dim.key}`} role="group" aria-label={`Select ${dim.label}`}>
-            {open && (visible.length ? visible.map((v) => {
+            {open && !ready ? <p className="company-none">Loading roles…</p> : null}
+            {open && ready && (visible.length ? visible.map((v) => {
               const count = current.get(v) || 0;
               return (
                 <label key={v} className={`company-row${count === 0 ? " is-zero" : ""}`}>
@@ -79,7 +85,7 @@ export default function FilterPicker({ dim, selected, counts, onChange }) {
                 </label>
               );
             }) : <p className="company-none">{query ? `No match for “${query}”.` : "Nothing left under the current filters."}</p>)}
-            {open && capped ? <p className="company-none">Top {MAX_OPTIONS} of {order.length} — search to find the rest.</p> : null}
+            {open && ready && capped ? <p className="company-none">Top {MAX_OPTIONS} of {order.length} — search to find the rest.</p> : null}
           </div>
         </div>
       </details>

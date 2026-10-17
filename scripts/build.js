@@ -17,7 +17,7 @@ const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
 const { BOARDS } = require("../scraper/boards");
-const { resultsPayload, allJobsPayload, firmPayload } = require("../scraper/pipeline");
+const { resultsPayload, allJobsPayload, splitJobsPayload, firmPayload } = require("../scraper/pipeline");
 const { groupByShard } = require("../shared/description");
 
 const ROOT = path.join(__dirname, "..");
@@ -28,8 +28,15 @@ const DESCRIPTIONS_FILE = path.join(ROOT, "data", "descriptions.json");
 const PAGES_DIR = path.join(ROOT, "web", "dist");
 const PAGES = ["index.html", "firm.html", "firms.html", "about.html", "404.html"];
 
-// Content-hashed by Vite, so a file under assets/ never changes under the same URL.
-const HEADERS = "/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n";
+// Cloudflare Pages' cache rules. Content-hashed by Vite, a file under assets/ never
+// changes under the same URL. The public job data changes only when a scrape lands,
+// twice a day, so a browser may reuse it for five minutes instead of asking again on
+// every visit. Only these paths: /api/auth, /api/sync, /api/resumes and /api/match are
+// one person's data and must never be cached.
+const DATA_TTL = "  Cache-Control: public, max-age=300, must-revalidate\n";
+const HEADERS = "/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n" +
+  ["/api/jobs-recent.json", "/api/jobs-rest.json", "/api/all-jobs.json", "/api/results.json", "/api/firm/*", "/api/desc/*"]
+    .map((path) => `${path}\n${DATA_TTL}`).join("");
 
 async function writeJson(rel, body) {
   const full = path.join(DIST, rel);
@@ -74,7 +81,13 @@ async function main() {
     : null;
   let bytes = 0;
   bytes += await writeJson("api/results.json", resultsPayload(data));
-  bytes += await writeJson("api/all-jobs.json", allJobsPayload(data, described));
+  const allJobs = allJobsPayload(data, described);
+  // The page loads the list as two pieces, newest first (see splitJobsPayload);
+  // all-jobs.json stays for anything that still asks for the whole list at once.
+  const { recent, rest } = splitJobsPayload(allJobs, { version: data.scrapedAt });
+  bytes += await writeJson("api/jobs-recent.json", recent);
+  bytes += await writeJson("api/jobs-rest.json", rest);
+  bytes += await writeJson("api/all-jobs.json", allJobs);
 
   let firmCount = 0;
   for (const id of Object.keys(BOARDS)) {
