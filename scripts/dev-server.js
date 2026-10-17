@@ -16,7 +16,7 @@ const fsp = require("fs/promises");
 const path = require("path");
 const crypto = require("crypto");
 const { BOARDS } = require("../scraper/boards");
-const { resultsPayload, allJobsPayload, firmPayload } = require("../scraper/pipeline");
+const { resultsPayload, allJobsPayload, splitJobsPayload, firmPayload } = require("../scraper/pipeline");
 const { groupByShard, shardOf } = require("../shared/description");
 
 const ROOT = path.join(__dirname, "..");
@@ -165,6 +165,13 @@ const server = http.createServer(async (req, res) => {
 
   if (route === "/api/all-jobs") {
     return sendJson(res, 200, allJobsPayload(await readResults(), await describedIds()));
+  }
+
+  // The same list in two pieces, newest first, as build.js writes them.
+  if (route === "/api/jobs-recent" || route === "/api/jobs-rest") {
+    const data = await readResults();
+    const { recent, rest } = splitJobsPayload(allJobsPayload(data, await describedIds()), { version: data.scrapedAt });
+    return sendJson(res, 200, route === "/api/jobs-recent" ? recent : rest);
   }
 
   // /api/desc/<shard>.json — the same files build.js writes.

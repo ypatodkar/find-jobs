@@ -128,3 +128,29 @@ test("a firm's file carries only what the firm page reads", () => {
   assert.deepEqual(Object.keys(out).sort(), ["atsCompanies", "fromAts", "fromBoard", "host", "jobs", "reason", "status", "totalOnBoard"]);
   assert.equal("locations" in out.jobs[0], false);
 });
+
+test("the list splits into a newest piece and the rest that join back into the whole", () => {
+  const { packCompanies, splitJobsPayload } = require("../scraper/pipeline");
+  const day = (d) => `2026-10-${String(d).padStart(2, "0")}T12:00:00Z`;
+  const list = [];
+  for (let i = 1; i <= 20; i++) list.push({ job_id: `j${i}`, title: `Role ${i}`, company: `Co ${i % 4}`, posted: day(i), size: `${i % 4}` });
+  list.push({ job_id: "tie", title: "Same time as the cutoff", company: "Co 9", posted: day(19), size: "9" });
+  list.push({ job_id: "undated", title: "No date", company: "Co 0", posted: null, size: "0" });
+  const whole = packCompanies(list);
+  const { recent, rest } = splitJobsPayload(whole, { share: 0.1, version: "scrape-1" });
+  assert.equal(recent.version, "scrape-1");
+  assert.equal(rest.version, "scrape-1");
+
+  // The newest tenth, ties at the cutoff kept together, nothing undated.
+  assert.deepEqual(recent.jobs.map((j) => list[whole.jobs.indexOf(j)].job_id).sort(), ["j19", "j20", "tie"]);
+  assert.equal(recent.total, list.length);
+  assert.equal(recent.totalCompanies, whole.companies.length);
+
+  // Each company is sent once, under its own index, and the two join into the whole.
+  const recentCos = Object.keys(recent.companies), restCos = Object.keys(rest.companies);
+  assert.equal(recentCos.filter((c) => restCos.includes(c)).length, 0);
+  const companies = { ...recent.companies, ...rest.companies };
+  const joined = [...recent.jobs, ...rest.jobs].map((j) => ({ ...j, company: companies[j.c].n }));
+  assert.deepEqual(joined.map((j) => j.job_id).sort(), list.map((j) => j.job_id).sort());
+  for (const j of joined) assert.equal(j.company, list.find((x) => x.job_id === j.job_id).company);
+});

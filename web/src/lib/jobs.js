@@ -79,11 +79,46 @@ export function expand(data) {
   });
 }
 
-/** Every role, from the path the dev server answers, the build writes and Pages serves. */
-export async function loadJobs() {
-  const r = await fetch("api/all-jobs.json");
-  if (!r.ok) throw new Error(`Job data request failed (${r.status})`);
-  return expand(await r.json());
+async function getJson(path) {
+  const r = await fetch(path);
+  if (!r.ok) throw Object.assign(new Error(`Job data request failed (${r.status})`), { status: r.status });
+  return r.json();
+}
+
+/**
+ * Every role, from the paths the dev server answers, the build writes and Pages
+ * serves. The list comes in two pieces requested together (scraper/pipeline.js
+ * splitJobsPayload): the newest tenth, handed to `onRecent` as soon as it lands with
+ * the whole list's totals, so the first page can be drawn; then everything. Where the
+ * pieces are not published, the whole list is read in one go.
+ */
+export async function loadJobs(onRecent) {
+  const recentReq = getJson("api/jobs-recent.json");
+  const restReq = getJson("api/jobs-rest.json");
+  // Marked handled at once: if the pieces are missing it can fail before the newest
+  // piece's answer is read, and an unhandled failure is reported as a page error.
+  // Awaiting it below still raises the error.
+  restReq.catch(() => {});
+  let recent;
+  try {
+    recent = await recentReq;
+  } catch (err) {
+    if (err.status !== 404) throw err;
+    return expand(await getJson("api/all-jobs.json"));
+  }
+  const recentJobs = expand(recent);
+  if (onRecent) onRecent({ jobs: recentJobs, total: recent.total, totalCompanies: recent.totalCompanies });
+  const rest = await restReq;
+  // Pieces from two different deploys (a browser cache can mix them) do not fit
+  // together: read the whole list instead, straight from the server.
+  if (rest.version !== recent.version) {
+    const r = await fetch("api/all-jobs.json", { cache: "no-store" });
+    if (!r.ok) throw new Error(`Job data request failed (${r.status})`);
+    return expand(await r.json());
+  }
+  // One company table across both pieces, under shared indexes.
+  const companies = { ...recent.companies, ...rest.companies };
+  return recentJobs.concat(expand({ ...rest, companies }));
 }
 
 /**
