@@ -27,12 +27,12 @@ for (const line of fs.existsSync(path.join(ROOT, ".env")) ? fs.readFileSync(path
   if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^(["'])(.*)\1$/, "$2");
 }
 
-const { classify, withTitle } = require(path.join(ROOT, "classify"));
-const { deriveSeniority } = require(path.join(ROOT, "match"));
+const { classify, withTitle } = require(path.join(ROOT, "scraper", "classify"));
+const { deriveSeniority } = require(path.join(ROOT, "scraper", "match"));
 
 async function main() {
   const labels = JSON.parse(fs.readFileSync(LABELS, "utf8"));
-  const descriptions = JSON.parse(fs.readFileSync(path.join(ROOT, "descriptions.json"), "utf8"));
+  const descriptions = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "descriptions.json"), "utf8"));
   const jobs = labels.map((l) => ({ company: l.company, title: l.title, html: descriptions[l.job_id] || "" }));
   const missing = jobs.filter((j) => !j.html).length;
   if (missing) console.log(`${missing} labelled jobs have no stored description; they are judged on the title alone.\n`);

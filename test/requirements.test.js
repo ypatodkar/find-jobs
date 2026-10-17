@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { extractRequirements } = require("../requirements");
+const { extractRequirements } = require("../shared/requirements");
 
 test("reads sections: requirements, preferences, duties; skips benefits and pay", () => {
   const html = "<h3>What you'll do</h3><ul><li>Design the ingestion pipeline end to end</li></ul>" +

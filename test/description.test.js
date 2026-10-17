@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { toDisplayHtml, toPlainText, shardOf, groupByShard } = require("../description");
+const { toDisplayHtml, toPlainText, shardOf, groupByShard } = require("../shared/description");
 
 test("keeps Ashby's paragraph-wrapped list items as list items", () => {
   const html = toDisplayHtml('<p style="x"><strong>We expect you to:</strong></p><ul><li><p>Write Rust</p></li><li><p>Ship it</p></li></ul>');

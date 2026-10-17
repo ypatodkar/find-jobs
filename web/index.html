@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Find Jobs — Engineering roles at VC-backed companies</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧭</text></svg>" />
+  <meta name="description" content="Every engineering role across 16 top VC portfolios in one searchable list. 5,400+ roles at 700+ companies across 19 US metros, updated twice daily." />
+  <link rel="canonical" href="https://jobs.ypatodkar.com/" />
+
+  <!-- Link previews on LinkedIn, Slack, iMessage, X. Absolute URLs are required:
+       relative ones are not resolved by any of the crawlers. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Find Jobs" />
+  <meta property="og:title" content="Find Jobs — Engineering roles at VC-backed companies" />
+  <meta property="og:description" content="Every engineering role across 16 top VC portfolios in one searchable list. 5,400+ roles at 700+ companies across 19 US metros, updated twice daily." />
+  <meta property="og:url" content="https://jobs.ypatodkar.com/" />
+  <meta property="og:image" content="https://jobs.ypatodkar.com/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Find Jobs — engineering roles at VC-backed companies" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Find Jobs — Engineering roles at VC-backed companies" />
+  <meta name="twitter:description" content="Every engineering role across 16 top VC portfolios in one searchable list. 5,400+ roles at 700+ companies across 19 US metros, updated twice daily." />
+  <meta name="twitter:image" content="https://jobs.ypatodkar.com/og.png" />
+
+  <!-- Colours the browser's own chrome — the address bar on mobile — to match the page
+       it sits above, rather than leaving a white strip over a dark site. -->
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#111014" media="(prefers-color-scheme: dark)" />
+
+
+  <!-- The OS preference is handled in CSS and needs no script. This applies only a
+       deliberate override, and has to run here, before the first paint: any later and
+       a visitor who chose light on a dark laptop would watch the page change under
+       them. Inline and blocking for the same reason. src/lib/theme.js owns the rest. -->
+  <script>
+    try {
+      var t = localStorage.getItem("vc-directory-theme");
+      if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to job listings</a>
+  <main class="page page-split" id="main-content"></main>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>

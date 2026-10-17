@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { excerpt, requestFor, parseClassification, withTitle, labelJobs, contentHash, RUBRIC_VERSION } = require("../classify");
-const { MODEL } = require("../jev");
+const { excerpt, requestFor, parseClassification, withTitle, labelJobs, contentHash, RUBRIC_VERSION } = require("../scraper/classify");
+const { MODEL } = require("../shared/jev");
 
 // A fake Jev that answers every question from `pick(title)` → { field, level }.
 function fakeJev(pick, calls = []) {

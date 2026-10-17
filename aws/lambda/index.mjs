@@ -1,7 +1,7 @@
 // Click collector, ported from the Cloudflare Worker to a Lambda Function URL.
 //
-//   POST /click    record one click             (track.js, via sendBeacon)
-//   POST /filter   record a saved/applied view  (presets.js)
+//   POST /click    record one click             (web/src/lib/track.js, via sendBeacon)
+//   POST /filter   record a saved/applied view  (web/src/lib/presets.js)
 //   POST /like     one-way heart, per browser
 //   POST /feedback record feedback, and email it on
 //   GET  /stats    public totals for the header counter

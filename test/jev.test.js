@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { requestFor, parseAssessment, assess, MODEL } = require("../jev");
+const { requestFor, parseAssessment, assess, MODEL } = require("../shared/jev");
 
 const resume = "Senior engineer.\nBuilt distributed services in Go handling 50k requests per second.\nLed a Kubernetes migration that cut deploys to ten minutes.\nWrote Terraform modules for AWS networking.";
 const job = {

@@ -5,7 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require('playwright');
 const root = path.resolve(__dirname, '..');
-const artifactDir = path.join(root, '.catalogue/one-click-match');
+// The pages under test: the page build (npm run build --prefix web), or SITE_DIR.
+const site = path.resolve(root, process.env.SITE_DIR || 'web/dist');
+const artifactDir = path.join(root, 'test/artifacts/jd-ux');
 fs.mkdirSync(artifactDir, { recursive: true });
 const requirements = [
   'Build and operate reliable distributed systems in production.',
@@ -80,8 +82,8 @@ const server=http.createServer((req,res)=>{
     return setTimeout(()=>json({match:{...r,feedback:reviews.get(reviewKey(url.searchParams.get('resume'),url.searchParams.get('job'),r.checkedAt))||null}}),url.searchParams.get('resume')==='r_data'?250:10);
   }
   if(url.pathname==='/featured.json') return json({});
-  const file=path.join(root,url.pathname==='/'?'index.html':url.pathname.slice(1));
-  if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()) {res.writeHead(404);return res.end();}
+  const file=path.join(site,url.pathname==='/'?'index.html':url.pathname.slice(1));
+  if(!file.startsWith(site+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()) {res.writeHead(404);return res.end();}
   const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.woff2':'font/woff2'};
   res.writeHead(200,{'content-type':mime[path.extname(file)]||'application/octet-stream'});fs.createReadStream(file).pipe(res);
 });
@@ -724,8 +726,9 @@ async function main(){
     assert.equal(await filters.locator('.picker-label').count(),0,'no duplicate labels above filters');
     assert.equal(await filters.locator('#sum-role').textContent(),'Role');
     assert.equal(await filters.locator('#sum-company').textContent(),'Company');
-    const posted=filters.locator('#date-select + details > summary');
-    const salary=filters.locator('#salary-select + details > summary');
+    const menu=(id)=>filters.locator(`details#menu-${id}`);
+    const posted=menu('date-select').locator('> summary');
+    const salary=menu('salary-select').locator('> summary');
     assert.equal(await posted.textContent(),'Posted');
     assert.equal(await salary.textContent(),'Salary');
     const companySummary=filters.locator('#sum-company');
@@ -765,12 +768,12 @@ async function main(){
     assert.equal(await companySummary.textContent(),'Company');
     await advancedToggle.click();
     await posted.focus();await posted.press('ArrowDown');
-    await filters.locator('#date-select + details [role="option"]').first().waitFor();
+    await menu('date-select').locator('[role="option"]').first().waitFor();
     await filters.keyboard.press('ArrowDown');await filters.keyboard.press('Enter');
     assert.equal(await posted.textContent(),'Last 7 days','keyboard selection shows the selected date');
-    assert.equal(await filters.locator('#date-select').inputValue(),'7');
+    assert.equal(new URL(filters.url()).searchParams.get('posted'),'7');
     await salary.click();
-    await filters.locator('#salary-select + details').getByRole('option',{name:'$150k+',exact:true}).click();
+    await menu('salary-select').getByRole('option',{name:'$150k+',exact:true}).click();
     assert.equal(await salary.textContent(),'$150k+');
     await filters.locator('#advanced-filter-reset').click();
     assert.equal(await filters.locator('#advanced-filter-label').textContent(),'Advanced filters');

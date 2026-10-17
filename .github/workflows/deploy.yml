@@ -40,6 +40,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # The pages are React (web/), the one part of the repo with dependencies. Built
+      # before the scrape so a broken build fails the run in seconds, not after it, and
+      # before the tests, some of which read web/src.
+      - name: Build pages
+        run: |
+          npm ci --prefix web
+          npm run build --prefix web
 
       - name: Test application logic
         run: node --test test/*.test.js
@@ -47,30 +57,45 @@ jobs:
       # The CI user publishes static assets only. API releases use the approved
       # operator path documented in README.md; no extra IAM access is needed here.
 
-      # Jev's answers from earlier runs (job-labels.json, see classify.js), so only
-      # postings new since the last run are put to it. Each run saves under its own key
-      # and restores the newest by prefix; an evicted cache triggers reclassification.
+      # Jev's answers from earlier runs (data/job-labels.json, see scraper/classify.js),
+      # so only postings new since the last run are put to it. Each run saves under its
+      # own key and restores the newest by prefix; an evicted cache means reclassifying.
       - name: Restore job classifications
+        id: labels
+        uses: actions/cache/restore@v4
+        with:
+          path: data/job-labels.json
+          key: job-labels-${{ github.run_id }}
+          restore-keys: job-labels-
+
+      # A cache belongs to its path as well as its key, so the copies saved before the
+      # file moved into data/ only restore to the old path. Brought across once; this
+      # and the next step can go after a run has saved under data/.
+      - name: Restore job classifications from the old location
+        if: steps.labels.outputs.cache-matched-key == ''
         uses: actions/cache/restore@v4
         with:
           path: job-labels.json
           key: job-labels-${{ github.run_id }}
           restore-keys: job-labels-
 
+      - name: Move them into data/
+        run: if [ -f job-labels.json ]; then mkdir -p data && mv job-labels.json data/; fi
+
       - name: Scrape all boards
         env:
           # Without it the scrape still runs; new postings are just left unlabelled.
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
-        run: node scrape.js
+        run: node scraper/scrape.js
 
       - name: Save job classifications
         uses: actions/cache/save@v4
         with:
-          path: job-labels.json
+          path: data/job-labels.json
           key: job-labels-${{ github.run_id }}
 
       - name: Build static site
-        run: node build.js
+        run: node scripts/build.js
 
       # The D1 sync is gone rather than ported. It existed so a click could be joined
       # back to a job title, but the /click handler already writes company, title and
@@ -94,10 +119,12 @@ jobs:
           # from cache until the invalidation below clears it.
           aws s3 sync dist/ s3://find-jobs-site-075521919080/ --delete \
             --cache-control "public, max-age=300, must-revalidate" \
-            --exclude "*.woff2" --only-show-errors
-          # Fonts are content-addressed by name and never change under the same URL.
+            --exclude "*.woff2" --exclude "assets/*" --only-show-errors
+          # Fonts, and the pages' scripts and styles under assets/, are content-addressed
+          # by name and never change under the same URL. Earlier builds' assets are left
+          # in place, so a page cached before this deploy can still load its scripts.
           aws s3 sync dist/ s3://find-jobs-site-075521919080/ \
-            --exclude "*" --include "*.woff2" \
+            --exclude "*" --include "*.woff2" --include "assets/*" \
             --cache-control "public, max-age=31536000, immutable" --only-show-errors
 
       # Both hosts, deliberately, until DNS moves. jobs.ypatodkar.com still resolves to

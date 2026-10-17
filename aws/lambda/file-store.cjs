@@ -10,7 +10,7 @@
 // the repo stays dependency-free.
 //
 // Anywhere else (the dev server, the integration test): a directory, RESUME_FILE_DIR,
-// default .resume-files/ at the repo root, which git ignores.
+// default data/resume-files/ at the repo root, which git ignores.
 //
 // Deleting a resume keeps its row (match-store.cjs), so its file is not removed either;
 // it is tagged deleted=true, and the bucket's lifecycle rule erases tagged files 30 days
@@ -116,7 +116,7 @@ function createFileStore(env = process.env) {
     console.warn("RESUME_BUCKET is not set: original resume files are not being kept.");
     return null;
   }
-  return dirStore(env.RESUME_FILE_DIR || path.join(__dirname, "..", "..", ".resume-files"));
+  return dirStore(env.RESUME_FILE_DIR || path.join(__dirname, "..", "..", "data", "resume-files"));
 }
 
 module.exports = { createFileStore, readUpload, keyFor, MAX_FILE_BYTES };

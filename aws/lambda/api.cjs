@@ -3,8 +3,8 @@ if (process.env.AWS_LAMBDA_FUNCTION_NAME) require('node:dns').setDefaultResultOr
 const fs = require('node:fs');
 const path = require('node:path');
 const { Readable } = require('node:stream');
-const { createAccountApi } = require('../../account-api.cjs');
-const { shardOf } = require('../../description');
+const { createAccountApi } = require('./account-api.cjs');
+const { shardOf } = require('../../shared/description');
 
 // Read the same published, sanitized description shards that the browser reads.
 // A short cache bounds network work without retaining removed postings indefinitely.

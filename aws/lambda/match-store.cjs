@@ -1,6 +1,6 @@
 // Resumes and their match scores, in Postgres (tables in aws/schema.sql).
 //
-// Shared by the local dev server (server.js) and, once matching is deployed, the
+// Shared by the local dev server (scripts/dev-server.js) and, once matching is deployed, the
 // Lambda. It lives here so `pg` resolves from this directory's node_modules — the
 // repo root stays dependency-free.
 //
