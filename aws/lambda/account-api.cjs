@@ -1,7 +1,7 @@
 // Shared authenticated API for the local dev server and the production Lambda.
 const { createStore, poolFromEnv } = require('./match-store.cjs');
 const { createAccountStore } = require('./account-store.cjs');
-const { createUsageStore } = require('./usage-store.cjs');
+const { createUsageStore, isUnlimited } = require('./usage-store.cjs');
 const { verifyGoogleIdToken } = require('./google-id.cjs');
 const { createFileStore, readUpload, keyFor } = require('./file-store.cjs');
 const { toPlainText } = require('../../shared/description');
@@ -94,8 +94,9 @@ function createAccountApi({ getDescription, env = process.env }) {
 
     // This person's daily allowance (usage-store.cjs): throws 429 "daily_limit" when it
     // is used up, which the page answers with the feedback form. A failed model call
-    // gives the check back, so an outage never eats anyone's allowance.
-    const allowance = await usageStore().take(account.id);
+    // gives the check back, so an outage never eats anyone's allowance. Accounts listed
+    // in MATCH_UNLIMITED_EMAILS are counted but never refused.
+    const allowance = await usageStore().take(account.id, Date.now(), { unlimited: isUnlimited(account, env) });
     budget.used++;
     let assessment;
     try {
@@ -131,7 +132,7 @@ function createAccountApi({ getDescription, env = process.env }) {
 
     const account = await requireAccount(req);
 
-    if (route === "/api/match/usage" && m === "GET") return [200, { usage: await usageStore().usage(account.id) }];
+    if (route === "/api/match/usage" && m === "GET") return [200, { usage: await usageStore().usage(account.id, Date.now(), { unlimited: isUnlimited(account, env) }) }];
     // Feedback that unlocks more checks once today's are used up (usage-store.cjs).
     // Not /api/match/feedback: that is the per-analysis thumbs up/down review.
     if (route === "/api/match/unlock" && m === "POST") {
