@@ -11,6 +11,11 @@
 // started at once cannot both take the last slot. A check whose model call fails gets
 // its slot back (refund).
 //
+// Accounts whose email is in MATCH_UNLIMITED_EMAILS (comma-separated) have no daily
+// limit. Their checks are still counted, so they show in the stats, and the API's
+// hourly ceiling on paid calls (account-api.cjs) still applies to them. The page is told
+// a large allowance remains, so it never shows them a limit.
+//
 // Tables in aws/schema.sql. Shared by the dev server and, once deployed, the Lambda.
 
 const fail = (status, message, extra) => Object.assign(new Error(message), { status }, extra || {});
@@ -21,8 +26,16 @@ function settings(env = process.env) {
     limit: n(env.MATCH_DAILY_LIMIT, 25),
     bonus: n(env.MATCH_FEEDBACK_BONUS, 25),
     unlocks: n(env.MATCH_FEEDBACK_UNLOCKS, 1),
+    unlimited: new Set(String(env.MATCH_UNLIMITED_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)),
   };
 }
+
+/** Whether a signed-in account (with its email) has no daily limit. */
+const isUnlimited = (account, env = process.env) =>
+  !!(account && typeof account.email === "string" && settings(env).unlimited.has(account.email.trim().toLowerCase()));
+
+// What an unlimited account is told remains: enough that the page never shows a limit.
+const UNLIMITED_HEADROOM = 1000;
 
 const today = (now = Date.now()) => new Date(now).toISOString().slice(0, 10);
 const nextReset = (now = Date.now()) => {
@@ -44,10 +57,13 @@ function createUsageStore(pool, env = process.env) {
   }
 
   // What the page needs to say where someone stands today.
-  function describe(row, s, now) {
+  function describe(row, s, now, unlimited = false) {
     const used = row ? Number(row.used) : 0;
     const bonus = row ? Number(row.bonus) : 0;
     const unlocks = row ? Number(row.unlocks) : 0;
+    if (unlimited) {
+      return { used, limit: used + UNLIMITED_HEADROOM, remaining: UNLIMITED_HEADROOM, canUnlock: false, bonus: s.bonus, resetsAt: nextReset(now), unlimited: true };
+    }
     const limit = s.limit + bonus;
     return {
       used,
@@ -60,19 +76,27 @@ function createUsageStore(pool, env = process.env) {
   }
 
   return {
-    async usage(accountId, now = Date.now()) {
+    async usage(accountId, now = Date.now(), { unlimited = false } = {}) {
       const { rows } = await q("SELECT used, bonus, unlocks FROM match_usage WHERE account_id = $1 AND day = $2", [accountId, today(now)]);
-      return describe(rows[0], settings(env), now);
+      return describe(rows[0], settings(env), now, unlimited);
     },
 
     /**
      * Take one check from today's allowance, or throw 429 with code "daily_limit"
      * and the current usage, which tells the page whether feedback can unlock more.
+     * An unlimited account's check is counted and never refused.
      */
-    async take(accountId, now = Date.now()) {
+    async take(accountId, now = Date.now(), { unlimited = false } = {}) {
       const s = settings(env);
       const day = today(now);
       await q("INSERT INTO match_usage (account_id, day) VALUES ($1, $2) ON CONFLICT DO NOTHING", [accountId, day]);
+      if (unlimited) {
+        const { rows } = await q(
+          "UPDATE match_usage SET used = used + 1 WHERE account_id = $1 AND day = $2 RETURNING used, bonus, unlocks",
+          [accountId, day]
+        );
+        return describe(rows[0], s, now, true);
+      }
       const { rows } = await q(
         `UPDATE match_usage SET used = used + 1
           WHERE account_id = $1 AND day = $2 AND used < $3 + bonus
@@ -123,4 +147,4 @@ function createUsageStore(pool, env = process.env) {
   };
 }
 
-module.exports = { createUsageStore, settings, MIN_MESSAGE };
+module.exports = { createUsageStore, settings, isUnlimited, MIN_MESSAGE };
