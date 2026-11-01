@@ -1,6 +1,7 @@
 // Job descriptions, fetched a shard at a time on first need (shared/description.js
 // decides which shard file holds a job, for the build, the API and the page). Shards
 // are cached for the visit; a failed fetch is forgotten so a blip can be retried.
+import { withSource } from "./outbound.js";
 import "../../../shared/description.js"; // sets self.JobDescription
 
 const shards = new Map(); // shard -> Promise<{ job_id: html } | null>
@@ -41,7 +42,7 @@ export function descriptionTree(html) {
       const props = {};
       if (n.tagName === "A") {
         const href = n.getAttribute("href") || "";
-        if (/^(https?:|mailto:)/i.test(href)) Object.assign(props, { href, target: "_blank", rel: "noopener noreferrer nofollow" });
+        if (/^(https?:|mailto:)/i.test(href)) Object.assign(props, { href: withSource(href), target: "_blank", rel: "noopener noreferrer nofollow" });
       }
       const children = walk(n);
       if (n.tagName === "P") {

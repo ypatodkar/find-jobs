@@ -14,6 +14,7 @@ import { createElement, forwardRef, useEffect, useMemo, useRef, useState } from 
 import { ROLE_LABELS, compactPay, relativeDate } from "../lib/jobs.js";
 import { descriptionTree, loadDescription } from "../lib/descriptions.js";
 import { saved, useSaved } from "../lib/saved.js";
+import { withSource } from "../lib/outbound.js";
 import { AcquiredNote } from "./JobRow.jsx";
 import ResumeMatch from "./ResumeMatch.jsx";
 
@@ -110,7 +111,7 @@ const DetailPane = forwardRef(function DetailPane({ job, open, sheet, narrowColu
       : <span className="src-tag" title="From the VC's portfolio board">vc board</span>;
   // data-track-open: lib/track.js counts this as opening the role.
   const apply = job.url ? (
-    <a className="detail-apply" href={job.url} target="_blank" rel="noopener noreferrer" data-track-open=""
+    <a className="detail-apply" href={withSource(job.url)} target="_blank" rel="noopener noreferrer" data-track-open=""
       data-job-id={job.job_id} data-company={job.company} data-city={job.city || ""} data-title={job.title}>
       Apply<span className="apply-more"> on company site</span> ↗
     </a>

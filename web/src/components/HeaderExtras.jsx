@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { ENDPOINT } from "../lib/api.js";
 import { toggleTheme, useTheme } from "../lib/theme.js";
 import { visitorId, visitorName } from "../lib/visitor.js";
+import { withSource } from "../lib/outbound.js";
 
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
@@ -230,7 +231,7 @@ export function Featured() {
           <p className="featured-links">
             {f.roles ? <a className="featured-roles" href={`index.html?company=${encodeURIComponent(f.company)}`}>{String(f.roles)} open role{f.roles === 1 ? "" : "s"} →</a> : null}
             {f.domain ? (
-              <a className="featured-site" href={/^https?:/.test(f.domain) ? f.domain : "https://" + f.domain} target="_blank" rel="noopener noreferrer">
+              <a className="featured-site" href={withSource(/^https?:/.test(f.domain) ? f.domain : "https://" + f.domain)} target="_blank" rel="noopener noreferrer">
                 {String(f.domain).replace(/^https?:\/\//, "")} ↗
               </a>
             ) : null}

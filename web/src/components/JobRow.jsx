@@ -1,6 +1,7 @@
 // One role in the list.
 import { acquirerOf, compactPay, relativeDate } from "../lib/jobs.js";
 import { openedLabel } from "../lib/groups.js";
+import { withSource } from "../lib/outbound.js";
 
 export function AcquiredNote({ company }) {
   const by = acquirerOf(company);
@@ -28,7 +29,7 @@ export default function JobRow({ job, selected, onSelect, inGroup = false, opene
     <article className={`job${seen ? " row-seen" : ""}${selected ? " is-selected" : ""}`} data-job-id={job.job_id} onClick={onClick}>
       <div className="job-main">
         {job.url ? (
-          <a className={`job-title${seen ? " is-seen" : ""}`} href={job.url} target="_blank" rel="noopener noreferrer"
+          <a className={`job-title${seen ? " is-seen" : ""}`} href={withSource(job.url)} target="_blank" rel="noopener noreferrer"
             data-job-id={job.job_id} data-company={job.company} data-city={job.city || ""} data-selects=""
             title={seen ? "You've opened this one" : undefined}>
             {job.title}

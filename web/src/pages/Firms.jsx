@@ -5,6 +5,7 @@
 import { TIER_META as TIERS, VC_FIRMS as FIRMS } from "../data.js";
 import { useEffect, useState } from "react";
 import Masthead, { PRIVACY_NOTE } from "../components/Masthead.jsx";
+import { withSource } from "../lib/outbound.js";
 
 const TIER_ORDER = ["ai-mega", "generalist", "ai-native", "accelerator"];
 
@@ -37,9 +38,9 @@ function Card({ firm, r }) {
   };
   let link;
   if (firm.url && firm.noBoard) {
-    link = <span className="no-board">{firm.urlLabel} · <a href={firm.url} target="_blank" rel="noopener noreferrer">no public board, visit site ↗</a></span>;
+    link = <span className="no-board">{firm.urlLabel} · <a href={withSource(firm.url)} target="_blank" rel="noopener noreferrer">no public board, visit site ↗</a></span>;
   } else if (firm.url) {
-    link = <a className="joblink" href={firm.url} target="_blank" rel="noopener noreferrer">{firm.urlLabel}</a>;
+    link = <a className="joblink" href={withSource(firm.url)} target="_blank" rel="noopener noreferrer">{firm.urlLabel}</a>;
   } else {
     link = <span className="no-link">no confirmed public link — search “{firm.name}” directly</span>;
   }

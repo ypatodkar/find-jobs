@@ -2,6 +2,7 @@
 // most recent first. Joined against the job list already loaded, so it needs no
 // network call and works signed out. Nothing here is sent anywhere.
 import { Fragment, useMemo, useRef, useState } from "react";
+import { withSource } from "../lib/outbound.js";
 
 function when(ts) {
   if (!ts) return "";
@@ -16,7 +17,7 @@ function when(ts) {
 // Deliberately not a.job-title[data-job-id], which counts as opening a role: these
 // have all been opened already, and a visit to your own history is not a new click.
 // A role with no url stays plain text rather than a link to nowhere.
-const Role = ({ r }) => (r.url ? <a className="viewed-link" href={r.url} target="_blank" rel="noopener noreferrer">{r.title}</a> : r.title);
+const Role = ({ r }) => (r.url ? <a className="viewed-link" href={withSource(r.url)} target="_blank" rel="noopener noreferrer">{r.title}</a> : r.title);
 
 export default function Viewed({ jobs, seen }) {
   const [open, setOpen] = useState(false);
