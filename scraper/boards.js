@@ -70,8 +70,25 @@ const BOARDS = {
   "m13":                 { platform: "getro", host: "jobs.m13.co", networkId: 318 },
   "glasswing":           { platform: "getro", host: "jobs.glasswing.vc", networkId: 215 },
 
+  // Added November 2026 for companies the boards above don't reach (about 390 new
+  // ones between them). Kept after the older boards so a company both list stays
+  // credited to the firm that already showed it. jobs.accel.com itself sits behind
+  // Cloudflare's bot check, but the Getro API it is built on answers like any other.
+  "accel":               { platform: "getro", host: "jobs.accel.com", networkId: 8672 },
+  "techstars":           { platform: "getro", host: "jobs.techstars.com", networkId: 89 },
+  "sv-angel":            { platform: "getro", host: "jobs.svangel.com", networkId: 880 },
+  "abstract":            { platform: "consider", host: "jobs.abstractvc.com", boardId: "abstract-ventures" },
+  "645-ventures":        { platform: "getro", host: "jobs.645ventures.com", networkId: 1621 },
+  "antler":              { platform: "getro", host: "careers.antler.co", networkId: 7715 },
+  "usv":                 { platform: "consider", host: "jobs.usv.com", boardId: "union-square-ventures" },
+  "battery":             { platform: "consider", host: "jobs.battery.com", boardId: "battery-ventures" },
+  "eniac":               { platform: "getro", host: "jobs.eniac.vc", networkId: 117 },
+  "entrepreneur-first":  { platform: "getro", host: "portfolio.joinef.com", networkId: 228 },
+  "foundry":             { platform: "getro", host: "jobs.foundry.vc", networkId: 25 },
+  "soma":                { platform: "getro", host: "jobs.somacap.com", networkId: 3194 },
+  "contrary":            { platform: "consider", host: "jobs.contrary.com", boardId: "contrary" },
+
   // Boards that exist but can't be scraped, with the reason surfaced in the UI.
-  "accel":          { platform: null, host: "jobs.accel.com", reason: "Board is behind Cloudflare bot protection" },
   "index-ventures": { platform: null, host: "www.indexventures.com", reason: "Custom board, no public search API" },
   "iconiq":         { platform: null, host: "www.iconiq.com", reason: "Greenhouse board lists ICONIQ's own roles, not portfolio jobs" },
   "founders-fund":  { platform: null, host: "foundersfund.com", reason: "Portfolio directory only, no job listings" },
@@ -80,7 +97,6 @@ const BOARDS = {
   // Firms that publish no portfolio job board at all.
   "coatue":       { platform: null, host: "coatue.com", reason: "No public portfolio job board" },
   "tiger-global": { platform: null, host: "tigerglobal.com", reason: "No public portfolio job board" },
-  "battery":      { platform: null, host: "batteryventures.com", reason: "No public portfolio job board" },
   "benchmark":    { platform: null, host: "benchmark.com", reason: "No public portfolio job board" },
   "mayfield":     { platform: null, host: "mayfield.com", reason: "No public portfolio job board" },
   "emergence":    { platform: null, host: "emergencecap.com", reason: "No public portfolio job board" },
@@ -104,6 +120,10 @@ const BLOCKED_COMPANIES = [
   // description says it is not an application for a specific job, so these are lead
   // capture forms rather than openings at SignalFire or its portfolio companies.
   { domain: "signalfire.com", names: ["SignalFire"], slugs: ["signalfire"] },
+  // Accel's board lists Google itself, with over 500 engineering openings. That would
+  // make it the largest company on the site, ahead of every startup, on a site about
+  // VC-backed companies.
+  { domain: "google.com", names: ["Google"], slugs: [] },
 ];
 
 // Metro areas we track. Each carries the query values the two VC-board platforms

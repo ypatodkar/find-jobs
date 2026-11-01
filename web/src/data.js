@@ -30,7 +30,7 @@ export const VC_FIRMS = [
   { id: "index-ventures", name: "Index Ventures", tier: "generalist", aum: null, focus: "Transatlantic, developer tools & SaaS", signal: 2, note: null, url: "https://www.indexventures.com/startup-jobs", urlLabel: "indexventures.com/startup-jobs", inList: false, noBoard: false },
   { id: "craft", name: "Craft Ventures", tier: "generalist", aum: null, focus: "Operator-led, SaaS & marketplaces", signal: 1, note: null, url: "https://jobs.craftventures.com/jobs", urlLabel: "jobs.craftventures.com", inList: false, noBoard: false },
   { id: "notable-capital", name: "Notable Capital", short: "fka GGV", tier: "generalist", aum: null, focus: "Cross-border enterprise & consumer tech", signal: 1, note: null, url: "https://jobs.notablecap.com", urlLabel: "jobs.notablecap.com", inList: false, noBoard: false },
-  { id: "battery", name: "Battery Ventures", tier: "generalist", aum: null, focus: "Infra, software, industrial tech", signal: 1, note: null, url: "https://batteryventures.com", urlLabel: "batteryventures.com", inList: false, noBoard: true },
+  { id: "battery", name: "Battery Ventures", tier: "generalist", aum: null, focus: "Infra, software, industrial tech", signal: 1, note: null, url: "https://jobs.battery.com", urlLabel: "jobs.battery.com", inList: false, noBoard: false },
   { id: "benchmark", name: "Benchmark", tier: "generalist", aum: null, focus: "Small-partnership, high-conviction early-stage", signal: 2, note: "Perplexity", url: "https://benchmark.com", urlLabel: "benchmark.com", inList: false, noBoard: true },
   { id: "ivp", name: "IVP", tier: "generalist", aum: null, focus: "Late-stage growth equity", signal: 1, note: null, url: "https://careers.ivp.com", urlLabel: "careers.ivp.com", inList: false, noBoard: false },
   { id: "crv", name: "CRV", tier: "generalist", aum: null, focus: "Early-stage enterprise & fintech", signal: 1, note: null, url: "https://jobs.crv.com", urlLabel: "jobs.crv.com", inList: false, noBoard: false },
@@ -83,6 +83,19 @@ export const VC_FIRMS = [
   { id: "innovation-endeavors", name: "Innovation Endeavors", tier: "ai-native", aum: null, focus: "Early-stage deep tech and applied AI", signal: 3, note: null, url: "https://jobs.innovationendeavors.com", urlLabel: "jobs.innovationendeavors.com", inList: false, noBoard: false },
   { id: "zetta", name: "Zetta Venture Partners", tier: "ai-native", aum: null, focus: "AI-first seed investing", signal: 3, note: null, url: "https://careers.zettavp.com", urlLabel: "careers.zettavp.com", inList: false, noBoard: false },
   { id: "glasswing", name: "Glasswing Ventures", tier: "ai-native", aum: null, focus: "AI-native seed and Series A", signal: 3, note: null, url: "https://jobs.glasswing.vc", urlLabel: "jobs.glasswing.vc", inList: false, noBoard: false },
+
+  // --- Added November 2026 for companies the firms above don't reach ---
+  { id: "sv-angel", name: "SV Angel", tier: "generalist", aum: null, focus: "Seed-stage Silicon Valley generalist", signal: 1, note: null, url: "https://jobs.svangel.com", urlLabel: "jobs.svangel.com", inList: false, noBoard: false },
+  { id: "abstract", name: "Abstract Ventures", tier: "generalist", aum: null, focus: "Seed and early-stage software", signal: 1, note: null, url: "https://jobs.abstractvc.com", urlLabel: "jobs.abstractvc.com", inList: false, noBoard: false },
+  { id: "645-ventures", name: "645 Ventures", tier: "generalist", aum: null, focus: "Seed and Series A, New York based", signal: 1, note: null, url: "https://jobs.645ventures.com", urlLabel: "jobs.645ventures.com", inList: false, noBoard: false },
+  { id: "usv", name: "Union Square Ventures", short: "USV", tier: "generalist", aum: null, focus: "New York early stage, networks and fintech", signal: 1, note: null, url: "https://jobs.usv.com", urlLabel: "jobs.usv.com", inList: false, noBoard: false },
+  { id: "eniac", name: "Eniac Ventures", tier: "generalist", aum: null, focus: "Seed-stage software", signal: 1, note: null, url: "https://jobs.eniac.vc", urlLabel: "jobs.eniac.vc", inList: false, noBoard: false },
+  { id: "foundry", name: "Foundry", tier: "generalist", aum: null, focus: "Early-stage software, Colorado based", signal: 1, note: null, url: "https://jobs.foundry.vc", urlLabel: "jobs.foundry.vc", inList: false, noBoard: false },
+  { id: "soma", name: "Soma Capital", tier: "generalist", aum: null, focus: "Seed-stage generalist", signal: 1, note: null, url: "https://jobs.somacap.com", urlLabel: "jobs.somacap.com", inList: false, noBoard: false },
+  { id: "contrary", name: "Contrary", tier: "generalist", aum: null, focus: "Seed to growth, sourced through a network of student and founder scouts", signal: 2, note: null, url: "https://jobs.contrary.com", urlLabel: "jobs.contrary.com", inList: false, noBoard: false },
+  { id: "techstars", name: "Techstars", tier: "accelerator", aum: null, focus: "Pre-seed accelerator programs worldwide", signal: 1, note: null, url: "https://jobs.techstars.com", urlLabel: "jobs.techstars.com", inList: false, noBoard: false },
+  { id: "antler", name: "Antler", tier: "accelerator", aum: null, focus: "Day-zero investor that forms founding teams", signal: 1, note: null, url: "https://careers.antler.co", urlLabel: "careers.antler.co", inList: false, noBoard: false },
+  { id: "entrepreneur-first", name: "Entrepreneur First", short: "EF", tier: "accelerator", aum: null, focus: "Backs individual founders before they have a company", signal: 2, note: null, url: "https://portfolio.joinef.com", urlLabel: "portfolio.joinef.com", inList: false, noBoard: false },
 ];
 
 export const TIER_META = {
