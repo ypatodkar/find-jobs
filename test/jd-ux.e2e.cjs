@@ -378,7 +378,7 @@ async function main(){
     // The header and the slim scroll bar both carry Save and Apply; use the header's.
     await page.locator('#detail-top .detail-save').click();assert.equal(await page.locator('#detail-top .detail-save').getAttribute('aria-pressed'),'true');
     assert.equal(await page.locator('#detail-bar .detail-save').getAttribute('aria-pressed'),'true','both Save buttons stay in step');
-    assert.equal(await page.locator('#detail-top .detail-apply').getAttribute('href'),'https://example.com/job');
+    assert.equal(await page.locator('#detail-top .detail-apply').getAttribute('href'),'https://example.com/job?utm_source=jobs.ypatodkar.com','Apply says it came from this site');
     assert.ok((await page.locator('.detail-meta').textContent()).includes('160'));
     // The list is part of the page, so its position is the page's scroll position.
     await page.evaluate(()=>{window.scrollTo(0,document.querySelector('#results-split').offsetTop+200);document.querySelector('.job-detail').scrollTop=500;});

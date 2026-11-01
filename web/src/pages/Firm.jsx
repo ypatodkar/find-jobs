@@ -7,6 +7,7 @@ import Viewed from "../components/Viewed.jsx";
 import JobsWorkspace from "../JobsWorkspace.jsx";
 import { loadFirm } from "../lib/jobs.js";
 import { useSeen } from "../lib/seen.js";
+import { withSource } from "../lib/outbound.js";
 
 const UNAVAILABLE = "Listings for this investor are temporarily unavailable; its board will be checked again automatically.";
 
@@ -39,7 +40,7 @@ export default function Firm() {
       <>
         <p><strong>This firm's portfolio board can't be checked automatically.</strong></p>
         <p>{data.reason || "No public job board."}</p>
-        {firm.url ? <p><a className="joblink" href={firm.url} target="_blank" rel="noopener noreferrer">{firm.urlLabel || firm.url}</a></p> : null}
+        {firm.url ? <p><a className="joblink" href={withSource(firm.url)} target="_blank" rel="noopener noreferrer">{firm.urlLabel || firm.url}</a></p> : null}
       </>
     );
   } else if (data && data.status === "error") {
