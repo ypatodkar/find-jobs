@@ -48,11 +48,11 @@ function detectAts(rawUrl) {
       }
     });
 
-  if (host.endsWith("ashbyhq.com")) {
+  if (host === "jobs.ashbyhq.com") {
     // jobs.ashbyhq.com/{slug}/{posting uuid}
     return seg[0] ? { ats: "ashby", slug: seg[0], postingId: seg[1] || null } : null;
   }
-  if (host.endsWith("greenhouse.io")) {
+  if (["boards.greenhouse.io", "job-boards.greenhouse.io", "boards.eu.greenhouse.io", "job-boards.eu.greenhouse.io"].includes(host)) {
     // Embedded boards carry the slug in ?for= and the posting in ?gh_jid=,
     // hosted boards use /{slug}/jobs/{id}.
     const embedded = u.searchParams.get("for");
@@ -63,7 +63,7 @@ function detectAts(rawUrl) {
     const hosted = seg[1] === "jobs" ? seg[2] : null;
     return seg[0] ? { ats: "greenhouse", slug: seg[0], postingId: hosted || null } : null;
   }
-  if (host.endsWith("lever.co")) {
+  if (host === "jobs.lever.co") {
     // jobs.lever.co/{slug}/{posting uuid}
     return seg[0] ? { ats: "lever", slug: seg[0], postingId: seg[1] || null } : null;
   }
@@ -127,7 +127,8 @@ function postalPlace(address) {
 const ADAPTERS = {
   async ashby(slug) {
     const data = await getJson(`https://api.ashbyhq.com/posting-api/job-board/${encodeURIComponent(slug)}`);
-    return (data.jobs || []).map((j) => ({
+    if (!Array.isArray(data?.jobs)) throw new Error("invalid Ashby jobs response");
+    return data.jobs.filter((j) => j.isListed !== false).map((j) => ({
       id: j.id || null,
       title: j.title,
       // `location` is whatever the employer typed, which is often a label rather than
@@ -156,7 +157,8 @@ const ADAPTERS = {
 
   async greenhouse(slug) {
     const data = await getJson(`https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(slug)}/jobs?content=true`);
-    return (data.jobs || []).map((j) => ({
+    if (!Array.isArray(data?.jobs)) throw new Error("invalid Greenhouse jobs response");
+    return data.jobs.map((j) => ({
       id: j.id != null ? String(j.id) : null,
       title: j.title,
       locations: [j.location && j.location.name, ...(j.offices || []).map((o) => o.name)],
@@ -170,7 +172,8 @@ const ADAPTERS = {
 
   async lever(slug) {
     const data = await getJson(`https://api.lever.co/v0/postings/${encodeURIComponent(slug)}?mode=json`);
-    return (Array.isArray(data) ? data : []).map((j) => {
+    if (!Array.isArray(data)) throw new Error("invalid Lever jobs response");
+    return data.map((j) => {
       const c = j.categories || {};
       return {
         id: j.id || null,
@@ -313,4 +316,4 @@ function buildRegistry(firms) {
   return registry;
 }
 
-module.exports = { detectAts, isSupported, buildRegistry, fetchAll, SUPPORTED, CONCURRENCY };
+module.exports = { detectAts, isSupported, buildRegistry, fetchAll, fetchCompany, SUPPORTED, CONCURRENCY };

@@ -3,8 +3,8 @@ name: Scrape and deploy
 on:
   schedule:
     # Twice a day: late morning and end of the working day on the US west coast, which
-    # is when boards actually post. A full pass makes ~600 outbound requests to
-    # Ashby/Greenhouse/Lever, so there is no point spending them overnight.
+    # is when boards actually post. Saved company boards are refreshed each run;
+    # discovery is independently due weekly, with daily retries for failed sources.
     #
     # Cron here is UTC and GitHub has no timezone support, so these are fixed UTC and
     # shift by an hour against the wall clock at each DST changeover:
@@ -54,8 +54,15 @@ jobs:
       - name: Test application logic
         run: node --test test/*.test.js
 
-      # The CI user publishes static assets only. API releases use the approved
-      # operator path documented in README.md; no extra IAM access is needed here.
+      # Registry state is durable S3 data, not an evictable Actions cache. The CI
+      # principal needs GetObject/PutObject on _scraper/* in the existing site bucket.
+      # Access errors and corrupt snapshots fail the run instead of resetting it.
+      - name: Restore company registry
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+        run: node scripts/scraper-state.js restore
 
       # Jev's answers from earlier runs (data/job-labels.json, see scraper/classify.js),
       # so only postings new since the last run are put to it. Each run saves under its
@@ -92,11 +99,21 @@ jobs:
           key: yc-descriptions-${{ github.run_id }}
           restore-keys: yc-descriptions-
 
-      - name: Scrape all boards
+      - name: Discover companies when due
+        run: node scraper/scrape.js --discover-only
+
+      - name: Refresh saved company boards
         env:
           # Without it the scrape still runs; new postings are just left unlabelled.
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
-        run: node scraper/scrape.js
+        run: node scraper/scrape.js --jobs-only
+
+      - name: Save company registry
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+        run: node scripts/scraper-state.js save
 
       - name: Save job classifications
         uses: actions/cache/save@v4
@@ -136,7 +153,7 @@ jobs:
           # from cache until the invalidation below clears it.
           aws s3 sync dist/ s3://find-jobs-site-075521919080/ --delete \
             --cache-control "public, max-age=300, must-revalidate" \
-            --exclude "*.woff2" --exclude "assets/*" --only-show-errors
+            --exclude "*.woff2" --exclude "assets/*" --exclude "_scraper/*" --only-show-errors
           # Fonts, and the pages' scripts and styles under assets/, are content-addressed
           # by name and never change under the same URL. Earlier builds' assets are left
           # in place, so a page cached before this deploy can still load its scripts.

@@ -161,8 +161,10 @@ const CACHE_DAYS = 30;
 async function labelJobs(results, cache, options = {}) {
   const log = options.log || (() => {});
   const now = options.now || Date.now();
+  const direct = { jobs: results.directJobs || [] };
+  const groups = [...Object.values(results.firms || {}), direct];
   const all = [];
-  for (const firm of Object.values(results.firms || {})) for (const j of firm.jobs || []) all.push(j);
+  for (const firm of groups) for (const j of firm.jobs || []) all.push(j);
 
   const hashOf = new Map(all.map((j) => [j, contentHash(j, j.description)]));
   const todo = new Map();
@@ -207,7 +209,7 @@ async function labelJobs(results, cache, options = {}) {
   const wouldDrop = all.filter(drops).length;
   const dropping = wouldDrop <= all.length * MAX_DROP_SHARE;
   if (!dropping) log(`Not dropping ${wouldDrop} of ${all.length} postings as non-computing: more than ${MAX_DROP_SHARE * 100}% suggests Jev's answers have shifted.`);
-  for (const firm of Object.values(results.firms || {})) {
+  for (const firm of groups) {
     if (!firm.jobs) continue;
     firm.jobs = firm.jobs.filter((j) => {
       if (dropping && drops(j)) {
@@ -219,6 +221,8 @@ async function labelJobs(results, cache, options = {}) {
       return true;
     });
   }
+
+  if (results.directJobs) results.directJobs = direct.jobs;
 
   for (const [h, v] of Object.entries(cache)) if (!(now - (v.seen || 0) < CACHE_DAYS * 864e5)) delete cache[h];
   return stats;
