@@ -13,6 +13,18 @@ test("does not block SignalFire portfolio companies", () => {
   assert.equal(isBlockedCompany({ company: "Horizon3.ai", domain: "horizon3.ai", slug: "horizon3ai" }), false);
 });
 
+// Acquired companies on a board: the ones still hiring through their own board stay,
+// the ones whose listings are really the buyer's openings go.
+test("tells a company's own apply link from its buyer's", () => {
+  const { isOwnLink } = require("../scraper/match");
+  assert.equal(isOwnLink({ company: "Zoox", url: "https://jobs.lever.co/zoox/51838a63", slug: "zoox" }), true);
+  assert.equal(isOwnLink({ company: "Altruist", url: "https://altruist.com/join-altruist/6186198004" }), true);
+  assert.equal(isOwnLink({ company: "OfferFit", url: "https://job-boards.greenhouse.io/braze/jobs/8197642", slug: "braze" }), false);
+  assert.equal(isOwnLink({ company: "Instana", url: "https://careers.ibm.com/job/123" }), false);
+  assert.equal(isOwnLink({ company: "Hpe Simplivity", url: "https://careers.hpe.com/us/en/job/1" }), false);
+  assert.equal(isOwnLink({ company: "", url: "https://example.com" }), false);
+});
+
 // The AI-lab annotation gigs. "AI Tutor" matched the AI/ML role pattern on the word
 // "AI", so 43 of them were reaching the list as engineering roles.
 test("drops AI tutor listings, whatever they are suffixed with", () => {

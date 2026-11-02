@@ -1,5 +1,5 @@
 const { BOARDS, LOCATIONS } = require("./boards");
-const { keep, dedupe, deriveSeniority, sizeBucket, isBlockedCompany } = require("./match");
+const { keep, dedupe, deriveSeniority, sizeBucket, isBlockedCompany, isOwnLink } = require("./match");
 const { classifySponsorship } = require("./sponsorship");
 const { toDisplayHtml } = require("../shared/description");
 
@@ -480,7 +480,13 @@ async function scrapeGetro(cfg) {
       if (!hit) continue;
       const company = j.organization?.name || "";
       const url = j.url || "";
-      if (isBlockedCompany({ company, domain: j.organization?.domain, slug: (detectAts(url) || {}).slug })) continue;
+      const slug = (detectAts(url) || {}).slug;
+      // Some firms keep companies they sold on the board, and the board then shows the
+      // buyer's openings under the old name (Accel's Opower lists Oracle's jobs, Lux's
+      // Tecton Databricks'). Getro marks those companies as acquired; one that still
+      // hires through its own board, as Zoox does on Lever, stays.
+      if (j.organization?.stage === "acquisition" && !isOwnLink({ company, url, slug })) continue;
+      if (isBlockedCompany({ company, domain: j.organization?.domain, slug })) continue;
       const sponsorship = classifySponsorship(j.descriptionPlain || j.description || j.descriptionHtml || j.content || "");
       out.push({
         job_id: boardJobId(company, j.title, hit.city, url),

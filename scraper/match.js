@@ -28,6 +28,18 @@ function isBlockedCompany({ company, domain, slug } = {}) {
   return false;
 }
 
+/**
+ * Whether an apply link belongs to the company itself: its name is in the link's host
+ * (altruist.com) or ATS slug (jobs.lever.co/zoox). A board that keeps a company after
+ * selling it lists the buyer's openings under the old name, and those links name the
+ * buyer instead (OfferFit's go to greenhouse.io/braze, Instana's to careers.ibm.com).
+ */
+function isOwnLink({ company, url, slug } = {}) {
+  const key = nameKey(company);
+  if (!key) return false;
+  return nameKey(hostKey(url)).includes(key) || (!!slug && nameKey(slug).includes(key));
+}
+
 const REMOTE_RE = /\bremote\b|\bwork from home\b|\banywhere\b|\bdistributed\b/i;
 // Remote postings routinely name the region they're open to. We only track US roles,
 // so a remote listing scoped to somewhere else is not a match.
@@ -121,7 +133,7 @@ function dedupe(jobs) {
 }
 
 module.exports = {
-  matchCity, matchRoles, keep, dedupe, isBlockedCompany,
+  matchCity, matchRoles, keep, dedupe, isBlockedCompany, isOwnLink,
   deriveSeniority, sizeBucket,
   SENIORITY_LABELS, SIZE_BUCKETS,
 };
