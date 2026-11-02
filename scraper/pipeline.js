@@ -10,6 +10,27 @@ const { dedupe } = require("./match");
 
 const BOARD_DELAY_MS = 250; // be polite to the upstream boards
 
+// The VC boards are read in parallel lanes, one per platform, so a slow board (a16z's
+// takes half a minute) no longer holds up the other fifty. Each platform has its own
+// limit, because its boards share one backend: Getro's are all api.getro.com, and
+// Consider runs every Consider board. a16z already reads its company pages six at a
+// time on its own. Within a lane boards still start BOARD_DELAY_MS apart.
+const BOARD_LANES = { consider: 4, getro: 3, a16z: 1, greylock: 1 };
+const DEFAULT_LANE = 2; // a platform added later without a limit of its own
+
+/** Run `task` over `items`, at most `limit` at once, each worker pausing `gapMs` between its tasks. */
+async function inLanes(items, limit, gapMs, task) {
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const item = items[next++];
+      await task(item);
+      if (next < items.length) await new Promise((res) => setTimeout(res, gapMs));
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
+
 /**
  * Run all three phases and return the results object.
  * `onEvent(type, data)` lets the CLI and automation report:
@@ -24,26 +45,37 @@ async function runScrape(onEvent = () => {}) {
   let done = 0;
 
   // --- Phase 1: VC boards. These tell us which companies each firm backs. ---
+  // Read in parallel lanes (BOARD_LANES), then stored in BOARDS order: what follows
+  // (the company registry, the merge, the payloads) takes the first firm to report a
+  // company as the one that names it, so the order must not depend on which board
+  // happened to answer first.
+  const read = new Map();
+  const byPlatform = new Map();
+  for (const id of scrapeable) {
+    const platform = BOARDS[id].platform;
+    if (!byPlatform.has(platform)) byPlatform.set(platform, []);
+    byPlatform.get(platform).push(id);
+  }
+  await Promise.all([...byPlatform].map(([platform, ids]) =>
+    inLanes(ids, BOARD_LANES[platform] || DEFAULT_LANE, BOARD_DELAY_MS, async (id) => {
+      onEvent("progress", { phase: "boards", firmId: id, done, total: scrapeable.length, state: "scraping" });
+      const r = await scrapeFirm(id);
+      read.set(id, r);
+      done++;
+      onEvent("progress", {
+        phase: "boards",
+        firmId: id,
+        done,
+        total: scrapeable.length,
+        state: r.status,
+        count: r.jobs.length,
+        reason: r.reason || null,
+      });
+    })
+  ));
   for (const id of firmIds) {
     const cfg = BOARDS[id];
-    if (!cfg.platform) {
-      results.firms[id] = { firmId: id, status: "unsupported", reason: cfg.reason, host: cfg.host, jobs: [] };
-      continue;
-    }
-    onEvent("progress", { phase: "boards", firmId: id, done, total: scrapeable.length, state: "scraping" });
-    const r = await scrapeFirm(id);
-    results.firms[id] = r;
-    done++;
-    onEvent("progress", {
-      phase: "boards",
-      firmId: id,
-      done,
-      total: scrapeable.length,
-      state: r.status,
-      count: r.jobs.length,
-      reason: r.reason || null,
-    });
-    await new Promise((res) => setTimeout(res, BOARD_DELAY_MS));
+    results.firms[id] = cfg.platform ? read.get(id) : { firmId: id, status: "unsupported", reason: cfg.reason, host: cfg.host, jobs: [] };
   }
 
   // --- Phase 2: go straight to each company's own ATS for the authoritative list. ---
