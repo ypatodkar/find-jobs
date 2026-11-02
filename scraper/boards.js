@@ -87,12 +87,14 @@ const BOARDS = {
   "foundry":             { platform: "getro", host: "jobs.foundry.vc", networkId: 25 },
   "soma":                { platform: "getro", host: "jobs.somacap.com", networkId: 3194 },
   "contrary":            { platform: "consider", host: "jobs.contrary.com", boardId: "contrary" },
+  // Work at a Startup needs an account, but each company's openings are public on
+  // ycombinator.com; see scrapeYc. Last, so firms that co-invested keep their credit.
+  "y-combinator":        { platform: "yc", host: "www.ycombinator.com" },
 
   // Boards that exist but can't be scraped, with the reason surfaced in the UI.
   "index-ventures": { platform: null, host: "www.indexventures.com", reason: "Custom board, no public search API" },
   "iconiq":         { platform: null, host: "www.iconiq.com", reason: "Greenhouse board lists ICONIQ's own roles, not portfolio jobs" },
   "founders-fund":  { platform: null, host: "foundersfund.com", reason: "Portfolio directory only, no job listings" },
-  "y-combinator":   { platform: null, host: "www.workatastartup.com", reason: "Requires a logged-in account" },
 
   // Firms that publish no portfolio job board at all.
   "coatue":       { platform: null, host: "coatue.com", reason: "No public portfolio job board" },

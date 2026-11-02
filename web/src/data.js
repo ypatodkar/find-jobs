@@ -48,7 +48,7 @@ export const VC_FIRMS = [
   { id: "air-street", name: "Air Street Capital", tier: "ai-native", aum: null, focus: "AI-first tech & life sciences (London-based, invests in the US)", signal: 3, note: "Run by Nathan Benaich", url: "https://www.airstreet.com", urlLabel: "airstreet.com", inList: false, noBoard: false },
 
   // --- Accelerator ---
-  { id: "y-combinator", name: "Y Combinator", tier: "accelerator", aum: null, focus: "Seed accelerator — highest-volume board for early-stage software/AI roles", signal: 2, note: "Not a check-writing growth VC", url: "https://www.workatastartup.com", urlLabel: "workatastartup.com", inList: true, noBoard: false },
+  { id: "y-combinator", name: "Y Combinator", tier: "accelerator", aum: null, focus: "Seed accelerator — highest-volume board for early-stage software/AI roles", signal: 2, note: "Not a check-writing growth VC", url: "https://www.ycombinator.com/jobs", urlLabel: "ycombinator.com/jobs", inList: true, noBoard: false },
   // --- Firms added after probing for scrapeable portfolio boards ---
   { id: "first-round", name: "First Round Capital", tier: "generalist", aum: null, focus: "Seed-stage generalist with a large operating community", signal: 2, note: null, url: "https://jobs.firstround.com", urlLabel: "jobs.firstround.com", inList: false, noBoard: false },
   { id: "initialized", name: "Initialized Capital", tier: "generalist", aum: null, focus: "Seed-stage software and infrastructure", signal: 2, note: null, url: "https://jobs.initialized.com", urlLabel: "jobs.initialized.com", inList: false, noBoard: false },
