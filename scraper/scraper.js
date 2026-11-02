@@ -25,6 +25,10 @@ function fmtSalary(min, max, currency, period) {
 }
 const { detectAts } = require("./ats");
 const { jobId } = require("./id");
+const {
+  inertiaProps, ycPostedDate, ycSalary, ycLocations, ycSponsorship, markdownToHtml, batchGroups, mayHireInUs,
+  loadDescriptions, saveDescriptions, isFresh,
+} = require("./yc");
 
 /**
  * Board listings carry no id of their own, but their apply URL usually points at an
@@ -528,6 +532,150 @@ async function scrapeGetro(cfg) {
   return { jobs: out, scanned, totalOnBoard: count };
 }
 
+// ---- Y Combinator ----
+//
+// YC's portfolio jobs live on Work at a Startup, which needs an account, but every
+// company's openings are also public at ycombinator.com/companies/{slug}/jobs. So, like
+// a16z, it is read company by company: the directory's search index says which of
+// YC's companies are hiring (about 1,500), each hiring company's page lists its
+// openings, and the page of each role we keep carries the description.
+//
+// These roles have no ATS link for phase 2 to follow (applying goes through a YC
+// account), so what is collected here is what the site shows.
+const YC_ORIGIN = "https://www.ycombinator.com";
+const YC_CONCURRENCY = 8;
+
+async function getText(url) {
+  const res = await withTimeout(url, { headers: { accept: "text/html", "user-agent": UA } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.text();
+}
+
+/** Run `fn` over `items`, at most `limit` at a time. */
+async function forEachLimit(items, limit, fn) {
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) await fn(items[next++]);
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
+
+/** Every company YC's directory marks as hiring, read from the index behind /companies. */
+async function ycHiringCompanies() {
+  const html = await getText(`${YC_ORIGIN}/companies`);
+  const opts = html.match(/window\.AlgoliaOpts\s*=\s*(\{[^;]+\})/);
+  if (!opts) throw new Error("yc: no search settings on /companies — page shape changed");
+  const { app, key } = JSON.parse(opts[1]);
+  const search = (body) => postJson(
+    `https://${app}-dsn.algolia.net/1/indexes/YCCompany_production/query`,
+    body,
+    { "x-algolia-application-id": app, "x-algolia-api-key": key }
+  );
+
+  const facets = await search({ query: "", hitsPerPage: 0, filters: "isHiring:true", facets: ["batch"], maxValuesPerFacet: 1000 });
+  const companies = [];
+  for (const group of batchGroups(facets.facets?.batch || {})) {
+    const filters = `isHiring:true AND (${group.map((b) => `batch:"${b.replace(/"/g, '\\"')}"`).join(" OR ")})`;
+    const page = await search({ query: "", hitsPerPage: 1000, filters, attributesToRetrieve: ["name", "slug", "regions"] });
+    companies.push(...(page.hits || []));
+  }
+  if (!companies.length) throw new Error("yc: the directory lists no hiring companies — index changed");
+  return companies;
+}
+
+async function scrapeYc() {
+  const companies = (await ycHiringCompanies()).filter((c) => c.slug && mayHireInUs(c));
+  const now = Date.now();
+
+  // Each hiring company's page: its openings, kept when the title and a US place match.
+  const kept = [];
+  let scanned = 0;
+  let failures = 0;
+  await forEachLimit(companies, YC_CONCURRENCY, async (c) => {
+    let props;
+    try {
+      props = inertiaProps(await getText(`${YC_ORIGIN}/companies/${encodeURIComponent(c.slug)}/jobs`));
+    } catch {
+      failures++;
+      return;
+    }
+    if (!props || !Array.isArray(props.jobPostings)) { failures++; return; }
+    scanned += props.jobPostings.length;
+    const co = props.company || {};
+    for (const p of props.jobPostings) {
+      const locations = ycLocations(p.location);
+      const hit = keep(p.title, locations);
+      if (!hit) continue;
+      const company = co.name || p.companyName || c.name || "";
+      let domain = null;
+      try { domain = new URL(co.website).host.replace(/^www\./, ""); } catch { /* no website */ }
+      if (isBlockedCompany({ company, domain })) continue;
+      kept.push({ p, co, company, domain, hit, locations });
+    }
+  });
+
+  // A handful of unreadable pages is ordinary; most of them failing means the page
+  // shape changed, and shipping a near-empty YC is worse than failing loudly.
+  if (failures > companies.length / 2) {
+    throw new Error(`yc: ${failures}/${companies.length} company pages unreadable`);
+  }
+
+  // Each kept role's own page, for its description, unless an earlier run fetched it
+  // this week. A role whose page fails still ships, with any older copy or none.
+  const cached = loadDescriptions();
+  const fetched = new Map();
+  const out = [];
+  await forEachLimit(kept, YC_CONCURRENCY, async ({ p, co, company, domain, hit, locations }) => {
+    const id = String(p.id);
+    let entry = cached.get(id);
+    if (!isFresh(entry, id, now)) {
+      try {
+        const d = inertiaProps(await getText(`${YC_ORIGIN}${p.url}`))?.job?.description;
+        if (typeof d === "string") entry = { d, at: now };
+      } catch { /* keep the older copy, if any */ }
+    }
+    if (entry) fetched.set(id, entry);
+    const description = entry ? entry.d : "";
+
+    const pay = ycSalary(p.salaryRange);
+    const sponsorship = ycSponsorship(p.visa, description);
+    const staffCount = co.team_size || null;
+    const seniority = deriveSeniority(p.title);
+    out.push({
+      job_id: jobId({ company, title: p.title, city: hit.city, ats: "yc", atsId: String(p.id) }),
+      title: p.title,
+      company,
+      city: hit.city,
+      locations: locations.slice(0, 3),
+      roles: hit.roles,
+      url: `${YC_ORIGIN}${p.url}`,
+      posted: ycPostedDate(p.createdAt, now),
+      remote: /remote/i.test(p.location || ""),
+      salaryMin: pay ? pay.min : null,
+      salaryMax: pay ? pay.max : null,
+      salary: pay ? fmtSalary(pay.min, pay.max, "USD", "year") : null,
+      seniority: /intern/i.test(p.type || "") ? "intern" : seniority,
+      sponsorship: sponsorship.status,
+      sponsorshipEvidence: sponsorship.evidence,
+      sponsorshipTypes: sponsorship.types,
+      staffCount,
+      size: sizeBucket(staffCount),
+      // YC publishes a batch, not a funding stage, and a guessed stage would be a
+      // wrong fact about a real company.
+      stage: null,
+      markets: co.tags || [],
+      domain,
+      logo: co.small_logo_url || p.companyLogoUrl || null,
+      source: "board",
+      // Moved out into descriptions.json by scrape.js before results.json is written.
+      description: toDisplayHtml(markdownToHtml(description)),
+    });
+  });
+
+  saveDescriptions(fetched);
+  return { jobs: out, scanned, totalOnBoard: scanned };
+}
+
 async function scrapeFirm(firmId) {
   const cfg = BOARDS[firmId];
   if (!cfg) return { firmId, status: "unsupported", reason: "No board configured", jobs: [] };
@@ -542,6 +690,7 @@ async function scrapeFirm(firmId) {
       const res = cfg.platform === "consider" ? await scrapeConsider(cfg)
         : cfg.platform === "a16z" ? await scrapeA16z(cfg)
         : cfg.platform === "greylock" ? await scrapeGreylock(cfg)
+        : cfg.platform === "yc" ? await scrapeYc()
         : await scrapeGetro(cfg);
       return {
         firmId,
