@@ -519,7 +519,7 @@ async function scrapeGetro(cfg) {
         size: null,
         stage: getroStage(j.organization?.stage),
         markets: j.organization?.industry_tags || [],
-        domain: null,
+        domain: j.organization?.domain || null,
         logo: j.organization?.logo_url || null,
         source: "board",
         // Moved out into descriptions.json by scrape.js before results.json is written.

@@ -8,7 +8,9 @@
 const fs = require("fs");
 const fsp = require("fs/promises");
 const path = require("path");
-const { runScrape, failedPlatforms, failedBoards } = require("./pipeline");
+const { runScrape } = require("./pipeline");
+const { BOARDS } = require("./boards");
+const { STATE_FILE, loadState, atomicJson, withStateLock } = require("./registry");
 const { labelJobs } = require("./classify");
 
 const ROOT = path.join(__dirname, "..");
@@ -56,7 +58,7 @@ async function classifyJobs(results) {
 function splitDescriptions(results) {
   const out = {};
   const source = {};
-  for (const firm of Object.values(results.firms || {})) {
+  for (const firm of [...Object.values(results.firms || {}), { jobs: results.directJobs || [] }]) {
     for (const j of firm.jobs || []) {
       const text = j.description;
       delete j.description;
@@ -71,11 +73,28 @@ function splitDescriptions(results) {
 }
 
 async function main() {
+  const args = new Set(process.argv.slice(2));
+  const known = ["--discover", "--discover-only", "--jobs-only", "--help"];
+  if ([...args].some((a) => !known.includes(a))) throw new Error("Unknown argument; use --help");
+  if (args.has("--help")) {
+    console.log("node scraper/scrape.js [--discover | --discover-only | --jobs-only]\nDefault: discover when weekly refresh is due, then refresh saved company boards.\n--discover forces discovery; --discover-only runs due discovery without refreshing jobs.\n--jobs-only skips discovery. State is saved in data/scraper-state.json.");
+    return;
+  }
+  if (args.has("--jobs-only") && (args.has("--discover") || args.has("--discover-only"))) throw new Error("Choose discovery or jobs-only, not both");
+  return withStateLock(STATE_FILE, async () => {
+    const state = await loadState(STATE_FILE, { resultsFile: RESULTS_FILE, descriptionsFile: DESCRIPTIONS_FILE, boards: BOARDS });
+    return refresh(state, args);
+  });
+}
+
+async function refresh(state, args) {
   const started = Date.now();
 
   const results = await runScrape((event, data) => {
     if (event === "phase" && data.phase === "ats") {
-      console.log(`\nBoards done. Fetching ${data.companies} company job boards…`);
+      console.log(`\nFetching ${data.companies} company job boards…`);
+    } else if (event === "phase" && data.phase === "repair") {
+      console.log(`Checking careers pages for ${data.companies} unresolved or repeatedly failing companies…`);
     } else if (event === "progress" && data.phase === "boards" && data.state !== "scraping") {
       const outcome = data.state === "ok" ? `${data.count} roles` : data.reason || data.state;
       console.log(`  [${data.done}/${data.total}] ${data.firmId}: ${outcome}`);
@@ -85,24 +104,17 @@ async function main() {
       const e = data.enrichment;
       console.log(
         `\nDone in ${Math.round((Date.now() - started) / 1000)}s — ` +
-          `${e.fromAts} roles live from ${e.reached}/${e.companies} company boards, ${e.fromBoard} from VC boards.`
+          `${e.reached}/${e.companies} company boards refreshed; ${e.fromAts} ATS roles, ${e.fromBoard} from VC snapshots, ${e.retained} retained after failures.`
       );
       if (e.failures.length) console.log(`${e.failures.length} company boards unreachable.`);
     }
-  });
+  }, { state, forceDiscovery: args.has("--discover"), discoveryOnly: args.has("--discover-only"), jobsOnly: args.has("--jobs-only") });
 
-  const failed = failedPlatforms(results);
-  if (failed.length) {
-    throw new Error(`refusing to replace results.json: every ${failed.join(" and ")} board failed`);
-  }
-
-  // Named individually, because the totals hide this. Two boards going quiet costs
-  // whole portfolios' worth of companies while the run still reports success, and the
-  // only visible symptom is a job count that looks plausibly like ordinary churn.
-  const lost = failedBoards(results);
-  if (lost.length) {
-    console.warn(`\n${lost.length} configured board${lost.length === 1 ? "" : "s"} did not return:`);
-    for (const [id, reason] of lost) console.warn(`  ${id.padEnd(24)} ${reason}`);
+  for (const { firmId, reason } of results.discovery.errors) console.warn(`Discovery ${firmId}: ${reason}; retaining previous observations`);
+  if (args.has("--discover-only")) {
+    await atomicJson(STATE_FILE, state);
+    console.log(`Saved ${Object.keys(state.companies).length} companies; ${results.discovery.succeeded} discovery boards refreshed.`);
+    return;
   }
 
   // Optional: a bug here must not cost the deploy, which is the job list itself.
@@ -114,12 +126,15 @@ async function main() {
 
   const descriptions = splitDescriptions(results);
   await fsp.mkdir(DATA, { recursive: true });
-  await fsp.writeFile(DESCRIPTIONS_FILE, JSON.stringify(descriptions));
-  await fsp.writeFile(RESULTS_FILE, JSON.stringify(results, null, 2));
+  await atomicJson(DESCRIPTIONS_FILE, descriptions);
+  await atomicJson(RESULTS_FILE, results);
+  await atomicJson(STATE_FILE, state);
   console.log(`Wrote data/results.json and ${Object.keys(descriptions).length} descriptions`);
 }
 
-main().catch((err) => {
+if (require.main === module) main().catch((err) => {
   console.error("Scrape failed:", err.message);
   process.exit(1);
 });
+
+module.exports = { main, splitDescriptions };
