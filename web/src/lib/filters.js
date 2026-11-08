@@ -25,16 +25,24 @@ const CAREER_LABELS = { early: "Early career", experienced: "Experienced", uncle
 const CAREER_ORDER = ["early", "experienced", "unclear"];
 const SIZE_LABELS = { "1-10": "1–10", "11-50": "11–50", "51-200": "51–200", "201-1000": "201–1,000", "1000+": "1,000+" };
 const SIZE_ORDER = ["1-10", "11-50", "51-200", "201-1000", "1000+"];
+// Where a company is based (pipeline.js reads it off where its openings are).
+const HQ_LABELS = { IN: "India", US: "United States", other: "Other countries" };
+const HQ_ORDER = ["IN", "US", "other"];
 
 /**
  * Every multi-select filter: a key (also its URL parameter), how to read its values
  * off a job, and how to label them. AND across filters, OR within one. `group` picks
- * the main row or the Advanced panel; `exclude` removes what it matches.
+ * the main row or the Advanced panel; `exclude` removes what it matches. `allChecked`
+ * draws an empty selection as every option ticked, for a filter people narrow by
+ * unticking rather than build up by ticking.
+ *
+ * `country` is the list's: the India list (in.html) adds where companies are based.
  */
-export function dimensions({ showFirms = false, firmLabel = (id) => id } = {}) {
+export function dimensions({ showFirms = false, firmLabel = (id) => id, country = "US" } = {}) {
   return [
     { key: "role", label: "Role", pluralLabel: "Roles", group: "primary", values: (j) => j.roles || [], labelFor: (v) => ROLE_LABELS[v] || v },
     { key: "city", label: "Location", pluralLabel: "Locations", group: "primary", values: (j) => [j.city] },
+    { key: "hq", label: "Company HQ", pluralLabel: "Company HQs", group: "primary", values: (j) => [j.hq || "US"], labelFor: (v) => HQ_LABELS[v] || v, order: HQ_ORDER, allChecked: true, onlyIn: "IN" },
     { key: "seniority", label: "Experience", pluralLabel: "Experience levels", group: "primary", values: (j) => (j.seniority ? [j.seniority] : []), labelFor: (v) => SENIORITY_LABELS[v] || v, order: SENIORITY_ORDER },
     { key: "career", label: "Career stage", pluralLabel: "Career stages", group: "primary", values: (j) => [j.career || "unclear"], labelFor: (v) => CAREER_LABELS[v] || v, order: CAREER_ORDER },
     { key: "company", label: "Company", pluralLabel: "Companies", group: "advanced", values: (j) => [j.company] },
@@ -43,7 +51,7 @@ export function dimensions({ showFirms = false, firmLabel = (id) => id } = {}) {
     { key: "size", label: "Company size", pluralLabel: "Company sizes", group: "advanced", values: (j) => (j.size ? [j.size] : []), labelFor: (v) => SIZE_LABELS[v] || v, order: SIZE_ORDER },
     { key: "stage", label: "Funding", pluralLabel: "Funding stages", group: "advanced", values: (j) => (j.stage ? [j.stage] : []) },
     { key: "firm", label: "Investor", pluralLabel: "Investors", group: "advanced", values: (j) => j.firms || [], labelFor: firmLabel, onlyWhenFirms: true },
-  ].filter((d) => !d.onlyWhenFirms || showFirms).map((d) => ({ labelFor: (v) => v, ...d }));
+  ].filter((d) => (!d.onlyWhenFirms || showFirms) && (!d.onlyIn || d.onlyIn === country)).map((d) => ({ labelFor: (v) => v, ...d }));
 }
 
 /** The filter state as plain JSON: what the URL, undo and saved filters all hold. */

@@ -58,7 +58,8 @@ function main() {
     process.exit(1);
   }
 
-  const data = packCompanies(mergeJobs(JSON.parse(fs.readFileSync(RESULTS, "utf8"))));
+  // The featured startup tops the US list, so it is chosen from US roles.
+  const data = packCompanies(mergeJobs(JSON.parse(fs.readFileSync(RESULTS, "utf8"))).filter((j) => (j.country || "US") === "US"));
   const companies = data.companies || [];
   const featured = loadFeatured();
 

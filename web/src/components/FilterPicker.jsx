@@ -4,6 +4,10 @@
 // The order of the list is fixed when the menu opens or its search changes, never on a
 // tick: re-sorting under the cursor mid-selection is disorienting. Counts are always
 // current, and a selected value stays listed even at zero so it can be unticked.
+//
+// A dimension with `allChecked` (Company HQ) starts with every option ticked: its empty
+// selection is drawn as all of them, unticking one keeps the rest, and ticking the
+// last one back returns to the empty selection, so the URL stays clean.
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const MAX_OPTIONS = 60; // the long tail (hundreds of industry tags) is reached by searching
@@ -15,6 +19,7 @@ export default function FilterPicker({ dim, selected, counts, onChange }) {
   const [order, setOrder] = useState([]);
   const chosen = useMemo(() => new Set(selected), [selected]);
   const n = selected.length;
+  const all = !!dim.allChecked && n === 0; // every option counts as ticked
 
   // Ordinal filters (size, seniority, career) keep their own scale; the rest lead with
   // what is selected, then by number of roles.
@@ -48,15 +53,20 @@ export default function FilterPicker({ dim, selected, counts, onChange }) {
   // capped head. Hidden on the exclude filter, where it would empty the list.
   const target = (q ? visible : order).filter((v) => !chosen.has(v));
 
-  const summary = n === 0 ? dim.label : n === 1 ? dim.labelFor(selected[0]) : `(${n}) ${dim.pluralLabel}`;
-  const toggle = (v, on) => onChange(on ? [...selected, v] : selected.filter((x) => x !== v));
+  const summary = all ? `${dim.label}: All` : n === 0 ? dim.label : n === 1 ? dim.labelFor(selected[0]) : `(${n}) ${dim.pluralLabel}`;
+  const toggle = (v, on) => {
+    if (!dim.allChecked) return onChange(on ? [...selected, v] : selected.filter((x) => x !== v));
+    const options = [...new Map(counts()).keys()];
+    const next = all ? options.filter((x) => x !== v) : on ? [...selected, v] : selected.filter((x) => x !== v);
+    onChange(options.every((x) => next.includes(x)) ? [] : next);
+  };
 
   return (
     <div className="picker-wrap">
       <details ref={ref} className={`company-picker${n ? " has-selection" : ""}`} id={`pick-${dim.key}`} open={open}
         onToggle={(e) => setOpen(e.currentTarget.open)}
         onKeyDown={(e) => { if (e.key === "Escape" && open) { e.preventDefault(); e.stopPropagation(); setOpen(false); ref.current.querySelector("summary").focus(); } }}>
-        <summary id={`sum-${dim.key}`} aria-label={`${dim.label} filter: ${n === 0 ? (dim.exclude ? "None excluded" : "Any") : summary}`}
+        <summary id={`sum-${dim.key}`} aria-label={`${dim.label} filter: ${all ? "All" : n === 0 ? (dim.exclude ? "None excluded" : "Any") : summary}`}
           onClick={(e) => { e.preventDefault(); setOpen(!open); }}>{summary}</summary>
         <div className="company-panel">
           <div className="company-panel-top">
@@ -64,16 +74,16 @@ export default function FilterPicker({ dim, selected, counts, onChange }) {
               value={query} onChange={(e) => setQuery(e.target.value)} />
           </div>
           <div className="panel-actions">
-            <button type="button" className="linkish" id={`sa-${dim.key}`} hidden={dim.exclude || target.length === 0}
+            <button type="button" className="linkish" id={`sa-${dim.key}`} hidden={dim.exclude || dim.allChecked || target.length === 0}
               onClick={() => onChange([...selected, ...target])}>{q ? `Select all ${target.length} matching` : `Select all ${target.length}`}</button>
-            <button type="button" className="linkish" id={`clr-${dim.key}`} hidden={n === 0} onClick={() => onChange([])}>Clear</button>
+            <button type="button" className="linkish" id={`clr-${dim.key}`} hidden={n === 0} onClick={() => onChange([])}>{dim.allChecked ? "Select all" : "Clear"}</button>
           </div>
           <div className="company-list" id={`list-${dim.key}`} role="group" aria-label={`Select ${dim.label}`}>
             {open && (visible.length ? visible.map((v) => {
               const count = current.get(v) || 0;
               return (
                 <label key={v} className={`company-row${count === 0 ? " is-zero" : ""}`}>
-                  <input type="checkbox" value={v} checked={chosen.has(v)} onChange={(e) => toggle(v, e.target.checked)} />
+                  <input type="checkbox" value={v} checked={all || chosen.has(v)} onChange={(e) => toggle(v, e.target.checked)} />
                   <span className="company-name">{dim.labelFor(v)}</span>
                   <span className="company-n">{count}</span>
                 </label>

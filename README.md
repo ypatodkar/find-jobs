@@ -7,6 +7,11 @@ boards discover companies weekly; saved company boards (Ashby, Greenhouse, Lever
 refresh twice daily. Companies can also be added directly by URL. Roles are kept for 19 US metros plus remote, deduplicated, and classified so
 that only computing roles stay.
 
+A second list, `in.html`, holds roles in India: the Indian openings of the same
+companies, two Indian firms' boards (Peak XV, 3one4), and the companies in 41 Indian
+investors' portfolios, read company by company. It is a preview until the country
+switcher ships (`noindex`, linked from nowhere).
+
 ## Where things are
 
 ```
@@ -28,6 +33,8 @@ test/       unit tests (*.test.js), the browser test (jd-ux.e2e.cjs) and a datab
             integration test.
 docs/       the change log and the database diagram.
 config/     companies.json: reviewed bootstrap company identities, no job content.
+            india-portfolio.json: Indian portfolio websites and the careers systems
+            first found on them, which seed state.portfolio.
 data/       not in git: the durable scraper-state.json registry and last successful
             postings, latest results/descriptions, and the Jev classification cache.
 ```
@@ -95,6 +102,9 @@ winter. GitHub disables cron workflows after 60 days without a push.
 - `firms.html`: the 70 investors and their role counts.
 - `firm.html?id=<firm>`: one investor's roles, or why its board cannot be read.
 - `about.html`.
+- `in.html`: roles in India, from `api/in/all-jobs.json`, with a Company HQ filter
+  (India / United States / Other) that starts with all three ticked, and no salary
+  filter (its floors are in dollars).
 
 Filters combine with AND across filters and OR within one, and each offers only values
 that still return roles under the others, with counts. The URL describes the view, so
@@ -123,6 +133,15 @@ a filtered list can be shared; saved filters can be shared as a `?f=` link.
    retain dated evidence until another source is added.
 5. **Classification** (`scraper/classify.js`): new postings go to Jev in batches of
    30. Content-based cached labels apply to both portfolio and independent companies.
+6. **India** (`scraper/india.js`, `scraper/portfolio.js`): every board and company is
+   read for India as well as the US, and a role in both gets a row in each list (the
+   US row keeps its id). Indian portfolios are read weekly for each company's website;
+   up to 60 new or month-old websites a run are checked for a careers system, and
+   those on a supported one (Ashby, Greenhouse, Lever, Keka, Workable, SmartRecruiters,
+   Recruitee, BambooHR) join the registry. A company only Indian sources list is read
+   for India alone, so nothing they add reaches the US list. Where a company is based
+   (`hq`) is the country most of its openings are in; a `.in` website settles it, and
+   with no openings to go by, an Indian investor's company counts as Indian.
 
 The CLI supports separate operations:
 

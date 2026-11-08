@@ -10,6 +10,7 @@
 //
 //   dist/api/results.json
 //   dist/api/all-jobs.json
+//   dist/api/in/all-jobs.json    (the India list, in.html)
 //   dist/api/firm/<id>.json      (one per firm, including the unscrapeable ones)
 //   dist/api/desc/<shard>.json   (job descriptions, a few per file; see shared/description.js)
 //
@@ -26,7 +27,7 @@ const RESULTS_FILE = path.join(ROOT, "data", "results.json");
 const DESCRIPTIONS_FILE = path.join(ROOT, "data", "descriptions.json");
 
 const PAGES_DIR = path.join(ROOT, "web", "dist");
-const PAGES = ["index.html", "firm.html", "firms.html", "about.html", "404.html"];
+const PAGES = ["index.html", "in.html", "firm.html", "firms.html", "about.html", "404.html"];
 
 // Content-hashed by Vite, so a file under assets/ never changes under the same URL.
 const HEADERS = "/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n";
@@ -75,6 +76,7 @@ async function main() {
   let bytes = 0;
   bytes += await writeJson("api/results.json", resultsPayload(data));
   bytes += await writeJson("api/all-jobs.json", allJobsPayload(data, described));
+  bytes += await writeJson("api/in/all-jobs.json", allJobsPayload(data, described, "IN"));
 
   let firmCount = 0;
   for (const id of Object.keys(BOARDS)) {
@@ -100,7 +102,8 @@ async function main() {
   console.log(`descriptions: ${shardCount} shard files, ${(descBytes / 1048576).toFixed(2)} MB uncompressed`);
 
   const jobs = allJobsPayload(data).jobs.length;
-  console.log(`dist/ built — the pages, ${firmCount} firm files, ${jobs} roles`);
+  const india = allJobsPayload(data, null, "IN").jobs.length;
+  console.log(`dist/ built — the pages, ${firmCount} firm files, ${jobs} US roles, ${india} India roles`);
   console.log(`data: ${(bytes / 1048576).toFixed(2)} MB uncompressed (hosts serve it gzipped)`);
   console.log(`scrapedAt: ${data.scrapedAt}`);
 }

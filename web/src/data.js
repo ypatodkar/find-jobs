@@ -105,8 +105,26 @@ export const TIER_META = {
   "accelerator": { label: "Accelerators", short: "Accelerators" },
 };
 
+// The Indian investors the India list (in.html) reads, by the ids scraper/india.js and
+// boards.js give them. Not in VC_FIRMS, which is the US investor directory.
+export const INDIA_FIRMS = [
+  ["peak-xv", "Peak XV"], ["surge", "Surge (Peak XV)"], ["3one4", "3one4 Capital"], ["titan", "Titan Capital"],
+  ["better", "Better Capital"], ["ian", "Indian Angel Network"], ["nexus", "Nexus Venture Partners"],
+  ["elevation", "Elevation Capital"], ["india-quotient", "India Quotient"], ["chiratae", "Chiratae Ventures"],
+  ["kalaari", "Kalaari Capital"], ["jungle", "Jungle Ventures"], ["point-one", "Point One Capital"],
+  ["axilor", "Axilor Ventures"], ["prime", "Prime Venture Partners"], ["sauce", "Sauce.vc"],
+  ["unicorn-india", "Unicorn India Ventures"], ["letsventure", "LetsVenture"], ["growx", "GrowX Ventures"],
+  ["stellaris", "Stellaris Venture Partners"], ["atoms", "Accel Atoms"], ["together", "Together Fund"],
+  ["rainmatter", "Rainmatter"], ["speciale", "Speciale Invest"], ["endiya", "Endiya Partners"],
+  ["9unicorns", "9Unicorns"], ["huddle", "Huddle Ventures"], ["orios", "Orios Venture Partners"],
+  ["ankur", "Ankur Capital"], ["ideaspring", "Ideaspring Capital"], ["exfinity", "Exfinity Venture Partners"],
+  ["alteria", "Alteria Capital"], ["eximius", "Eximius Ventures"], ["info-edge", "Info Edge Ventures"],
+  ["lumikai", "Lumikai"], ["caspian", "Caspian"], ["seafund", "Seafund"], ["trifecta", "Trifecta Capital"],
+  ["waterbridge", "WaterBridge Ventures"], ["beenext", "Beenext"], ["ipv", "Inflection Point Ventures"],
+].map(([id, name]) => ({ id, name }));
+
 /** The short name a firm goes by (a16z), or its full name. */
 export const firmLabel = (id) => {
-  const f = VC_FIRMS.find((x) => x.id === id);
+  const f = VC_FIRMS.find((x) => x.id === id) || INDIA_FIRMS.find((x) => x.id === id);
   return f ? f.short || f.name : id;
 };

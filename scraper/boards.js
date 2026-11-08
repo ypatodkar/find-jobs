@@ -91,6 +91,13 @@ const BOARDS = {
   // ycombinator.com; see scrapeYc. Last, so firms that co-invested keep their credit.
   "y-combinator":        { platform: "yc", host: "www.ycombinator.com" },
 
+  // Indian firms' own boards, for the India list only: they are asked for Indian roles
+  // and nothing else. Peak XV is the former Sequoia India, and its Consider board
+  // still carries that id. Most Indian firms publish no board; their portfolios are
+  // read company by company instead (scraper/portfolio.js).
+  "peak-xv":             { platform: "consider", host: "careers.peakxv.com", boardId: "sequoia-capital-india", countries: ["IN"] },
+  "3one4":               { platform: "getro", host: "jobs.3one4capital.com", networkId: 51275, countries: ["IN"] },
+
   // Boards that exist but can't be scraped, with the reason surfaced in the UI.
   "index-ventures": { platform: null, host: "www.indexventures.com", reason: "Custom board, no public search API" },
   "iconiq":         { platform: null, host: "www.iconiq.com", reason: "Greenhouse board lists ICONIQ's own roles, not portfolio jobs" },
@@ -177,12 +184,32 @@ const METROS = [
   { city: "Nashville", re: /nashville/i, consider: ["Nashville, Tennessee"], getro: ["Nashville, TN, USA"] },
 ];
 
+// India's metros, for the India list (in.html). Spellings are the ones boards and
+// ATSs actually use: Bangalore and Bengaluru, Gurgaon and Gurugram, and the districts
+// some give instead of the city (Ranga Reddy is Hyderabad's). Any other Indian city
+// falls into "Other India" rather than being dropped.
+const INDIA_METROS = [
+  { city: "Bengaluru", re: /bengaluru|bangalore|hsr layout|koramangala|whitefield|electronic city/i },
+  { city: "Delhi NCR", re: /new delhi|\bdelhi\b|\bncr\b|gurgaon|gurugram|noida|faridabad|ghaziabad/i },
+  { city: "Hyderabad", re: /hyderabad|secunderabad|ranga reddy|hitec city/i },
+  { city: "Mumbai", re: /mumbai|bombay|thane/i },
+  { city: "Pune", re: /\bpune\b/i },
+  { city: "Chennai", re: /chennai|madras/i },
+  { city: "Kolkata", re: /kolkata|calcutta/i },
+  { city: "Ahmedabad", re: /ahmedabad|gandhinagar/i },
+];
+
 // Getro accepts "Remote" as a searchable location. Consider has no equivalent — every
 // spelling of it returns zero rows — so remote roles from Consider-backed firms reach
 // us only through the ATS phase, which filters locations locally.
+//
+// Both platforms take a country as a location, so "India" asks for every Indian role.
+// The US boards ask for both countries; the Indian boards (countries: ["IN"]) only
+// for India.
 const LOCATIONS = {
   consider: METROS.flatMap((m) => m.consider),
   getro: [...METROS.flatMap((m) => m.getro), "Remote"],
+  india: ["India"],
 };
 
 const CITY_MATCHERS = METROS.map((m) => ({ city: m.city, re: m.re }));
@@ -227,4 +254,4 @@ const ROLE_PATTERNS = [
 // contribution to the list.
 const EXCLUDE_TITLE = /\b(recruit\w*|sourcer|talent partner|sales|account executive|account manager|marketing|brand|designer|design lead|people ops|human resources|controller|accountant|counsel|legal|paralegal|customer support|customer success|program manager|product manager|product marketing|community|content writer|copywriter|executive assistant|office manager|business development|solutions consultant recruiter|tutors?)\b/i;
 
-module.exports = { BOARDS, METROS, LOCATIONS, CITY_MATCHERS, ROLE_PATTERNS, EXCLUDE_TITLE, BLOCKED_COMPANIES };
+module.exports = { BOARDS, METROS, INDIA_METROS, LOCATIONS, CITY_MATCHERS, ROLE_PATTERNS, EXCLUDE_TITLE, BLOCKED_COMPANIES };

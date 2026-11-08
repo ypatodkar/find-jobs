@@ -232,6 +232,11 @@ h1.title {
   margin: 0 0 10px;
   text-wrap: balance;
 }
+/* "India" beside the title on in.html: which list this is, at a glance. */
+.title-country {
+  color: var(--accent);
+  font-weight: 500;
+}
 .dek {
   font-size: var(--text-md);
   color: var(--ink-soft);

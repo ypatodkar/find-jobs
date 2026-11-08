@@ -1,7 +1,7 @@
 // Shared role/city matching, used by both the VC-board scraper and the ATS adapters
 // so a job is judged identically no matter which source it came from.
 
-const { CITY_MATCHERS, ROLE_PATTERNS, EXCLUDE_TITLE, BLOCKED_COMPANIES } = require("./boards");
+const { CITY_MATCHERS, INDIA_METROS, ROLE_PATTERNS, EXCLUDE_TITLE, BLOCKED_COMPANIES } = require("./boards");
 
 // Punctuation and case carry no meaning in a company name here: "TENEX.AI", "Tenex.ai"
 // and "Tenex AI" are the same employer, and boards disagree about which to publish.
@@ -72,19 +72,116 @@ function matchCity(locations) {
   return null;
 }
 
+// India, by name or by state. Never by "IN": that is also Indiana's code, and
+// "Indianapolis, IN" is a US posting.
+const INDIA_RE = /\b(india|karnataka|maharashtra|telangana|tamil nadu|haryana|uttar pradesh|gujarat|kerala|west bengal|rajasthan|andhra pradesh|madhya pradesh|odisha|punjab|chandigarh|goa)\b/i;
+
+/**
+ * The India list's bucket for a posting: one of INDIA_METROS, "Remote (India)", or
+ * "Other India" for an Indian city outside them. Null when no location is in India.
+ * A named metro wins over remote, for the same reason as in matchCity.
+ */
+function matchIndiaCity(locations) {
+  for (const raw of locations) {
+    if (!raw) continue;
+    for (const m of INDIA_METROS) if (m.re.test(raw)) return m.city;
+  }
+  if (!locations.some((l) => l && INDIA_RE.test(l))) return null;
+  return locations.some((l) => l && REMOTE_RE.test(l)) ? "Remote (India)" : "Other India";
+}
+
+const COUNTRY_MATCHERS = { US: matchCity, IN: matchIndiaCity };
+
+/**
+ * Every tracked country a posting is in, as [{ city, country }], US first. A role
+ * listed in San Francisco and Bengaluru is both a US and an Indian opening, so it gets
+ * a row in each list. `countries` limits which are looked for.
+ */
+function matchPlaces(locations, countries = ["US"]) {
+  const out = [];
+  for (const country of countries) {
+    const city = COUNTRY_MATCHERS[country] && COUNTRY_MATCHERS[country](locations);
+    if (city) out.push({ city, country });
+  }
+  return out;
+}
+
 function matchRoles(title) {
   return ROLE_PATTERNS.filter((p) => p.re.test(title)).map((p) => p.key);
 }
 
-// Returns { roles, city } for an engineering role in a target city, else null.
-function keep(title, locations) {
+// Returns { roles, city, country, places } for an engineering role in a tracked city,
+// else null. `city` and `country` are the first place found (US before India);
+// `places` is all of them. By default only US cities count, as before India existed.
+function keep(title, locations, countries = ["US"]) {
   if (!title) return null;
   if (EXCLUDE_TITLE.test(title)) return null;
   const roles = matchRoles(title);
   if (roles.length === 0) return null;
-  const city = matchCity(locations);
-  if (!city) return null;
-  return { roles, city };
+  const places = matchPlaces(locations, countries);
+  if (!places.length) return null;
+  return { roles, city: places[0].city, country: places[0].country, places };
+}
+
+/**
+ * One row per place a kept posting is in. The first row is `row` itself, unchanged,
+ * so a US role keeps the job id it had before India was tracked; each further place
+ * gets a copy with that place's city and its own id from `idFor(city)`.
+ */
+function placeRows(row, hit, idFor) {
+  const rows = [inCountry({ ...row, country: hit.places[0].country })];
+  for (const p of hit.places.slice(1)) rows.push(inCountry({ ...row, city: p.city, country: p.country, job_id: idFor(p.city) }));
+  return rows;
+}
+
+// A dollar figure on an Indian row is the US range of a posting open in both
+// countries, or a board's guess ($5k–$30k a year for a Databricks engineer), never an
+// Indian salary; those are published in rupees. So an Indian row keeps INR pay only.
+function inCountry(row) {
+  if (row.country !== "IN" || (!row.salary && !row.salaryMin) || /\bINR\b|₹/.test(row.salary || "")) return row;
+  return { ...row, salaryMin: null, salaryMax: null, salary: null };
+}
+
+// Where a posting is, by country, for telling where a company is based: "US", "IN",
+// "other" for another named country, or null when it doesn't say (bare "Remote").
+const US_RE = /\b(united states|usa|u\.s\.a?\.?|[a-z .]+,\s*(al|ak|az|ar|ca|co|ct|de|fl|ga|hi|id|il|ia|ks|ky|la|me|md|ma|mi|mn|ms|mo|mt|ne|nv|nh|nj|nm|ny|nc|nd|oh|ok|or|pa|ri|sc|sd|tn|tx|ut|vt|va|wa|wv|wi|wy|dc))\b/i;
+function countryOf(locations) {
+  const places = (locations || []).filter(Boolean);
+  if (!places.length) return null;
+  // A US metro first: a role listed in New York and Bengaluru is most often a US
+  // company's, hiring in both.
+  const us = matchCity(places);
+  if (us && us !== "Remote") return "US";
+  if (matchIndiaCity(places)) return "IN";
+  if (places.some((l) => US_RE.test(l))) return "US";
+  if (places.some((l) => NON_US_RE.test(l))) return "other";
+  return null;
+}
+
+/**
+ * Where a company is based, from the postings it publishes: the country most of its
+ * located openings are in. `mix` is a { US, IN, other } count. A ".in" website settles
+ * it outright; with no evidence at all, `fallback` (the country of the investor that
+ * listed it) is used. Ties go to the US, then India.
+ */
+function companyCountry({ domain, mix, fallback = "US" } = {}) {
+  if (/\.(in|co\.in)$/i.test(hostKey(domain))) return "IN";
+  const m = mix || {};
+  const total = (m.US || 0) + (m.IN || 0) + (m.other || 0);
+  if (!total) return fallback;
+  if ((m.US || 0) >= (m.IN || 0) && (m.US || 0) >= (m.other || 0)) return "US";
+  if ((m.IN || 0) >= (m.other || 0)) return "IN";
+  return "other";
+}
+
+/** Tally countryOf over a list of postings' location arrays. */
+function countryMix(locationLists) {
+  const mix = { US: 0, IN: 0, other: 0 };
+  for (const locs of locationLists) {
+    const c = countryOf(locs);
+    if (c) mix[c]++;
+  }
+  return mix;
 }
 
 // Seniority is derived from the title rather than taken from a source field, because
@@ -133,7 +230,8 @@ function dedupe(jobs) {
 }
 
 module.exports = {
-  matchCity, matchRoles, keep, dedupe, isBlockedCompany, isOwnLink,
+  matchCity, matchIndiaCity, matchPlaces, matchRoles, keep, placeRows, inCountry, countryOf, countryMix, companyCountry,
+  dedupe, isBlockedCompany, isOwnLink,
   deriveSeniority, sizeBucket,
   SENIORITY_LABELS, SIZE_BUCKETS,
 };
