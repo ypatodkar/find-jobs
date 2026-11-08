@@ -167,6 +167,11 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, allJobsPayload(await readResults(), await describedIds()));
   }
 
+  // The India list (in.html).
+  if (route === "/api/in/all-jobs") {
+    return sendJson(res, 200, allJobsPayload(await readResults(), await describedIds(), "IN"));
+  }
+
   // /api/desc/<shard>.json — the same files build.js writes.
   const desc = /^\/api\/desc\/([0-9a-f]{3})$/.exec(route);
   if (desc) {

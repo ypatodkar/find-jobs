@@ -11,10 +11,14 @@ async function runScrape(onEvent = () => {}, options = {}) {
   return refreshRegistry(options.state || emptyState(), onEvent, options);
 }
 
+// Investor pages and the firms index are the US site's, so a firm's count is its US
+// roles; `countIn` is its Indian ones.
 function summarize(results) {
   const out = {};
   for (const [id, r] of Object.entries(results.firms || {})) {
-    out[id] = { status: r.status, count: (r.jobs || []).length, reason: r.reason || null };
+    const jobs = r.jobs || [];
+    const india = jobs.filter((j) => j.country === "IN").length;
+    out[id] = { status: r.status, count: jobs.length - india, countIn: india, reason: r.reason || null };
   }
   return out;
 }
@@ -62,7 +66,7 @@ function resultsPayload(data) {
 // merged registry value, so 41 companies published two different `size` values and the
 // company-size filter matched some of their roles but not others. One value per
 // company, first non-empty wins — the same rule ats.js already uses to merge them.
-const COMPANY_FIELDS = ["logo", "markets", "domain", "staffCount", "size", "stage"];
+const COMPANY_FIELDS = ["logo", "markets", "domain", "staffCount", "size", "stage", "hq"];
 
 const isEmpty = (v) => v == null || (Array.isArray(v) && v.length === 0);
 
@@ -100,7 +104,13 @@ function packCompanies(jobs) {
 // them: `locations` duplicates `city` for display purposes nobody built, and the
 // sponsorship trio lost its last reader when the sponsorship filter was removed.
 // Together they were 1.7MB of all-jobs.json.
-const SERVER_ONLY_FIELDS = new Set(["locations", "sponsorship", "sponsorshipEvidence", "sponsorshipTypes", "staffCount", "domain"]);
+//
+// `country` too: each list is one country's file, so every row in it would repeat it.
+const SERVER_ONLY_FIELDS = new Set(["locations", "sponsorship", "sponsorshipEvidence", "sponsorshipTypes", "staffCount", "domain", "country"]);
+
+// Which list a row belongs to. Rows from before India was tracked carry no country and
+// were all American.
+const countryOf = (job) => job.country || "US";
 
 // What the browser gets for one job: no server-only fields, and no null, false or
 // empty values (8,000 `remote: false` and 4,800 null salary triples), since every
@@ -147,9 +157,12 @@ function mergeJobs(data) {
   return [...merged.values()];
 }
 
-/** What the all-jobs page downloads: the merged jobs, slimmed and company-packed. */
-function allJobsPayload(data, described) {
-  return packCompanies(mergeJobs(data).map((j) => publicJob(j, described)));
+/**
+ * What a list page downloads: one country's merged jobs, slimmed and company-packed.
+ * "US" is the all-jobs page (index.html), "IN" the India list (in.html).
+ */
+function allJobsPayload(data, described, country = "US") {
+  return packCompanies(mergeJobs(data).filter((j) => countryOf(j) === country).map((j) => publicJob(j, described)));
 }
 
 /**
@@ -163,7 +176,8 @@ function firmPayload(data, id, described) {
     const { status, reason, host, totalOnBoard, atsCompanies, fromAts, fromBoard } = firm;
     return {
       status, reason, host, totalOnBoard, atsCompanies, fromAts, fromBoard,
-      jobs: (firm.jobs || []).map((j) => publicJob(j, described)),
+      // Investor pages are part of the US site.
+      jobs: (firm.jobs || []).filter((j) => countryOf(j) === "US").map((j) => publicJob(j, described)),
     };
   }
 

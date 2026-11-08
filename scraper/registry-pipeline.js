@@ -1,9 +1,11 @@
 const { BOARDS } = require("./boards");
 const { scrapeFirm } = require("./scraper");
 const { fetchAll, fetchCompany } = require("./ats");
-const { dedupe, isBlockedCompany } = require("./match");
+const { dedupe, isBlockedCompany, companyCountry, inCountry } = require("./match");
 const { resolveCareers } = require("./careers");
 const { DAY, DISCOVERY_INTERVAL, REPAIR_INTERVAL, due, ingestBoard, findCompany, atsEntry, compactBoardJobs } = require("./registry");
+const { INDIA_PORTFOLIOS, isIndianFirm } = require("./india");
+const { discoverPortfolios } = require("./portfolio");
 
 async function bounded(items, concurrency, work) {
   let next = 0;
@@ -12,14 +14,36 @@ async function bounded(items, concurrency, work) {
   }));
 }
 
+/**
+ * Where a company is based, for the India list's "Company HQ" filter: "US", "IN" or
+ * "other". From where all of its ATS openings are when we read its board, else from
+ * the roles the VC boards list for it; with neither, from its investors (an Indian
+ * board's company is Indian).
+ */
+function hqOf(co, boards) {
+  let mix = co.locationMix;
+  if (!mix) {
+    mix = { US: 0, IN: 0, other: 0 };
+    for (const j of co.lastJobs) mix[j.country === "IN" ? "IN" : "US"]++;
+  }
+  return companyCountry({ domain: co.meta.domain, mix, fallback: indianOnly(co, boards) ? "IN" : "US" });
+}
+
+// A company that only Indian sources list: read for the India list alone, so a firm
+// added for India never changes the US list.
+const indianOnly = (co, boards) => co.firms.length > 0 && co.firms.every((id) => isIndianFirm(id, boards));
+
 function recordSuccess(co, result, now, previousJobs = co.lastJobs) {
   const prior = new Map(previousJobs.map((j) => [`${j.title}|${j.city}`.toLowerCase(), j]));
   co.lastJobs = result.jobs.map((job) => {
     const old = prior.get(`${job.title}|${job.city}`.toLowerCase());
-    return !job.salaryMin && old?.salaryMin
+    // An Indian row only ever takes rupee pay (match.js, inCountry).
+    const carries = old?.salaryMin && (job.country !== "IN" || /\bINR\b|₹/.test(old.salary || ""));
+    return !job.salaryMin && carries
       ? { ...job, salaryMin: old.salaryMin, salaryMax: old.salaryMax, salary: old.salary }
       : job;
   });
+  if (result.mix) co.locationMix = result.mix;
   co.lastSuccessAt = now;
   co.lastAtsSuccessAt = now;
   co.lastAttemptAt = now;
@@ -35,6 +59,9 @@ async function refreshRegistry(state, onEvent = () => {}, options = {}) {
   const fetchOne = options.fetchCompany || fetchCompany;
   const resolve = options.resolveCareers || resolveCareers;
   const discovery = { attempted: 0, succeeded: 0, errors: [] };
+  // The Indian portfolios ride along with the real board list; a caller passing its
+  // own boards (the tests) opts in with options.portfolios.
+  const portfolios = options.portfolios ?? !options.boards;
   const ids = Object.keys(boards);
   const eligible = (co) => !isBlockedCompany({ company: co.company, domain: co.meta.domain, slug: co.slug });
   const dueBoards = options.jobsOnly ? [] : ids.filter((id) => boards[id].platform &&
@@ -73,6 +100,19 @@ async function refreshRegistry(state, onEvent = () => {}, options = {}) {
     }
   }
 
+  // Indian portfolios, company by company (portfolio.js): weekly per firm, plus a
+  // bounded number of careers lookups for new and stale websites every discovery run.
+  if (!options.jobsOnly && portfolios) {
+    try {
+      discovery.portfolios = await (options.discoverPortfolios || discoverPortfolios)(state, {
+        now, onEvent, forceDiscovery: options.forceDiscovery, resolveLimit: options.portfolioResolveLimit,
+      });
+    } catch (err) {
+      // India's sources must never cost the US refresh.
+      discovery.errors.push({ firmId: "india-portfolios", reason: err.message });
+    }
+  }
+
   // Preserve the most recent successful VC snapshot for unsupported ATSs. Their
   // freshness is explicitly the weekly board observation, not today's ATS run.
   const fallback = new Map();
@@ -96,7 +136,7 @@ async function refreshRegistry(state, onEvent = () => {}, options = {}) {
   const repair = { attempted: 0, resolved: 0, errors: [] };
   if (!options.discoveryOnly) {
     const companies = Object.values(state.companies).filter(eligible);
-    const entries = companies.filter((co) => co.key).map(atsEntry);
+    const entries = companies.filter((co) => co.key).map((co) => ({ ...atsEntry(co), countries: indianOnly(co, boards) ? ["IN"] : undefined }));
     onEvent("phase", { phase: "ats", companies: entries.length });
     const fetched = await fetchBoards(entries, (p) => onEvent("progress", { phase: "ats", ...p }));
     for (const co of companies.filter((c) => c.key)) {
@@ -161,11 +201,25 @@ async function refreshRegistry(state, onEvent = () => {}, options = {}) {
       jobs: [], totalOnBoard: board?.totalOnBoard ?? null, atsCompanies: 0, fromAts: 0, fromBoard: 0,
     };
   }
+  // The portfolios that are not also boards, so their companies' roles carry the firm.
+  for (const [id, cfg] of Object.entries(portfolios ? INDIA_PORTFOLIOS : {})) {
+    if (results.firms[id]) continue;
+    const firm = state.portfolio?.firms?.[id];
+    const known = Object.values(state.companies).some((co) => eligible(co) && co.firms.includes(id));
+    results.firms[id] = {
+      firmId: id, host: cfg.portfolio ? new URL(cfg.portfolio).hostname : null, platform: "portfolio",
+      // Its companies stay listed when a week's crawl fails, as a board's do.
+      status: firm?.lastDiscoveryAt || known ? "ok" : "error", reason: firm?.lastError || null,
+      jobs: [], totalOnBoard: firm?.companies ?? null, atsCompanies: 0, fromAts: 0, fromBoard: 0,
+    };
+  }
   let atsJobs = 0, boardJobs = 0, retained = 0;
   const active = Object.values(state.companies).filter(eligible);
   for (const co of active) {
     const stale = !!co.lastError || due(co.lastSuccessAt, DAY, now);
-    const jobs = co.lastJobs.map((j) => ({ ...j, ...co.meta, company: co.company, lastVerifiedAt: co.lastSuccessAt, stale }));
+    const hq = hqOf(co, boards);
+    // inCountry again here, for rows a board snapshot or an older run saved.
+    const jobs = co.lastJobs.map((j) => inCountry({ ...j, ...co.meta, company: co.company, hq, lastVerifiedAt: co.lastSuccessAt, stale }));
     const firms = co.firms.filter((id) => results.firms[id]);
     if (!firms.length) results.directJobs.push(...jobs);
     for (const firmId of firms) {
@@ -183,8 +237,10 @@ async function refreshRegistry(state, onEvent = () => {}, options = {}) {
     companies: active.filter((c) => c.key).length,
     reached: active.filter((c) => c.key && c.lastSuccessAt === now).length,
     fromAts: atsJobs, fromBoard: boardJobs, retained,
+    countries: { US: 0, IN: 0 },
     failures: active.filter((c) => c.key && c.lastError).map((c) => ({ company: c.company, ats: c.ats, slug: c.slug, reason: c.lastError })),
   };
+  for (const j of dedupe([...Object.values(results.firms).flatMap((f) => f.jobs), ...results.directJobs])) results.enrichment.countries[j.country === "IN" ? "IN" : "US"]++;
   if (!active.length && !Object.values(state.boards).some((b) => b.lastSuccessAt)) throw new Error("No company registry or successful discovery; refusing an empty refresh");
   if (!options.discoveryOnly && active.length && !active.some((co) => co.lastSuccessAt)) throw new Error("No company board could be verified and no previous jobs snapshot exists; refusing an empty refresh");
   state.updatedAt = now;
@@ -192,4 +248,4 @@ async function refreshRegistry(state, onEvent = () => {}, options = {}) {
   onEvent("done", { scrapedAt: now, enrichment: results.enrichment, discovery, repair });
   return results;
 }
-module.exports = { refreshRegistry, recordSuccess };
+module.exports = { refreshRegistry, recordSuccess, hqOf };

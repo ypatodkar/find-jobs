@@ -184,8 +184,11 @@ function batchGroups(counts, cap = 1000) {
 // so its page is not worth a request. Roles are still checked one by one afterwards.
 const US_REGIONS = new Set(["United States of America", "America / Canada", "Remote", "Fully Remote", "Partly Remote", "Unspecified"]);
 const mayHireInUs = (company) => !Array.isArray(company.regions) || !company.regions.length || company.regions.some((r) => US_REGIONS.has(r));
+// The same, with India: the regions YC files Indian hiring under.
+const INDIA_REGIONS = new Set(["India", "South Asia"]);
+const mayHireInTracked = (company) => mayHireInUs(company) || company.regions.some((r) => INDIA_REGIONS.has(r));
 
 module.exports = {
-  inertiaProps, ycPostedDate, ycSalary, ycLocations, ycSponsorship, markdownToHtml, batchGroups, mayHireInUs,
+  inertiaProps, ycPostedDate, ycSalary, ycLocations, ycSponsorship, markdownToHtml, batchGroups, mayHireInUs, mayHireInTracked,
   loadDescriptions, saveDescriptions, isFresh,
 };

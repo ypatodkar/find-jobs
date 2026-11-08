@@ -29,6 +29,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         index: page("index.html"),
+        in: page("in.html"),
         firm: page("firm.html"),
         firms: page("firms.html"),
         about: page("about.html"),

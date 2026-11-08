@@ -98,6 +98,14 @@ async function refresh(state, args) {
     } else if (event === "progress" && data.phase === "boards" && data.state !== "scraping") {
       const outcome = data.state === "ok" ? `${data.count} roles` : data.reason || data.state;
       console.log(`  [${data.done}/${data.total}] ${data.firmId}: ${outcome}`);
+    } else if (event === "phase" && data.phase === "portfolios") {
+      console.log(`\nReading ${data.firms} Indian portfolios…`);
+    } else if (event === "progress" && data.phase === "portfolios") {
+      console.log(`  ${data.firmId}: ${data.error || `${data.count} companies`}`);
+    } else if (event === "phase" && data.phase === "portfolio-careers") {
+      console.log(`Looking for the careers systems of ${data.sites} portfolio websites…`);
+    } else if (event === "done-portfolios") {
+      console.log(`Portfolios: ${data.firms} read, ${data.firmErrors.length} failed; ${data.resolved}/${data.checked} websites on a supported careers system; ${data.admitted} companies added.`);
     } else if (event === "progress" && data.phase === "ats" && data.done % 50 === 0) {
       console.log(`  companies ${data.done}/${data.total}…`);
     } else if (event === "done") {
@@ -107,6 +115,7 @@ async function refresh(state, args) {
           `${e.reached}/${e.companies} company boards refreshed; ${e.fromAts} ATS roles, ${e.fromBoard} from VC snapshots, ${e.retained} retained after failures.`
       );
       if (e.failures.length) console.log(`${e.failures.length} company boards unreachable.`);
+      console.log(`Countries: ${e.countries.US} US roles, ${e.countries.IN} India roles.`);
     }
   }, { state, forceDiscovery: args.has("--discover"), discoveryOnly: args.has("--discover-only"), jobsOnly: args.has("--jobs-only") });
 

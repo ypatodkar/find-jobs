@@ -5,10 +5,12 @@
 // discover a company's careers page: the apply URLs already scraped from the VC
 // boards tell us which ATS it uses and under what slug.
 //
-// Covers Ashby, Greenhouse and Lever (~83% of portfolio companies). Anything else
-// keeps its VC-board listing rather than being dropped.
+// Covers Ashby, Greenhouse and Lever (~83% of US portfolio companies), and Keka,
+// Workable, SmartRecruiters, Recruitee and BambooHR, which most Indian startups that
+// publish their openings use. Anything else keeps its VC-board listing rather than
+// being dropped.
 
-const { keep, deriveSeniority, isBlockedCompany } = require("./match");
+const { keep, placeRows, countryMix, deriveSeniority, isBlockedCompany } = require("./match");
 const { jobId } = require("./id");
 const { classifySponsorship, toPlainText } = require("./sponsorship");
 const { toDisplayHtml } = require("../shared/description");
@@ -67,15 +69,37 @@ function detectAts(rawUrl) {
     // jobs.lever.co/{slug}/{posting uuid}
     return seg[0] ? { ats: "lever", slug: seg[0], postingId: seg[1] || null } : null;
   }
+  // The systems Indian startups mostly use. Keka and BambooHR give each company a
+  // subdomain; Workable and SmartRecruiters a path. A shared subdomain (cdn.keka.com)
+  // is not a company.
+  const sub = host.split(".")[0];
+  if (host.endsWith(".keka.com") && seg[0] === "careers" && !/^(cdn|www|app|help|blog|api)$/.test(sub)) {
+    return { ats: "keka", slug: sub, postingId: seg[1] === "jobdetails" ? seg[2] || null : null };
+  }
+  if (host === "apply.workable.com" && seg[0] && !/^(api|j)$/.test(seg[0])) {
+    // apply.workable.com/{slug}/j/{shortcode}
+    return { ats: "workable", slug: seg[0].toLowerCase(), postingId: seg[1] === "j" ? seg[2] || null : null };
+  }
+  if (["jobs.smartrecruiters.com", "careers.smartrecruiters.com"].includes(host) && seg[0]) {
+    // jobs.smartrecruiters.com/{slug}/{posting id}-{title}
+    return { ats: "smartrecruiters", slug: seg[0], postingId: (seg[1] || "").split("-")[0] || null };
+  }
+  if (host.endsWith(".recruitee.com") && !/^(www|app|api|blog|support)$/.test(sub)) {
+    return { ats: "recruitee", slug: sub, postingId: null };
+  }
+  if (host.endsWith(".bamboohr.com") && /^(careers|jobs)$/.test(seg[0] || "") && !/^(www|api)$/.test(sub)) {
+    return { ats: "bamboohr", slug: sub, postingId: seg[0] === "careers" && /^\d+$/.test(seg[1] || "") ? seg[1] : null };
+  }
   return null;
 }
 
-async function getOnce(url) {
+async function getOnce(url, init = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
     const res = await fetch(url, {
-      headers: { "user-agent": UA, accept: "application/json" },
+      ...init,
+      headers: { "user-agent": UA, accept: "application/json", ...(init.headers || {}) },
       signal: ctrl.signal,
     });
     if (res.status === 404) {
@@ -92,11 +116,11 @@ async function getOnce(url) {
 }
 
 // Retries transient failures (timeouts, 429s, 5xx) once; never retries a 404.
-async function getJson(url) {
+async function getJson(url, init) {
   let lastErr;
   for (let attempt = 0; attempt <= RETRIES; attempt++) {
     try {
-      return await getOnce(url);
+      return await getOnce(url, init);
     } catch (err) {
       lastErr = err;
       if (err.permanent) break;
@@ -105,6 +129,18 @@ async function getJson(url) {
   }
   throw lastErr;
 }
+
+// A careers page as text, for the one system (Keka) whose job feed is named in it.
+async function getText(url) {
+  const res = await fetch(url, { headers: { "user-agent": UA, accept: "text/html" }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (res.status === 404) { await res.body?.cancel(); const e = new Error("board not found"); e.permanent = true; throw e; }
+  if (!res.ok) { await res.body?.cancel(); throw new Error("HTTP " + res.status); }
+  return res.text();
+}
+
+const place = (...parts) => parts.filter(Boolean).join(", ");
+// SmartRecruiters and Workable give a country code; the location matchers want a name.
+const COUNTRY_NAMES = { in: "India", us: "United States" };
 
 function money(range) {
   if (!range || range.min == null) return null;
@@ -202,8 +238,116 @@ const ADAPTERS = {
   },
 };
 
+// Keka publishes each company's openings through the widget its careers page embeds.
+// The page names the company's portal id (in /ats/documents/{id}/), and the widget's
+// feed under that id is the whole list, with structured locations and full HTML.
+ADAPTERS.keka = async function keka(slug) {
+  const page = await getText(`https://${slug}.keka.com/careers/`);
+  const portal = (/\/ats\/documents\/([0-9a-f-]{36})\//i.exec(page) || [])[1];
+  if (!portal) throw new Error("Keka careers page names no portal id");
+  const data = await getJson(`https://${slug}.keka.com/careers/api/embedjobs/default/active/${portal}`);
+  if (!Array.isArray(data)) throw new Error("invalid Keka jobs response");
+  return data.map((j) => ({
+    id: j.id != null ? String(j.id) : null,
+    title: j.title,
+    locations: (j.jobLocations || []).flatMap((l) => [place(l.city, l.state, l.countryName), l.name]),
+    url: `https://${slug}.keka.com/careers/jobdetails/${j.id}`,
+    posted: j.publishedOn || null,
+    remote: (j.jobLocations || []).some((l) => /remote/i.test(l.name || "")),
+    salary: null,
+    description: j.description || "",
+  }));
+};
+
+// Ten rows a page, with a token for the next; descriptions need a request per role,
+// so only the list is read and the classifier works from the title.
+ADAPTERS.workable = async function workable(slug) {
+  const out = [];
+  let token = null;
+  for (let page = 0; page < 30; page++) {
+    const data = await getJson(`https://apply.workable.com/api/v3/accounts/${encodeURIComponent(slug)}/jobs`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ query: "", location: [], department: [], worktype: [], remote: [], ...(token ? { token } : {}) }),
+    });
+    if (!Array.isArray(data?.results)) throw new Error("invalid Workable jobs response");
+    for (const j of data.results) {
+      out.push({
+        id: j.shortcode || (j.id != null ? String(j.id) : null),
+        title: j.title,
+        locations: [j.location, ...(j.locations || [])].filter(Boolean).map((l) => place(l.city, l.region, l.country || COUNTRY_NAMES[String(l.countryCode || "").toLowerCase()])),
+        url: `https://apply.workable.com/${slug}/j/${j.shortcode}/`,
+        posted: j.published || null,
+        remote: !!j.remote || j.workplace === "remote",
+        salary: null,
+        description: "",
+      });
+    }
+    if (!data.nextPage) break;
+    token = data.nextPage;
+  }
+  return out;
+};
+
+ADAPTERS.smartrecruiters = async function smartrecruiters(slug) {
+  const out = [];
+  for (let offset = 0; offset < 1000; offset += 100) {
+    const data = await getJson(`https://api.smartrecruiters.com/v1/companies/${encodeURIComponent(slug)}/postings?limit=100&offset=${offset}`);
+    if (!Array.isArray(data?.content)) throw new Error("invalid SmartRecruiters jobs response");
+    for (const j of data.content) {
+      const l = j.location || {};
+      out.push({
+        id: j.id || null,
+        title: j.name,
+        locations: [l.fullLocation, place(l.city, l.region, COUNTRY_NAMES[String(l.country || "").toLowerCase()] || l.country)],
+        url: `https://jobs.smartrecruiters.com/${slug}/${j.id}`,
+        posted: j.releasedDate || null,
+        remote: !!l.remote,
+        salary: null,
+        description: "",
+      });
+    }
+    if (out.length >= (data.totalFound || 0) || !data.content.length) break;
+  }
+  return out;
+};
+
+ADAPTERS.recruitee = async function recruitee(slug) {
+  const data = await getJson(`https://${slug}.recruitee.com/api/offers/`);
+  if (!Array.isArray(data?.offers)) throw new Error("invalid Recruitee jobs response");
+  return data.offers.map((j) => ({
+    id: j.id != null ? String(j.id) : null,
+    title: j.title,
+    locations: [j.location, place(j.city, j.state_name, j.country)],
+    url: j.careers_url || `https://${slug}.recruitee.com/o/${j.slug}`,
+    posted: j.published_at || j.created_at || null,
+    remote: !!j.remote,
+    salary: null,
+    description: [j.description, j.requirements].filter(Boolean).join(""),
+  }));
+};
+
+ADAPTERS.bamboohr = async function bamboohr(slug) {
+  const data = await getJson(`https://${slug}.bamboohr.com/careers/list`);
+  if (!Array.isArray(data?.result)) throw new Error("invalid BambooHR jobs response");
+  return data.result.map((j) => ({
+    id: j.id != null ? String(j.id) : null,
+    title: j.jobOpeningName,
+    locations: [place(j.location?.city, j.location?.state, j.location?.country), place(j.atsLocation?.city, j.atsLocation?.state, j.atsLocation?.country)],
+    url: `https://${slug}.bamboohr.com/careers/${j.id}`,
+    posted: null,
+    remote: !!j.isRemote,
+    salary: null,
+    description: "",
+  }));
+};
+
 const SUPPORTED = Object.keys(ADAPTERS);
 const isSupported = (ats) => SUPPORTED.includes(ats);
+
+// Every company is read for both lists: a US company's Bengaluru roles belong in the
+// India list as much as an Indian company's do.
+const COUNTRIES = ["US", "IN"];
 
 /** Fetch one company's live openings, filtered to target cities and engineering roles. */
 async function fetchCompany(entry) {
@@ -214,13 +358,14 @@ async function fetchCompany(entry) {
     const jobs = [];
     for (const j of raw) {
       const locations = (j.locations || []).filter(Boolean);
-      const hit = keep(j.title, locations);
+      // A company only Indian investors list is read for India alone (registry-pipeline.js).
+      const hit = keep(j.title, locations, entry.countries || COUNTRIES);
       if (!hit) continue;
       // Prefer the id the API gave us; fall back to the one in the apply URL so a
       // job keeps its identity even if an adapter stops returning `id`.
       const atsId = j.id || (detectAts(j.url) || {}).postingId || null;
       const sponsorship = classifySponsorship(j.description);
-      jobs.push({
+      jobs.push(...placeRows({
         job_id: jobId({ company: entry.company, ats: entry.ats, atsId, title: j.title, city: hit.city }),
         title: j.title,
         company: entry.company,
@@ -249,9 +394,12 @@ async function fetchCompany(entry) {
         ats: entry.ats,
         // Moved out into descriptions.json by scrape.js before results.json is written.
         description: toDisplayHtml(j.displayDescription ?? j.description),
-      });
+      }, hit, (city) => jobId({ company: entry.company, ats: entry.ats, atsId, title: j.title, city })));
     }
-    return { ...entry, ok: true, jobs, scanned: raw.length };
+    // Where every opening is, engineering or not: what tells where the company is
+    // based (registry-pipeline.js).
+    const mix = countryMix(raw.map((j) => (j.locations || []).filter(Boolean)));
+    return { ...entry, ok: true, jobs, scanned: raw.length, mix };
   } catch (err) {
     return { ...entry, ok: false, reason: err.message, jobs: [] };
   }

@@ -100,7 +100,8 @@ function useDrawer(mobile, controls, toggle, closeBtn) {
   return [isOpen, setOpen];
 }
 
-export default function Filters({ dims, filters, countsFor, onChange, onReset, canUndo, onUndo, total, naming }) {
+// `showSalary`: the salary floors are in dollars, so the India list leaves them out.
+export default function Filters({ dims, filters, countsFor, onChange, onReset, canUndo, onUndo, total, naming, showSalary = true }) {
   const mobile = useMobile();
   const controls = useRef(null), toggle = useRef(null), closeBtn = useRef(null);
   const [drawerOpen, setDrawerOpen] = useDrawer(mobile, controls, toggle, closeBtn);
@@ -145,10 +146,10 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
             <SelectMenu id="date-select" label="Filter by date posted" placeholder="Posted" placeholderValue="all"
               options={DATE_RANGES.map((r) => ({ value: r.k, label: r.label }))} value={filters.range} onChange={(v) => set({ range: v })} />
           </div>
-          <div className="sort-wrap">
+          {showSalary ? <div className="sort-wrap">
             <SelectMenu id="salary-select" label="Filter by minimum salary" placeholder="Salary" placeholderValue="all"
               options={SALARY_FLOORS.map((s) => ({ value: s.k, label: s.label }))} value={filters.salary} onChange={(v) => set({ salary: v })} />
-          </div>
+          </div> : null}
         </AdvancedPanel>
       </div>
 

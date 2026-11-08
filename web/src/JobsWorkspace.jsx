@@ -43,15 +43,16 @@ const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").match
 
 /**
  * `showFirms`: offer the Investor filter (the all-jobs page). `contextLabel`: the
- * investor a page is about, which names its saved filters.
+ * investor a page is about, which names its saved filters. `country`: whose list this
+ * is, "US" or "IN" (in.html), which picks the filters that make sense for it.
  */
-export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = null }) {
+export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = null, country = "US" }) {
   const [selectedId, setSelectedId] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false); // the description over the list, under 1100px
   const [expanded, setExpanded] = useState(() => new Set());
   const wide = useMedia("(min-width: 1100px)");
   const narrow = !wide;
-  const dims = useMemo(() => dimensions({ showFirms, firmLabel }), [showFirms]);
+  const dims = useMemo(() => dimensions({ showFirms, firmLabel, country }), [showFirms, country]);
   const { filters, setFilters, page, setPage, view, setView, canUndo, undo, reset, settle } = useFilterState(dims);
 
   const splitRef = useRef(null), dividerRef = useRef(null), paneRef = useRef(null), listRef = useRef(null);
@@ -297,7 +298,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
     <>
       {jobs ? (
         <Filters dims={dims} filters={filters} onChange={setFilters} onReset={reset} canUndo={canUndo} onUndo={undo}
-          total={sorted.length} naming={naming} countsFor={(d) => countsFor(jobs, filters, d, dims, filterOpts)} />
+          total={sorted.length} naming={naming} countsFor={(d) => countsFor(jobs, filters, d, dims, filterOpts)} showSalary={country === "US"} />
       ) : null}
       <div ref={splitRef} className={`results-split${wide ? " is-split" : ""}`} id="results-split" style={columnStyle}>
         <div className="results-main">

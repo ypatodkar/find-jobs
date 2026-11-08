@@ -11,6 +11,8 @@ const HEADCOUNT_INTERVAL = 30 * DAY;
 const REPAIR_INTERVAL = 7 * DAY;
 const STATE_FILE = path.join(__dirname, "../data/scraper-state.json");
 const SEED_FILE = path.join(__dirname, "../config/companies.json");
+// India portfolio websites and their careers systems, as first found (portfolio.js).
+const PORTFOLIO_SEED_FILE = path.join(__dirname, "../config/india-portfolio.json");
 const META_FIELDS = ["staffCount", "size", "stage", "markets", "domain", "logo"];
 const due = (at, interval, now) => !at || Date.parse(now) - Date.parse(at) >= interval;
 const nameKey = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -161,7 +163,7 @@ function seedResults(state, results, descriptions = {}, boards = {}) {
   compactBoardJobs(state);
 }
 
-async function loadState(file = STATE_FILE, { seedFile = SEED_FILE, resultsFile, descriptionsFile, boards = {} } = {}) {
+async function loadState(file = STATE_FILE, { seedFile = SEED_FILE, portfolioSeedFile = PORTFOLIO_SEED_FILE, resultsFile, descriptionsFile, boards = {} } = {}) {
   const saved = await readJson(file);
   const state = saved ? validateState(saved) : emptyState();
   const seed = await readJson(seedFile, { companies: [] });
@@ -176,6 +178,13 @@ async function loadState(file = STATE_FILE, { seedFile = SEED_FILE, resultsFile,
     state.companies[co.id] = { ...co, lastJobs: [], lastSuccessAt: null, consecutiveFailures: 0, lastRepairAt: null };
   }
   if (!saved && resultsFile) seedResults(state, await readJson(resultsFile), descriptionsFile ? await readJson(descriptionsFile, {}) : {}, boards);
+  // Websites the seed knows and the state does not yet, so a state saved before India
+  // existed starts with what the first careers check found instead of redoing it.
+  const portfolioSeed = portfolioSeedFile ? await readJson(portfolioSeedFile, { sites: {} }) : { sites: {} };
+  state.portfolio ||= { firms: {}, sites: {} };
+  for (const [website, site] of Object.entries(portfolioSeed.sites || {})) {
+    if (!state.portfolio.sites[website]) state.portfolio.sites[website] = { ...site, firms: [...site.firms] };
+  }
   return validateState(state);
 }
 
@@ -187,7 +196,7 @@ function seedPayload(state) {
   }) };
 }
 module.exports = {
-  DAY, DISCOVERY_INTERVAL, HEADCOUNT_INTERVAL, REPAIR_INTERVAL, STATE_FILE, SEED_FILE,
+  DAY, DISCOVERY_INTERVAL, HEADCOUNT_INTERVAL, REPAIR_INTERVAL, STATE_FILE, SEED_FILE, PORTFOLIO_SEED_FILE,
   due, domainOf, emptyState, validateState, readJson, atomicJson, withStateLock,
   boardKey, findCompany, observeCompany, ingestBoard, compactBoardJobs, seedResults, loadState, atsEntry, seedPayload,
 };

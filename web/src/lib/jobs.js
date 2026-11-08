@@ -56,6 +56,11 @@ export function relativeDate(iso) {
 
 export function compactPay(j) {
   if (!j.salaryMin) return j.salary || null;
+  // Rupees as Indian postings state pay: lakhs per annum.
+  if (j.salary && /\bINR\b|₹/.test(j.salary) && /year/i.test(j.salary)) {
+    const l = (n) => String(Math.round(n / 1e4) / 10);
+    return j.salaryMax && j.salaryMax !== j.salaryMin ? `₹${l(j.salaryMin)}–${l(j.salaryMax)} LPA` : `₹${l(j.salaryMin)}+ LPA`;
+  }
   if (j.salary && !/USD|\$/.test(j.salary)) return j.salary; // other currencies as published
   const k = (n) => "$" + Math.round(n / 1000) + "k";
   return j.salaryMax && j.salaryMax !== j.salaryMin ? `${k(j.salaryMin)}–${k(j.salaryMax)}` : `${k(j.salaryMin)}+`;
@@ -80,8 +85,9 @@ export function expand(data) {
 }
 
 /** Every role, from the path the dev server answers, the build writes and Pages serves. */
-export async function loadJobs() {
-  const r = await fetch("api/all-jobs.json");
+// `path`: the India list (in.html) reads api/in/all-jobs.json.
+export async function loadJobs(path = "api/all-jobs.json") {
+  const r = await fetch(path);
   if (!r.ok) throw new Error(`Job data request failed (${r.status})`);
   return expand(await r.json());
 }

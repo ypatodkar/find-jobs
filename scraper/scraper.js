@@ -1,5 +1,5 @@
 const { BOARDS, LOCATIONS } = require("./boards");
-const { keep, dedupe, deriveSeniority, sizeBucket, isBlockedCompany, isOwnLink } = require("./match");
+const { keep, placeRows, dedupe, deriveSeniority, sizeBucket, isBlockedCompany, isOwnLink } = require("./match");
 const { classifySponsorship } = require("./sponsorship");
 const { toDisplayHtml } = require("../shared/description");
 
@@ -26,7 +26,7 @@ function fmtSalary(min, max, currency, period) {
 const { detectAts } = require("./ats");
 const { jobId } = require("./id");
 const {
-  inertiaProps, ycPostedDate, ycSalary, ycLocations, ycSponsorship, markdownToHtml, batchGroups, mayHireInUs,
+  inertiaProps, ycPostedDate, ycSalary, ycLocations, ycSponsorship, markdownToHtml, batchGroups, mayHireInTracked,
   loadDescriptions, saveDescriptions, isFresh,
 } = require("./yc");
 
@@ -39,6 +39,12 @@ function boardJobId(company, title, city, url) {
   const d = detectAts(url);
   return jobId({ company, title, city, ats: d && d.postingId ? d.ats : null, atsId: d ? d.postingId : null });
 }
+
+// Which countries a board's roles are kept for: the US boards feed both lists, an
+// Indian board (countries: ["IN"]) only the India one.
+const DEFAULT_COUNTRIES = ["US", "IN"];
+const countriesOf = (cfg) => cfg.countries || DEFAULT_COUNTRIES;
+const asksFor = (cfg, country) => countriesOf(cfg).includes(country);
 
 const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36";
@@ -181,7 +187,8 @@ async function considerFetch(cfg, locations, depth = 0) {
 }
 
 async function scrapeConsider(cfg) {
-  const data = await considerFetch(cfg, LOCATIONS.consider);
+  const asked = [...(asksFor(cfg, "US") ? LOCATIONS.consider : []), ...(asksFor(cfg, "IN") ? LOCATIONS.india : [])];
+  const data = await considerFetch(cfg, asked);
 
   const seen = new Set();
   const out = [];
@@ -191,7 +198,7 @@ async function scrapeConsider(cfg) {
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
     const locations = j.locations || [];
-    const hit = keep(j.title, locations);
+    const hit = keep(j.title, locations, countriesOf(cfg));
     if (!hit) continue;
     const company = j.companyName || "";
     const url = j.applyUrl || j.url || "";
@@ -201,7 +208,7 @@ async function scrapeConsider(cfg) {
     const s = j.salary || {};
     const staffCount = j.companyStaffCount || null;
     const sponsorship = classifySponsorship(j.descriptionPlain || j.description || j.descriptionHtml || j.content || "");
-    out.push({
+    out.push(...placeRows({
       job_id: boardJobId(company, j.title, hit.city, url),
       title: j.title,
       company,
@@ -227,7 +234,7 @@ async function scrapeConsider(cfg) {
       source: "board",
       // Moved out into descriptions.json by scrape.js before results.json is written.
       description: toDisplayHtml(j.descriptionHtml || j.description || j.descriptionPlain || j.content || ""),
-    });
+    }, hit, (city) => boardJobId(company, j.title, city, url)));
   }
   return { jobs: out, scanned: (data.jobs || []).length, totalOnBoard: data.total ?? null };
 }
@@ -336,14 +343,14 @@ async function scrapeA16z(cfg) {
         seen.add(dedupeKey);
 
         const locations = (j.locations || []).filter(Boolean);
-        const hit = keep(j.title, locations);
+        const hit = keep(j.title, locations, countriesOf(cfg));
         if (!hit) continue;
         const company = j.company_name || co.name || "";
         if (isBlockedCompany({ company, domain: co.domain, slug: (detectAts(url) || {}).slug })) continue;
 
         const staffCount = co.headcount || null;
         const sponsorship = classifySponsorship(j.description_html || "");
-        out.push({
+        out.push(...placeRows({
           job_id: boardJobId(company, j.title, hit.city, url),
           title: j.title,
           company,
@@ -369,7 +376,7 @@ async function scrapeA16z(cfg) {
           source: "board",
           // Moved out into descriptions.json by scrape.js before results.json is written.
           description: toDisplayHtml(j.description_html || ""),
-        });
+        }, hit, (city) => boardJobId(company, j.title, city, url)));
       }
     }
   }
@@ -415,14 +422,14 @@ async function scrapeGreylock(cfg) {
     seen.add(dedupeKey);
 
     const locations = (j.locations || j.normalizedLocations || []).filter(Boolean);
-    const hit = keep(j.title, locations);
+    const hit = keep(j.title, locations, countriesOf(cfg));
     if (!hit) continue;
     const company = j.companyName || "";
     if (isBlockedCompany({ company, domain: j.companyDomain, slug: (detectAts(url) || {}).slug })) continue;
 
     const s = j.salary || {};
     const sponsorship = classifySponsorship("");
-    out.push({
+    out.push(...placeRows({
       job_id: boardJobId(company, j.title, hit.city, url),
       title: j.title,
       company,
@@ -449,7 +456,7 @@ async function scrapeGreylock(cfg) {
       domain: j.companyDomain || null,
       logo: j.logoUrl || null,
       source: "board",
-    });
+    }, hit, (city) => boardJobId(company, j.title, city, url)));
   }
   return { jobs: out, scanned: jobs.length, totalOnBoard: null };
 }
@@ -458,6 +465,7 @@ async function scrapeGetro(cfg) {
   const out = [];
   let scanned = 0;
   let count = null;
+  const asked = [...(asksFor(cfg, "US") ? LOCATIONS.getro : []), ...(asksFor(cfg, "IN") ? LOCATIONS.india : [])];
 
   for (let page = 0; page < GETRO_MAX_PAGES; page++) {
     const data = await postJson(
@@ -467,7 +475,7 @@ async function scrapeGetro(cfg) {
         page,
         query: "",
         filters: {
-          searchable_locations: LOCATIONS.getro,
+          searchable_locations: asked,
           job_functions: ["Software Engineering", "Data Science"],
         },
       },
@@ -480,7 +488,7 @@ async function scrapeGetro(cfg) {
 
     for (const j of jobs) {
       const locations = j.searchable_locations || [];
-      const hit = keep(j.title, locations);
+      const hit = keep(j.title, locations, countriesOf(cfg));
       if (!hit) continue;
       const company = j.organization?.name || "";
       const url = j.url || "";
@@ -492,7 +500,7 @@ async function scrapeGetro(cfg) {
       if (j.organization?.stage === "acquisition" && !isOwnLink({ company, url, slug })) continue;
       if (isBlockedCompany({ company, domain: j.organization?.domain, slug })) continue;
       const sponsorship = classifySponsorship(j.descriptionPlain || j.description || j.descriptionHtml || j.content || "");
-      out.push({
+      out.push(...placeRows({
         job_id: boardJobId(company, j.title, hit.city, url),
         title: j.title,
         company,
@@ -524,7 +532,7 @@ async function scrapeGetro(cfg) {
         source: "board",
         // Moved out into descriptions.json by scrape.js before results.json is written.
         description: toDisplayHtml(j.descriptionHtml || j.description || j.descriptionPlain || j.content || ""),
-      });
+      }, hit, (city) => boardJobId(company, j.title, city, url)));
     }
 
     if (jobs.length < GETRO_PAGE_SIZE) break;
@@ -584,7 +592,7 @@ async function ycHiringCompanies() {
 }
 
 async function scrapeYc() {
-  const companies = (await ycHiringCompanies()).filter((c) => c.slug && mayHireInUs(c));
+  const companies = (await ycHiringCompanies()).filter((c) => c.slug && mayHireInTracked(c));
   const now = Date.now();
 
   // Each hiring company's page: its openings, kept when the title and a US place match.
@@ -604,7 +612,7 @@ async function scrapeYc() {
     const co = props.company || {};
     for (const p of props.jobPostings) {
       const locations = ycLocations(p.location);
-      const hit = keep(p.title, locations);
+      const hit = keep(p.title, locations, DEFAULT_COUNTRIES);
       if (!hit) continue;
       const company = co.name || p.companyName || c.name || "";
       let domain = null;
@@ -641,7 +649,7 @@ async function scrapeYc() {
     const sponsorship = ycSponsorship(p.visa, description);
     const staffCount = co.team_size || null;
     const seniority = deriveSeniority(p.title);
-    out.push({
+    out.push(...placeRows({
       job_id: jobId({ company, title: p.title, city: hit.city, ats: "yc", atsId: String(p.id) }),
       title: p.title,
       company,
@@ -669,7 +677,7 @@ async function scrapeYc() {
       source: "board",
       // Moved out into descriptions.json by scrape.js before results.json is written.
       description: toDisplayHtml(markdownToHtml(description)),
-    });
+    }, hit, (city) => jobId({ company, title: p.title, city: city, ats: "yc", atsId: String(p.id) })));
   });
 
   saveDescriptions(fetched);
