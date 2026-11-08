@@ -232,10 +232,70 @@ h1.title {
   margin: 0 0 10px;
   text-wrap: balance;
 }
-/* "India" beside the title on in.html: which list this is, at a glance. */
-.title-country {
-  color: var(--accent);
-  font-weight: 500;
+/* ---- Which country's list: the switch beside the title, and the note under the
+   description (components/Country.jsx). ---- */
+.title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; }
+.country-switch {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+}
+.country-switch a {
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--ink-faint);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.country-switch a:hover { color: var(--ink); background: var(--accent-fill); }
+.country-switch a[aria-current="page"] { color: var(--accent); background: var(--accent-fill); font-weight: 600; }
+.country-switch a:focus-visible { outline: 2px solid var(--accent2); outline-offset: 1px; }
+
+.country-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 12px 0 0;
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--rule);
+  border-left: 2px solid var(--accent);
+  border-radius: 5px;
+  background: var(--accent-fill);
+  font-size: var(--text-sm);
+}
+.country-note p { margin: 0; color: var(--ink-soft); }
+.country-note a { font-weight: 600; color: var(--accent); }
+.country-note a:hover { text-decoration: underline; }
+.country-note-close {
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  font-size: var(--text-md);
+  line-height: 1;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+.country-note-close:hover { color: var(--ink); background: var(--accent-fill); }
+.country-note-close:focus-visible { outline: 2px solid var(--accent2); outline-offset: 1px; }
+
+/* Read by screen readers, not shown. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 .dek {
   font-size: var(--text-md);

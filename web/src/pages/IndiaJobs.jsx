@@ -2,6 +2,7 @@
 // and Indian investors' portfolios, with the Company HQ filter.
 import { useEffect, useState } from "react";
 import Masthead, { PRIVACY_NOTE } from "../components/Masthead.jsx";
+import { CountryNote, CountrySwitch } from "../components/Country.jsx";
 import Viewed from "../components/Viewed.jsx";
 import JobsWorkspace from "../JobsWorkspace.jsx";
 import { loadJobs } from "../lib/jobs.js";
@@ -17,12 +18,17 @@ export default function IndiaJobs() {
 
   return (
     <div className="wrap">
-      <Masthead compact nav={[["./", "US jobs →"], ["about.html", "About"]]} account>
+      <Masthead compact nav={[["about.html", "About"]]} account>
         <div className="masthead-main">
-          <h1 className="title">Find Jobs <span className="title-country">India</span></h1>
+          <div className="title-row">
+            {/* The switch beside it shows "India" to the eye; this says it to a screen reader. */}
+            <h1 className="title">Find Jobs<span className="visually-hidden"> India</span></h1>
+            <CountrySwitch current="IN" />
+          </div>
           <div className="stats" id="all-stats">{error ? <span>No job data</span> : empty ? <span>No data yet</span> : null}</div>
         </div>
         <p className="dek">Engineering roles in India at VC-backed companies: Indian startups, and the Indian offices of startups based abroad. Use Company HQ to choose which.</p>
+        <CountryNote page="IN" />
       </Masthead>
       <Viewed jobs={jobs} seen={seen} />
       {empty ? null : <JobsWorkspace jobs={jobs} showFirms country="IN" />}

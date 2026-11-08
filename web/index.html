@@ -40,6 +40,30 @@
       if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
     } catch (e) {}
   </script>
+
+  <!-- Which country's list the home page opens, decided here, before anything loads, so
+       a visitor bound for the India list never sees the US one first. A choice made with
+       the switch wins. Without one, a first visit on India's clock goes to the India
+       list, and that becomes the choice; a browser that has used the site before (any
+       of these keys) stays on the US list, where lib/country.js tells it about India. A
+       link with filters or an anchor is a view someone shared, and opens as it is.
+       test/country.test.js runs this script as written. -->
+  <script>
+    try {
+      if (!location.search && !location.hash) {
+        var c = localStorage.getItem("vc-directory-country");
+        if (!c && /^Asia\/(Kolkata|Calcutta)$/.test(Intl.DateTimeFormat().resolvedOptions().timeZone || "")) {
+          var used = ["vc-directory-visitor", "vc-directory-seen", "vc-directory-filters", "vc-directory-liked",
+            "vc-directory-theme", "find-jobs-saved", "find-jobs-column-ratio"].some(function (k) { return localStorage.getItem(k) != null; });
+          if (!used) {
+            localStorage.setItem("vc-directory-country", (c = "IN"));
+            sessionStorage.setItem("vc-directory-country-auto", "1");
+          }
+        }
+        if (c === "IN") location.replace("in.html");
+      }
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to job listings</a>
