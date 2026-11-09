@@ -35,7 +35,8 @@ export default function CompanyCard({ group: g, open, onToggle, selectedId, onSe
   const m = monogram(g.company);
   const [logoFailed, setLogoFailed] = useState(false);
   const n = g.jobs.length;
-  const cities = [...g.cities.entries()].sort((a, b) => b[1] - a[1]);
+  // Roles without a city (a saved role no longer listed) add nothing to "Hiring in".
+  const cities = [...g.cities.entries()].filter(([c]) => c).sort((a, b) => b[1] - a[1]);
   const facts = [
     g.size ? (SIZE_LABELS[g.size] || g.size) + " staff" : null,
     g.stage,
@@ -82,13 +83,15 @@ export default function CompanyCard({ group: g, open, onToggle, selectedId, onSe
             className="cg-toggle mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-aria-expanded/head:rotate-180 motion-reduce:transition-none" />
         </span>
         {/* Under the name, so it lines up with it rather than with the logo. */}
-        <span className="cg-cities pl-12 text-sm text-muted-foreground">
-          <span className="cg-label mr-1.5 font-medium text-foreground">Hiring in</span>
-          <DotList items={cities.map(([c, k], i) => ({
-            key: c || i, className: "cg-city",
-            node: <>{c}{n > 1 ? <>&nbsp;<span className="cg-n tabular text-foreground/70">{k}</span></> : null}</>,
-          }))} />
-        </span>
+        {cities.length ? (
+          <span className="cg-cities pl-12 text-sm text-muted-foreground">
+            <span className="cg-label mr-1.5 font-medium text-foreground">Hiring in</span>
+            <DotList items={cities.map(([c, k]) => ({
+              key: c, className: "cg-city",
+              node: <>{c}{n > 1 ? <>&nbsp;<span className="cg-n tabular text-foreground/70">{k}</span></> : null}</>,
+            }))} />
+          </span>
+        ) : null}
       </button>
       {open ? (
         <div className="cg-body border-t">

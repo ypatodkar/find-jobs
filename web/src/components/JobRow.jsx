@@ -41,8 +41,10 @@ export default function JobRow({ job, selected, onSelect, inGroup = false, opene
     onSelect(job.job_id);
   };
 
+  // wrap-anywhere: a title with one very long word ("SoC/Microcontroller/DSP/…") wraps
+  // inside the row instead of widening the page on a phone.
   const titleClass = cn(
-    "job-title rounded-sm text-[15px] leading-snug font-medium text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50",
+    "job-title max-w-full rounded-sm text-[15px] leading-snug font-medium wrap-anywhere text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50",
     seen && "is-seen text-muted-foreground",
   );
 
@@ -75,7 +77,7 @@ export default function JobRow({ job, selected, onSelect, inGroup = false, opene
         ) : <span className={titleClass}>{job.title}</span>}
         {inGroup && !pay ? null : (
           <p className="job-sub flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            {inGroup ? null : <span className="job-company min-w-0 text-sm text-muted-foreground">{job.company}<AcquiredNote company={job.company} /></span>}
+            {inGroup ? null : <span className="job-company min-w-0 text-sm wrap-anywhere text-muted-foreground">{job.company}<AcquiredNote company={job.company} /></span>}
             {pay ? (
               <Badge variant="secondary" className="job-salary tabular max-w-full cursor-help" title={job.salary || undefined}>
                 <span className="truncate">{pay}</span>
@@ -89,7 +91,7 @@ export default function JobRow({ job, selected, onSelect, inGroup = false, opene
             {job.city ? (
               <span className="inline-flex min-w-0 items-center gap-1">
                 <MapPinIcon aria-hidden="true" className="size-3.5 shrink-0" />
-                <span className="min-w-0">{job.city}</span>
+                <span className="min-w-0 wrap-anywhere">{job.city}</span>
               </span>
             ) : null}
             {job.remote ? <Badge variant="outline" className="font-normal text-muted-foreground">Remote OK</Badge> : null}

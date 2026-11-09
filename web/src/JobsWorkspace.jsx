@@ -54,18 +54,24 @@ function useMedia(query) {
 
 const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// Beside the list, the job pane and the divider dock just under the sticky header and
-// filter toolbar (--toolbar-height is published below), and reach down to a little above
-// the viewport's bottom edge. Literal class strings, so Tailwind finds them.
-const DOCK_TOP = "top-[calc(var(--header-height)+var(--toolbar-height,0px)+1rem)]";
-const DOCK_HEIGHT = "h-[calc(100dvh-var(--header-height)-var(--toolbar-height,0px)-2rem)]";
+// shadcn's Skeleton pulses; held still for reduced motion.
+const Bone = ({ className }) => <Skeleton className={cn("motion-reduce:animate-none", className)} />;
+
+// Beside the list, the job pane and the divider dock 12px under the sticky header and
+// filter toolbar (--toolbar-height is published below), and reach down to 12px above
+// the viewport's bottom edge: the same top and height DetailPane gives #job-detail, so
+// the pane's own sticky top is where it actually sits. Literal class strings, so
+// Tailwind finds them.
+const DOCK_TOP = "top-[calc(var(--header-height)+var(--toolbar-height,0px)+0.75rem)]";
+const DOCK_HEIGHT = "h-[calc(100dvh-var(--header-height)-var(--toolbar-height,0px)-1.5rem)]";
 
 // An open overlay wants the arrow keys for itself (DESIGN.md, "Keyboard"): a Radix /
 // shadcn overlay's content (data-slot "…-content", data-state "open"), or an open
 // <details> menu. Not a Collapsible's content, which is open in the page rather than
 // over it, and not the disclosures inside the job pane (the resume match's requirement
-// rows), which stay open while the list is browsed.
-const OPEN_OVERLAY = '[data-state="open"][data-slot$="-content"]:not([data-slot="collapsible-content"]):not([data-slot="accordion-content"]), details[open]:not(#job-detail details)';
+// rows), which stay open while the list is browsed; the pane's resume picker is a menu,
+// though, so it still counts while it is a <details>.
+const OPEN_OVERLAY = '[data-state="open"][data-slot$="-content"]:not([data-slot="collapsible-content"]):not([data-slot="accordion-content"]), details[open]:not(#job-detail details), #job-detail details.company-picker[open]';
 
 // The All jobs / Companies switch: two pressed-state buttons drawn as shadcn's TabsList
 // and TabsTrigger. Buttons rather than Radix Tabs, because the view lives in the address
@@ -79,20 +85,20 @@ function ListSkeleton() {
     <div aria-hidden="true">
       <div className="mb-3 flex flex-col gap-2">
         <div className="flex items-center justify-between gap-4">
-          <Skeleton className="h-9 w-56 rounded-lg" />
-          <Skeleton className="h-9 w-40" />
+          <Bone className="h-9 w-56 rounded-lg" />
+          <Bone className="h-9 w-40" />
         </div>
-        <Skeleton className="h-5 w-56" />
+        <Bone className="h-5 w-56" />
       </div>
       <div className="flex flex-col gap-2">
         {Array.from({ length: 8 }, (_, i) => (
           <div key={i} className="flex items-start gap-4 rounded-lg border bg-card px-4 py-3.5">
             <div className="flex flex-1 flex-col gap-2.5">
-              <Skeleton className={cn("h-4", ["w-3/5", "w-4/5", "w-2/3"][i % 3])} />
-              <Skeleton className="h-3.5 w-40" />
-              <Skeleton className="h-3.5 w-28" />
+              <Bone className={cn("h-4", ["w-3/5", "w-4/5", "w-2/3"][i % 3])} />
+              <Bone className="h-3.5 w-40" />
+              <Bone className="h-3.5 w-28" />
             </div>
-            <Skeleton className="h-3 w-16" />
+            <Bone className="h-3 w-16" />
           </div>
         ))}
       </div>
@@ -103,14 +109,14 @@ function ListSkeleton() {
 function PaneSkeleton() {
   return (
     <div className="flex h-full flex-col gap-3 rounded-xl border bg-card p-6" aria-hidden="true">
-      <Skeleton className="h-4 w-32" />
-      <Skeleton className="h-6 w-3/4" />
-      <Skeleton className="h-4 w-1/2" />
-      <div className="mt-2 flex gap-2"><Skeleton className="h-9 w-28" /><Skeleton className="size-9" /></div>
-      <Skeleton className="mt-6 h-24 w-full" />
-      <Skeleton className="mt-4 h-4 w-full" />
-      <Skeleton className="h-4 w-11/12" />
-      <Skeleton className="h-4 w-4/5" />
+      <Bone className="h-4 w-32" />
+      <Bone className="h-6 w-3/4" />
+      <Bone className="h-4 w-1/2" />
+      <div className="mt-2 flex gap-2"><Bone className="h-9 w-28" /><Bone className="size-9" /></div>
+      <Bone className="mt-6 h-24 w-full" />
+      <Bone className="mt-4 h-4 w-full" />
+      <Bone className="h-4 w-11/12" />
+      <Bone className="h-4 w-4/5" />
     </div>
   );
 }
@@ -348,7 +354,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
     return () => document.removeEventListener("keydown", onKey);
   }); // re-bound each render, so it always sees the current rows and page
 
-  const scrollToResults = (smooth = true) => document.getElementById("job-results-bar")?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
+  const scrollToResults = (smooth = true) => document.getElementById("job-results-bar")?.scrollIntoView({ behavior: smooth && !reducedMotion() ? "smooth" : "auto", block: "start" });
   const goTo = (n) => { setPage(n); scrollToResults(); };
 
   // While the filter toolbar is pinned (sticky, under the sticky site header), the pane
@@ -368,6 +374,21 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
     addEventListener("resize", update); // a breakpoint can unpin the bar without resizing it
     return () => { ro.disconnect(); removeEventListener("resize", update); };
   }, [wide, jobs]);
+
+  // The intro's pieces can each render nothing, or an empty slot (no featured company
+  // today, nothing opened yet), which :empty cannot see through. So its top space is
+  // given only while it has height; measured before paint, then on every change.
+  const introRef = useRef(null);
+  const [introShown, setIntroShown] = useState(true);
+  useLayoutEffect(() => {
+    const el = introRef.current;
+    if (!el) return;
+    const update = () => setIntroShown(el.offsetHeight > 0);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [!!intro]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleCompany = (company) => setExpanded((s) => { const n = new Set(s); if (n.has(company)) n.delete(company); else n.add(company); return n; });
 
@@ -397,14 +418,18 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
         // The toolbar's place while the jobs load (its filters count them).
         <div className="border-b" aria-hidden="true">
           <div className={cn(CONTAINER, "flex items-center gap-2 py-3")}>
-            <Skeleton className="h-9 w-full max-w-xs" />
-            {["w-20", "w-24", "w-28", "w-28"].map((w, i) => <Skeleton key={i} className={cn("hidden h-9 md:block", w)} />)}
-            <Skeleton className="h-9 w-24 md:hidden" />
+            <Bone className="h-9 w-full max-w-xs" />
+            {["w-20", "w-24", "w-28", "w-28"].map((w, i) => <Bone key={i} className={cn("hidden h-9 md:block", w)} />)}
+            <Bone className="h-9 w-24 md:hidden" />
           </div>
         </div>
       )}
-      {/* :empty hides it when every part of the intro renders nothing. */}
-      {intro ? <div className={cn(CONTAINER, "flex flex-col gap-3 pt-4 empty:hidden")}>{intro}</div> : null}
+      {/* Its space above only while something in it shows (introShown). */}
+      {intro ? (
+        <div className={cn(CONTAINER, introShown ? "pt-4" : "pt-0")}>
+          <div ref={introRef} className="flex min-w-0 flex-col gap-3">{intro}</div>
+        </div>
+      ) : null}
       <div className={cn(CONTAINER, "pt-4 pb-8")}>
         {/* No padding on the grid itself: useColumns measures its clientWidth. */}
         <div ref={splitRef} id="results-split" style={columnStyle}
