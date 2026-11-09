@@ -119,17 +119,19 @@
 
 /* Where a "Find in JD" jump lands: the paragraph or bullet takes a brief tint (the
    class comes off after 2.4 s), and the exact words a stronger one. With motion
-   allowed, the tint fades out instead of switching off. */
+   allowed, the tint fades out instead of switching off. Neutral, a wash of the text
+   colour: brand violet is kept for the selected job (DESIGN.md, "Brand"), and green
+   and amber mean resume-match results. */
 :where(#detail-body) .desc-hit {
-  background-color: color-mix(in oklch, var(--brand) 10%, transparent);
-  box-shadow: 0 0 0 4px color-mix(in oklch, var(--brand) 10%, transparent);
+  background-color: color-mix(in oklch, var(--foreground) 6%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in oklch, var(--foreground) 6%, transparent);
   border-radius: 4px;
 }
 /* The jump also moves focus to the passage (tabindex -1), so a screen reader reads on
    from there; the tint is its visible mark, not a focus ring. */
 :where(#detail-body) :is(p, li)[tabindex="-1"]:focus { outline: none; }
 ::highlight(match-passage) {
-  background-color: color-mix(in oklch, var(--brand) 22%, transparent);
+  background-color: color-mix(in oklch, var(--foreground) 16%, transparent);
   color: var(--foreground);
 }
 @media (prefers-reduced-motion: no-preference) {

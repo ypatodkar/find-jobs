@@ -137,10 +137,11 @@ function ApplyLink({ job, compact = false }) {
 }
 
 // Only in the sheet: the header's says "Back to jobs", the slim bar's is the arrow alone.
+// The header's is the way out on a phone, so it keeps a 40px target.
 function BackButton({ onClose, compact = false }) {
   const button = (
-    <Button type="button" variant="ghost" size={compact ? "icon-sm" : "sm"} aria-label="Back to jobs" onClick={onClose}
-      className={cn("detail-close text-muted-foreground", compact ? "-ml-1.5" : "-ml-2.5 mb-2")}>
+    <Button type="button" variant="ghost" size={compact ? "icon-sm" : "lg"} aria-label="Back to jobs" onClick={onClose}
+      className={cn("detail-close text-muted-foreground", compact ? "-ml-1.5" : "-ml-2.5 mb-1")}>
       <ArrowLeft aria-hidden="true" />{compact ? null : <span className="detail-close-text" aria-hidden="true">Back to jobs</span>}
     </Button>
   );
@@ -183,22 +184,33 @@ const DetailPane = forwardRef(function DetailPane({ job, open, sheet, narrowColu
   const onScroll = () => {
     const el = pane.current, head = el && el.querySelector("#detail-top"), bar = el && el.querySelector("#detail-bar");
     if (!head || !bar) return;
-    setBarShown(el.scrollTop > head.offsetTop + head.offsetHeight - bar.offsetHeight);
+    const shown = el.scrollTop > head.offsetTop + head.offsetHeight - bar.offsetHeight;
+    // Hiding the bar makes it inert, which would drop focus held inside it to <body>.
+    // Hand focus to the same control in the header, which is back in view.
+    const active = document.activeElement;
+    if (!shown && bar.contains(active)) {
+      const same = ["detail-close", "detail-save", "detail-apply"].find((c) => active.closest("." + c));
+      ((same && head.querySelector("." + same)) || head.querySelector("#detail-title"))?.focus({ preventScroll: true });
+    }
+    setBarShown(shown);
   };
 
   // No top padding on the pane itself: a sticky child sticks at its scroller's padding
   // edge, and the slim bar belongs at the very top. The header carries that space.
+  // --pane-x is the side inset, shared by the pane and the slim bar that bleeds to its
+  // edges. Scroll padding keeps whatever focus scrolls to clear of the slim bar.
   const cls = cn(
     "job-detail", open && "is-open", narrowColumn && "is-narrow-column",
-    "min-w-0 overflow-y-auto overscroll-contain px-4 pb-12 text-card-foreground [overflow-anchor:none] [scrollbar-gutter:stable]",
+    "min-w-0 overflow-y-auto overscroll-contain px-(--pane-x) pb-12 text-card-foreground [--pane-x:1rem] scroll-pt-16 [overflow-anchor:none] [scrollbar-gutter:stable]",
     // Beside the list: a card docked 12px under the toolbar, reaching 12px short of the
     // window's foot, that scrolls on its own.
     "min-[1100px]:sticky min-[1100px]:top-[calc(var(--header-height)_+_var(--toolbar-height,0px)_+_0.75rem)]",
     "min-[1100px]:h-[calc(100dvh_-_var(--header-height)_-_var(--toolbar-height,0px)_-_1.5rem)]",
-    "min-[1100px]:rounded-xl min-[1100px]:border min-[1100px]:bg-card min-[1100px]:px-6 min-[1100px]:shadow-xs",
-    // Under 1100px the pane shows only as the open sheet.
+    "min-[1100px]:rounded-xl min-[1100px]:border min-[1100px]:bg-card min-[1100px]:shadow-xs min-[1100px]:[--pane-x:1.5rem]",
+    // Under 1100px the pane shows only as the open sheet. From a tablet's width up, the
+    // sheet keeps a centred reading column (42rem) instead of hugging its left edge.
     !open && "max-[1100px]:hidden",
-    sheet && "fixed inset-0 z-50 bg-background motion-safe:animate-in motion-safe:slide-in-from-right motion-safe:duration-300 motion-safe:ease-out",
+    sheet && "fixed inset-0 z-50 bg-background sm:[--pane-x:max(1.5rem,calc((100vw_-_42rem)/2))] motion-safe:animate-in motion-safe:slide-in-from-right motion-safe:duration-300 motion-safe:ease-out",
     // Nothing to sit beside until the list itself is showing.
     "[.results-split:has(#job-list[hidden])_&]:hidden",
   );
@@ -228,10 +240,10 @@ const DetailPane = forwardRef(function DetailPane({ job, open, sheet, narrowColu
   return (
     <aside ref={pane} className={cls} id="job-detail" aria-label="Job description" onScroll={onScroll}
       role={sheet ? "dialog" : undefined} aria-modal={sheet || undefined} aria-labelledby={sheet ? "detail-title" : undefined}>
-      <div className="detail-bar-anchor sticky top-0 z-20 -mx-4 h-0 min-[1100px]:-mx-6">
+      <div className="detail-bar-anchor sticky top-0 z-20 -mx-(--pane-x) h-0">
         <div id="detail-bar" inert={!barShown}
           className={cn(
-            "detail-bar absolute inset-x-0 top-0 flex items-center gap-3 border-b px-4 py-2 backdrop-blur-sm min-[1100px]:px-6",
+            "detail-bar absolute inset-x-0 top-0 flex items-center gap-3 border-b px-(--pane-x) py-2 backdrop-blur-sm",
             sheet ? "bg-background/95" : "bg-card/95",
             barShown ? "is-shown opacity-100" : "pointer-events-none -translate-y-1.5 opacity-0",
             "motion-safe:transition-[opacity,translate] motion-safe:duration-150 motion-safe:ease-out",
