@@ -22,7 +22,7 @@ import Filters from "./components/Filters.jsx";
 import JobRow from "./components/JobRow.jsx";
 import CompanyCard from "./components/CompanyCard.jsx";
 import Pagination from "./components/Pagination.jsx";
-import DetailPane from "./components/DetailPane.jsx";
+import DetailPane, { preloadResumeMatch } from "./components/DetailPane.jsx";
 import SelectMenu from "./components/SelectMenu.jsx";
 import { ResumeSignInDialog } from "./components/Account.jsx";
 import "./lib/track.js";
@@ -184,6 +184,8 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   const visibleGroups = view === "grouped" ? groups.slice(start, start + perPage) : [];
 
   useEffect(() => { if (jobs) settle(pageCount); }, [jobs]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The resume match card is a separate chunk (DetailPane); fetch it once the jobs are in.
+  useEffect(() => { if (jobs) preloadResumeMatch(); }, [!!jobs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selected = selectedId ? (jobs || []).find((j) => j.job_id === selectedId) : null;
   const open = wide ? !!selected : sheetOpen && !!selected;

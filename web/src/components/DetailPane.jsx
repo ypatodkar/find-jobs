@@ -22,7 +22,7 @@
 // against the pane (offsetTop, so nothing between them and the <aside> may be
 // positioned), and scroll the pane itself, which is why it is a plain overflow box
 // rather than a ScrollArea.
-import { createElement, forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, createElement, forwardRef, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowUpRight, Banknote, Bookmark, Clock, MapPin, MousePointerClick, Sparkles } from "lucide-react";
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +35,11 @@ import { descriptionTree, loadDescription } from "../lib/descriptions.js";
 import { saved, useSaved } from "../lib/saved.js";
 import { withSource } from "../lib/outbound.js";
 import { AcquiredNote } from "./JobRow.jsx";
-import ResumeMatch from "./ResumeMatch.jsx";
+// Loaded on its own (about 18 KB gzipped with the matching code), so the first page
+// load downloads less before the job list is fetched. JobsWorkspace warms it as soon as
+// the jobs land, so the card is normally there by the time a role is opened.
+export const preloadResumeMatch = () => import("./ResumeMatch.jsx");
+const ResumeMatch = lazy(preloadResumeMatch);
 import "../styles/description.css";
 
 // The job boards companies publish to, as they write their own names.
@@ -286,7 +290,9 @@ const DetailPane = forwardRef(function DetailPane({ job, open, sheet, narrowColu
           <SaveButton job={job} isSaved={isSaved} />
         </div>
       </div>
-      <ResumeMatch key={`match-${job.job_id}`} job={job} paneRef={pane} description={{ ready: html !== undefined, hasText: !!html }} />
+      <Suspense fallback={null}>
+        <ResumeMatch key={`match-${job.job_id}`} job={job} paneRef={pane} description={{ ready: html !== undefined, hasText: !!html }} />
+      </Suspense>
       <Description key={`desc-${job.job_id}`} job={job} html={html} />
     </aside>
   );
