@@ -112,28 +112,6 @@ export function CountrySwitcher({ country = null, className }) {
   );
 }
 
-/**
- * OBSOLETE after the redesign: the old page title, "Find Jobs in the US ▾". The
- * country now lives in the site header (CountrySwitcher). Kept, as the title around
- * the new switcher, until no page renders it.
- */
-// OBSOLETE after the redesign
-export function CountryTitle({ current }) {
-  return (
-    <div className="country-title">
-      <h1 className="title flex flex-wrap items-center gap-x-1.5 gap-y-1 text-2xl font-semibold tracking-tight">
-        Find Jobs in <CountrySwitcher country={current} className="text-base" />
-      </h1>
-    </div>
-  );
-}
-
-/** OBSOLETE after the redesign: the first "US | India" switch, now CountrySwitcher. */
-// OBSOLETE after the redesign
-export function CountrySwitch({ current }) {
-  return <CountrySwitcher country={current} />;
-}
-
 /** The dismiss button of the note: an icon, so it says what it does in a tooltip. */
 function Dismiss({ label, onClick }) {
   return (

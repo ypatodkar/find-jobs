@@ -14,7 +14,7 @@ import { CONTAINER } from "../lib/layout.js";
 export default function NotFound() {
   return (
     <>
-      <SiteHeader active={null} country={null} />
+      <SiteHeader active={null} country={null} account={false} />
       <div className={CONTAINER}>
         <Empty className="py-20 md:py-28">
           <EmptyHeader>

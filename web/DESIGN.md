@@ -64,8 +64,10 @@ SiteFooter     page blocks, privacy note, like, LinkedIn
 Under 720 px the toolbar collapses to a search box and a Filters button; filters open
 in a bottom sheet. Under 1100 px the job opens as a full-height sheet over the list.
 
-`SiteHeader({ active, country })` and `SiteFooter({ children })` are the frame's API;
-see the comments at the top of each file.
+`SiteHeader({ active, country, account })` and `SiteFooter({ children })` are the
+frame's API; see the comments at the top of each file. `account={false}` keeps the
+sign-in button, and its calls to the server, off a page: Investors, About and the 404
+page never ask who you are (lib/auth.js), as before the redesign.
 
 Pages render `JobsWorkspace` full width, outside `CONTAINER`: the toolbar is a
 full-bleed sticky bar and applies `CONTAINER` inside itself, and so do the results.
@@ -79,9 +81,9 @@ Each page also has an `<h1>` (visually hidden on the jobs pages, which have no t
 | --- | --- |
 | Any button, icon button, link styled as a button | `Button` (`asChild` around `<a>`) |
 | Multi-select filter with search and counts | `Popover` + `Command` (+ `Checkbox` look), trigger `Button variant="outline"` with a dashed border while empty; chosen values as `Badge`s on the trigger. shadcn's "faceted filter" pattern. |
-| Single choice (Sort, Posted, Salary, resume picker) | `Select` |
-| Menu of actions or toggles (View, account, saved filters) | `DropdownMenu` (with `DropdownMenuCheckboxItem` for toggles) |
-| Panel of extra controls (More filters, feedback) | `Popover` |
+| Single choice (Sort, Posted, Salary) | `Select` (through `SelectMenu`). The resume picker keeps its own `<details>` menu, drawn like a Select, because its rows carry upload and delete actions. |
+| Menu of actions or toggles (View, account, country) | `DropdownMenu` (with `DropdownMenuCheckboxItem` for toggles) |
+| Panel of extra controls (More filters, Saved filters, feedback) | `Popover`. Saved filters has its own button beside View: naming a filter needs a text field, which a menu's type-ahead would swallow. |
 | Phone filters, phone job view | a sheet: shadcn `Sheet`, or the existing custom sheet styled to match it where its behaviour (history, focus return) must be kept |
 | Blocking question (sign in to upload) | `Dialog` |
 | Tabs (All jobs / Companies) | `Tabs` (`TabsList`, `TabsTrigger`) |
@@ -103,8 +105,11 @@ mechanics and style the markup with the same tokens and classes the primitive us
   (`lib/useFilterState.js`); `?f=` saved-filter links apply once; Undo works.
 - **Keyboard:** ↑ / ↓ move through the list and across pages while focus is on the
   list or nowhere and no overlay is open. An open overlay is any element with
-  `data-state="open"` whose `data-slot` ends in `-content` (Radix/shadcn), or an open
-  `<details>`. Escape closes the top overlay; focus returns to what opened it.
+  `data-state="open"` whose `data-slot` ends in `-content` (Radix/shadcn), except
+  collapsible and accordion content (an expanded section is not an overlay), or an
+  open `<details>` outside the job pane, or the pane's resume picker
+  (`OPEN_OVERLAY` in `JobsWorkspace.jsx`). Escape closes the top overlay; focus
+  returns to what opened it.
 - **Analytics:** `lib/track.js` counts a click on `a.job-title[data-job-id]` (list
   titles; a plain click only selects, marked `data-selects`) and on
   `a[data-track-open][data-job-id]` (Apply). Both keep `data-company`, `data-city`,
@@ -115,9 +120,10 @@ mechanics and style the markup with the same tokens and classes the primitive us
 - **Country routing:** `lib/country.js` and the inline script in `index.html`.
 - **First paint:** the first jobs render before the whole list has downloaded.
 - **DOM that `lib/` code uses:**
-  - `lib/jdMarks.js` reads `.detail-head` (the pane's header), `#detail-body` (the
-    description), and adds `.jd-mark`, `.jd-note`, `.desc-hit` (styled in
-    `src/styles/description.css`).
+  - `lib/jdMarks.js` reads `#detail-bar` (the slim bar, whose height is what covers
+    the text: `coveredHeight`) and `#detail-body` (the description), and adds `.jd-mark`
+    and `.jd-note` (styled in `src/styles/match.css`) and `.desc-hit` plus the
+    `match-passage` highlight (styled in `src/styles/description.css`).
   - `JobsWorkspace.jsx` reads `#job-controls` (toolbar height), `.job[data-job-id]`
     rows with `.is-selected` and their `.job-title`, `#job-results-bar`,
     `#detail-title`.

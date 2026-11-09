@@ -11,8 +11,9 @@ A second list, `in.html`, holds roles in India: the Indian openings of the same
 companies, two Indian firms' boards (Peak XV, 3one4), and the companies in 41 Indian
 investors' portfolios, read company by company.
 
-The title names the list's country, "Find Jobs in the US ▾", and the country opens a
-menu that moves between the two lists and remembers the choice in the browser. The home page opens the remembered list. Without a choice, a
+The country switcher at the left of the site header (a flag and the country's name)
+opens a menu that moves between the two lists and remembers the choice in the browser.
+The home page opens the remembered list. Without a choice, a
 first visit on India's time zone opens the India list (and remembers it), with a note
 saying why and a link back. A browser that has used the site before stays on the US
 list, with a note about India until it picks. Links with filters open as shared. The
@@ -23,7 +24,9 @@ rules are in `web/src/lib/country.js` and the start-up script in `web/index.html
 ```
 web/        the site: React pages (Vite). src/pages/ is one file per page,
             src/JobsWorkspace.jsx the job list and description pane both job pages use,
-            src/components/ and src/lib/ the parts, src/styles/ the stylesheets,
+            src/components/ the site's parts, built from shadcn/ui (src/components/ui/,
+            Tailwind CSS; web/DESIGN.md is the design contract), src/lib/ the logic,
+            src/styles/app.css the theme,
             public/ files served as they are (og.png, robots.txt, featured.json).
 scraper/    the scrape: VC boards, company ATS boards, classification (Jev), the
             payloads the site reads. scrape.js runs it.

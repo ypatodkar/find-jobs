@@ -35,7 +35,7 @@ import {
   Import, STATUS_LABEL, activeId, addResume, ago, cache, call, deleteResume, fetchStored, findings,
   insightSummary, json, key, loadList, ranked, setActive, untilReset,
 } from "../lib/match.js";
-import { annotate, clearMarks, jumpTo, locate, marksEnabled, preservePosition, setMarksEnabled } from "../lib/jdMarks.js";
+import { annotate, clearMarks, coveredHeight, jumpTo, locate, marksEnabled, preservePosition, setMarksEnabled } from "../lib/jdMarks.js";
 import "../styles/match.css";
 
 // shadcn's Spinner is a status region named "Loading". Here it sits beside words that
@@ -472,7 +472,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
     const now = b.offsetTop, was = lastOffset.current;
     lastOffset.current = now;
     if (was === null || now === was) return;
-    const covered = pane.querySelector(".detail-head")?.offsetHeight || 0;
+    const covered = coveredHeight(pane);
     if (pane.scrollTop >= was - covered) pane.scrollTop = Math.max(0, pane.scrollTop + now - was);
   });
 

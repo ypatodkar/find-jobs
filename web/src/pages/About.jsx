@@ -23,7 +23,7 @@ const LINK = "rounded-sm underline decoration-muted-foreground/50 underline-offs
 export default function About() {
   return (
     <>
-      <SiteHeader active="about" country={null} />
+      <SiteHeader active="about" country={null} account={false} />
       <div className={CONTAINER}>
         <article className={`mx-auto max-w-2xl pt-10 pb-4 md:pt-14 ${PROSE}`}>
           <header>
@@ -123,7 +123,7 @@ export default function About() {
       <SiteFooter>
         <section>
           <h3 className={FOOT_H}>Something missing?</h3>
-          <p className="leading-6">If a company or an investor should be here and isn't, or a listing looks wrong, the feedback button in the corner of the job list goes straight to me.</p>
+          <p className="leading-6">If a company or an investor should be here and isn't, or a listing looks wrong, the Feedback button at the top of every page goes straight to me.</p>
         </section>
         <section>
           <h3 className={FOOT_H}>Start looking</h3>

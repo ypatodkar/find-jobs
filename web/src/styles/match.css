@@ -5,8 +5,8 @@
    - .jd-mark: the small ✓ / ◐ / ? button after a requirement the analysis found in
      the text (is-shown, is-partial, is-unclear). It opens the evidence beneath it.
    - .jd-note: that evidence, a small card under the bullet or paragraph.
-   - .desc-hit and ::highlight(match-passage): the flash on a passage that "Find in JD"
-     scrolled to.
+   The flash on a passage that "Find in JD" scrolled to (.desc-hit and
+   ::highlight(match-passage)) is the description's, in description.css.
 
    Colours are the theme tokens only. Green and amber are the resume-match status
    colours (DESIGN.md, "Status"); amber text is mixed a quarter of the way to the
@@ -103,18 +103,6 @@
   border-left: 2px solid var(--border);
   color: var(--foreground);
   font-style: normal;
-}
-
-/* "Find in JD": the passage it scrolled to, outlined and its words highlighted for a
-   moment (jdMarks removes both after 2.4s). Neutral, like the rest of the page. */
-::highlight(match-passage) {
-  background-color: color-mix(in oklch, var(--foreground) 12%, transparent);
-  color: var(--foreground);
-}
-#detail-body .desc-hit {
-  border-radius: 0.25rem;
-  outline: 2px solid color-mix(in oklch, var(--ring) 70%, transparent);
-  outline-offset: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {

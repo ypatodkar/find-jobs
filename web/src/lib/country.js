@@ -11,11 +11,10 @@
 
 // What the header's country switcher shows (components/Country.jsx): `name` on the
 // button and as the menu item's first line, `short` on the button on phones, where the
-// header has less room, and `detail` as the item's second line. `inTitle` completes
-// "Find Jobs in …" (the old title, CountryTitle). `href` is the country's list.
+// header has less room, and `detail` as the item's second line. `href` is the country's list.
 export const COUNTRIES = [
-  { code: "US", inTitle: "the US", name: "United States", short: "US", detail: "San Francisco, New York, Seattle and 16 more metros", href: "./" },
-  { code: "IN", inTitle: "India", name: "India", short: "India", detail: "Bengaluru, Delhi NCR, Hyderabad and 5 more cities", href: "in.html" },
+  { code: "US", name: "United States", short: "US", detail: "San Francisco, New York, Seattle and 16 more metros", href: "./" },
+  { code: "IN", name: "India", short: "India", detail: "Bengaluru, Delhi NCR, Hyderabad and 5 more cities", href: "in.html" },
 ];
 
 const KEY = "vc-directory-country";

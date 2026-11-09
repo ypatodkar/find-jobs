@@ -143,7 +143,7 @@ export default function Firms() {
 
   return (
     <>
-      <SiteHeader active="investors" country={null} />
+      <SiteHeader active="investors" country={null} account={false} />
       <div className={CONTAINER}>
         <header className="pt-8 pb-6 md:pt-10">
           <h1 className="text-2xl font-semibold tracking-tight">Investors</h1>
