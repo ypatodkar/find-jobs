@@ -138,7 +138,7 @@ function ResumePicker({ selected, disabled, onChoose, onRemove, onAdd }) {
             </button>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm" className="resume-picker-delete text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:bg-destructive/10 focus-visible:text-destructive dark:hover:bg-destructive/20"
+                <Button type="button" variant="ghost" size="icon-sm" className="resume-picker-delete text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:bg-destructive/10 focus-visible:text-destructive dark:hover:bg-destructive/20"
                   data-act="remove" data-resume-id={r.id} aria-label={`Delete ${r.label}`} disabled={disabled} onClick={() => onRemove(r.id)}>
                   <Trash2 aria-hidden="true" className="size-3.5" />
                 </Button>
@@ -209,14 +209,17 @@ function Insights({ rows, mappable, onJump }) {
   );
 }
 
+// shadcn's Skeleton, whose pulse stops for anyone who asks for reduced motion.
+const Shape = ({ className }) => <Skeleton className={cn("motion-reduce:animate-none", className)} />;
+
 // Placeholder shapes while a score is on its way, roughly where the score, the three
 // counts and the two insights will land, so the card grows once rather than twice.
 function ResultSkeleton() {
   return (
     <div className="grid gap-3" aria-hidden="true">
-      <div className="flex items-center gap-4"><Skeleton className="h-8 w-20" /><div className="grid flex-1 gap-2"><Skeleton className="h-4 w-40" /><Skeleton className="h-1.5 w-full" /></div></div>
-      <div className="grid grid-cols-3 gap-2"><Skeleton className="h-14" /><Skeleton className="h-14" /><Skeleton className="h-14" /></div>
-      <Skeleton className="h-14 w-full" />
+      <div className="flex items-center gap-4"><Shape className="h-8 w-20" /><div className="grid flex-1 gap-2"><Shape className="h-4 w-40" /><Shape className="h-1.5 w-full" /></div></div>
+      <div className="grid grid-cols-3 gap-2"><Shape className="h-14" /><Shape className="h-14" /><Shape className="h-14" /></div>
+      <Shape className="h-14 w-full" />
     </div>
   );
 }
@@ -400,12 +403,16 @@ export default function ResumeMatch({ job, paneRef, description }) {
       error: s.reviewErrors.has(id),
     };
   }
-  async function review(rating) {
+  async function review(rating, fromKeyboard = false) {
     const r = hitNow(), id = activeId(), identity = cache.accountVersion;
     if (!r || sRef.current.busy || !Number.isSafeInteger(r.checkedAt) || (r.feedback && r.feedback.rating === rating)) return;
     const k = reviewKey(r, id);
     if (sRef.current.pending.has(k)) return;
     const errors = new Map(sRef.current.reviewErrors); errors.delete(k);
+    // Both thumbs are disabled while saving, which drops focus to the page. Pressed from
+    // the keyboard, focus comes back to that thumb, as after a check. Not after a click:
+    // focusing it would open its tooltip with no pointer there to close it.
+    const restoreFocus = fromKeyboard && !!host.current && host.current.contains(document.activeElement);
     update({ pending: new Set(sRef.current.pending).add(k), reviewErrors: errors });
     try {
       const response = await call("/match/feedback", json("POST", { resume_id: id, job_id: job.job_id, checked_at: r.checkedAt, rating }));
@@ -416,6 +423,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
       if (identity === cache.accountVersion) update({ reviewErrors: new Map(sRef.current.reviewErrors).set(k, err.message || "Could not save feedback. Please try again.") });
     } finally {
       const pending = new Set(sRef.current.pending); pending.delete(k);
+      if (restoreFocus) focusAfter.current = { selector: `[data-act="review"][data-rating="${rating}"]`, onlyIfLost: true };
       update({ pending });
     }
   }
@@ -491,7 +499,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
   // Analyze is the card's one primary action; once there is a score, Reanalyze steps
   // back to an outline button beside the dropdown.
   const action = (
-    <Button variant={result ? "outline" : "default"} size={result ? "sm" : "default"}
+    <Button type="button" variant={result ? "outline" : "default"} size={result ? "sm" : "default"}
       className={cn("match-run", result ? "analysis-reanalyze" : "analysis-primary", checking && "is-busy")} data-act="run"
       disabled={!canCheck} onClick={run}>
       {checking ? <Busy /> : result ? <RefreshCw aria-hidden="true" /> : <Sparkles aria-hidden="true" className="ai-icon" />}
@@ -523,7 +531,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
     </div>
   );
   const uploadButton = (
-    <Button className="match-run analysis-primary" data-act="upload" disabled={!!busy && !s.signedOut} onClick={addAnother}>
+    <Button type="button" className="match-run analysis-primary" data-act="upload" disabled={!!busy && !s.signedOut} onClick={addAnother}>
       {busy === "reading" || busy === "uploading" ? <Busy /> : <Upload aria-hidden="true" />}
       {busy === "reading" ? "Reading resume…" : busy === "uploading" ? "Uploading resume…" : "Upload resume"}
     </Button>
@@ -579,7 +587,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
         {rows.length || score !== null ? (
           <div className="analysis-links flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-3">
             {rows.length ? (
-              <Button variant="outline" size="sm" className="breakdown-open" data-act="breakdown" aria-haspopup="dialog" aria-expanded={s.breakdownOpen} aria-controls="requirement-breakdown"
+              <Button type="button" variant="outline" size="sm" className="breakdown-open" data-act="breakdown" aria-haspopup="dialog" aria-expanded={s.breakdownOpen} aria-controls="requirement-breakdown"
                 onClick={() => setBreakdownOpen(!sRef.current.breakdownOpen)}><ListChecks aria-hidden="true" />Full requirement breakdown ({rows.length})</Button>
             ) : null}
             {score !== null ? (
@@ -591,19 +599,23 @@ export default function ResumeMatch({ job, paneRef, description }) {
                       <TooltipTrigger asChild>
                         <button type="button" data-act="review" data-rating={rating} aria-label={label} aria-pressed={fb.rating === rating}
                           className={cn(toggleVariants({ variant: "outline", size: "sm" }), "size-8 px-0 text-muted-foreground aria-pressed:text-foreground aria-pressed:[&_svg]:fill-[color-mix(in_oklch,currentColor_25%,transparent)]")}
-                          disabled={fb.disabled} onClick={() => review(rating)}><Thumb aria-hidden="true" className="size-3.5" /></button>
+                          disabled={fb.disabled} onClick={(e) => review(rating, e.detail === 0)}><Thumb aria-hidden="true" className="size-3.5" /></button>
                       </TooltipTrigger>
                       <TooltipContent>{label}</TooltipContent>
                     </Tooltip>
                   ))}
                 </div>
-                <span className={cn("analysis-feedback-status empty:hidden", fb.error && "is-error text-destructive")} role="status" aria-live="polite">{fb.message}</span>
+                {/* Empty, it is visually hidden but stays a live region, so "Saving…" is
+                    announced when it appears. */}
+                <span className={cn("analysis-feedback-status empty:sr-only", fb.error && "is-error text-destructive")} role="status" aria-live="polite">{fb.message}</span>
               </div>
             ) : null}
           </div>
         ) : null}
         {rows.length ? (
-          <dialog ref={dialog} className="requirement-breakdown m-auto max-h-[min(760px,calc(100dvh-2rem))] w-[min(720px,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl bg-popover p-0 text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/10 backdrop:bg-black/40 open:flex"
+          // A native modal, drawn with the classes of shadcn's DialogContent and, on
+          // ::backdrop, its DialogOverlay (the same scrim as the site's other dialogs).
+          <dialog ref={dialog} className="requirement-breakdown m-auto max-h-[min(760px,calc(100dvh-2rem))] w-[min(720px,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl bg-popover p-0 text-sm text-popover-foreground ring-1 ring-foreground/10 backdrop:bg-black/10 supports-backdrop-filter:backdrop:backdrop-blur-xs open:flex"
             id="requirement-breakdown" aria-labelledby="breakdown-title"
             onCancel={(e) => { e.preventDefault(); setBreakdownOpen(false); }}
             onClick={(e) => {
@@ -614,7 +626,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
             <div className="grid shrink-0 gap-3 px-4 pt-4 sm:px-6 sm:pt-5">
               <div className="breakdown-head flex items-center justify-between gap-3">
                 <h3 id="breakdown-title" className="text-base font-semibold">Requirement breakdown</h3>
-                <Button variant="ghost" size="sm" className="-mr-2 text-muted-foreground" data-act="breakdown-close" aria-label="Close requirement breakdown" onClick={() => setBreakdownOpen(false)}>
+                <Button type="button" variant="ghost" size="sm" className="-mr-2 text-muted-foreground" data-act="breakdown-close" aria-label="Close requirement breakdown" onClick={() => setBreakdownOpen(false)}>
                   <X aria-hidden="true" />Close
                 </Button>
               </div>
@@ -643,7 +655,8 @@ export default function ResumeMatch({ job, paneRef, description }) {
                       {group.map((f) => {
                         const index = rows.indexOf(f);
                         return (
-                          <li key={index} data-status={f.status} hidden={s.breakdownFilter !== "all" && f.status !== s.breakdownFilter} className="border-b last:border-b-0">
+                          <li key={index} data-status={f.status} hidden={s.breakdownFilter !== "all" && f.status !== s.breakdownFilter}
+                            className="border-b last:border-b-0 [&:not(:has(~li:not([hidden])))]:border-b-0">
                             <details className="requirement-row group/row" data-index={index} open={s.expanded.has(index)}
                               onToggle={(e) => {
                                 const open = e.currentTarget.open;
@@ -681,7 +694,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
               <p className="breakdown-empty py-8 text-center text-sm text-muted-foreground" hidden={visible !== 0}>No requirements match this status.</p>
             </div>
             <div className="flex shrink-0 justify-end border-t px-4 py-3 sm:px-6">
-              <Button variant="outline" size="sm" className="breakdown-collapse" data-act="breakdown-close" onClick={() => setBreakdownOpen(false)}>Close breakdown</Button>
+              <Button type="button" variant="outline" size="sm" className="breakdown-collapse" data-act="breakdown-close" onClick={() => setBreakdownOpen(false)}>Close breakdown</Button>
             </div>
           </dialog>
         ) : null}
@@ -693,7 +706,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
     content = (
       <div className="analysis-entry grid gap-3">{heading}
         <p className={LOADING_LINE} role="status"><Busy />Loading resume…</p>
-        <div className="grid gap-3" aria-hidden="true"><Skeleton className="h-8 w-full max-w-60" /><Skeleton className="h-9 w-36" /></div>
+        <div className="grid gap-3" aria-hidden="true"><Shape className="h-8 w-full max-w-60" /><Shape className="h-9 w-36" /></div>
       </div>
     );
   } else if (s.message && s.message.kind === "error" && !cache.listing) {
@@ -777,7 +790,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
               <CircleAlert aria-hidden="true" />
               <AlertDescription>{message.text}</AlertDescription>
               {!cache.items.length && !s.signedOut && !busy ? (
-                <AlertAction><Button variant="outline" size="xs" className="analysis-retry" data-act="retry" onClick={start}>Retry</Button></AlertAction>
+                <AlertAction><Button type="button" variant="outline" size="xs" className="analysis-retry" data-act="retry" onClick={start}>Retry</Button></AlertAction>
               ) : null}
             </Alert>
           ) : null}
