@@ -362,12 +362,16 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   // published as --toolbar-height (DOCK_TOP, and the page's scroll-padding-top in
   // app.css, which keeps focused and scrolled-to rows clear of both bars). At any width,
   // since the header is sticky at every width; a toolbar that is not sticky counts as 0.
+  // On a phone #job-controls is the filter sheet and the pinned bar is #job-search-bar,
+  // which mounts and unmounts at 720px, so it is looked up on every update.
   useEffect(() => {
     const controls = document.getElementById("job-controls");
     if (!controls) return;
     const update = () => {
-      const pinned = getComputedStyle(controls).position === "sticky";
-      document.documentElement.style.setProperty("--toolbar-height", pinned ? controls.offsetHeight + "px" : "0px");
+      const bar = document.getElementById("job-search-bar");
+      const sticky = (el) => el && getComputedStyle(el).position === "sticky";
+      const pinned = sticky(controls) ? controls : sticky(bar) ? bar : null;
+      document.documentElement.style.setProperty("--toolbar-height", pinned ? pinned.offsetHeight + "px" : "0px");
     };
     update();
     const ro = new ResizeObserver(update);

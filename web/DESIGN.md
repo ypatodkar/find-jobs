@@ -61,7 +61,9 @@ Results        two columns from 1100 px: the list (tabs, sort, rows, pagination)
 SiteFooter     page blocks, privacy note, like, LinkedIn
 ```
 
-Under 720 px the toolbar collapses to a search box and a Filters button; filters open
+Under 720 px the toolbar collapses to a search box and a Filters button
+(`#job-search-bar`, pinned under the header like the desktop toolbar, and measured into
+`--toolbar-height` the same way); filters open
 in a bottom sheet. Under 1100 px the job opens as a full-height sheet over the list.
 
 `SiteHeader({ active, country, account })` and `SiteFooter({ children })` are the
