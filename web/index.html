@@ -30,15 +30,17 @@
   <meta name="theme-color" content="#111014" media="(prefers-color-scheme: dark)" />
 
 
-  <!-- The OS preference is handled in CSS and needs no script. This applies only a
-       deliberate override, and has to run here, before the first paint: any later and
-       a visitor who chose light on a dark laptop would watch the page change under
-       them. Inline and blocking for the same reason. src/lib/theme.js owns the rest. -->
+  <!-- Puts the theme in effect on <html data-theme>: a stored override, else the OS.
+       It has to run here, before the first paint: any later and a visitor on a dark
+       laptop would watch the page change under them. Inline and blocking for the same
+       reason. src/lib/theme.js owns the rest. -->
   <script>
-    try {
-      var t = localStorage.getItem("vc-directory-theme");
-      if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
-    } catch (e) {}
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem("vc-directory-theme"); } catch (e) {}
+      if (t !== "dark" && t !== "light") t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    })();
   </script>
 
   <!-- Which country's list the home page opens, decided here, before anything loads, so

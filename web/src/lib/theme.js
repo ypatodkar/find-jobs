@@ -1,6 +1,9 @@
-// Light or dark: the OS decides unless the visitor says otherwise. The
-// default is CSS (prefers-color-scheme); index.html's inline script applies a stored
-// override before first paint. This owns the toggle.
+// Light or dark: the OS decides unless the visitor says otherwise.
+//
+// <html data-theme> always holds the theme in effect, "light" or "dark", so the styles
+// (app.css, and Tailwind's dark: variant) read one attribute and never a media query.
+// Each page's inline script sets it before the first paint; this module keeps it right
+// afterwards and owns the toggle.
 //
 // The override is stored only while it disagrees with the OS. Toggling back into
 // agreement clears it, so the visitor follows their system again rather than being
@@ -20,31 +23,33 @@ function stored() {
   }
 }
 const system = () => (dark.matches ? "dark" : "light");
-export const effectiveTheme = () => root.getAttribute("data-theme") || system();
+export const effectiveTheme = () => stored() || system();
+
+const paint = () => root.setAttribute("data-theme", effectiveTheme());
 
 function apply(theme) {
-  if (theme === system()) {
+  try {
     // Agreeing with the OS is having no opinion, so a later OS change carries the page.
-    root.removeAttribute("data-theme");
-    try { localStorage.removeItem(KEY); } catch { /* fine */ }
-  } else {
-    root.setAttribute("data-theme", theme);
-    try { localStorage.setItem(KEY, theme); } catch { /* fine */ }
-  }
+    if (theme === system()) localStorage.removeItem(KEY);
+    else localStorage.setItem(KEY, theme);
+  } catch { /* private mode: this visit only */ }
+  paint();
 }
 
 const listeners = new Set();
 const emit = () => listeners.forEach((fn) => fn());
 
-// Re-applied here in case the inline snippet is missing, dropping one the OS has
-// since caught up to.
+// Re-applied here in case the inline snippet is missing, dropping an override the OS
+// has since caught up to.
 const saved = stored();
 if (saved) apply(saved);
+else paint();
 
 // The OS can flip mid-visit (macOS does at sunset); an override may then be redundant.
 dark.addEventListener("change", () => {
   const s = stored();
   if (s && s === system()) apply(s);
+  else paint();
   emit();
 });
 
