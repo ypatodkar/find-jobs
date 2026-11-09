@@ -45,7 +45,9 @@ function Signal({ signal }) {
 function JobsBadge({ firm, r }) {
   if (!firm.id || !r) return null;
   if (r.status === "unsupported") return <Badge variant="outline" className="text-muted-foreground" title={r.reason || ""}>no board</Badge>;
-  if (r.status === "error") return <Badge variant="destructive" title={r.reason || ""}>update failed</Badge>;
+  // Outline with destructive text rather than the destructive variant: its red-on-pink
+  // tint is under 4.5:1 at this size, red on the card's own background is not.
+  if (r.status === "error") return <Badge variant="outline" className="text-destructive" title={r.reason || ""}>update failed</Badge>;
   if (r.count === 0) return <Badge variant="outline" className="text-muted-foreground tabular">0 roles</Badge>;
   return (
     <Badge asChild variant="secondary" className="h-6 px-2.5 tabular">
