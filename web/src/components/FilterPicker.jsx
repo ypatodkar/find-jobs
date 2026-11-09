@@ -190,7 +190,7 @@ export default function FilterPicker({ dim, selected, counts, onChange, inline =
             const count = current.get(v) || 0;
             const checked = all || chosen.has(v);
             return (
-              <CommandItem key={v} value={v} aria-checked={checked} onSelect={() => toggle(v, !checked)}
+              <CommandItem key={v} value={v} onSelect={() => toggle(v, !checked)}
                 className={cn("[&>svg:last-child]:hidden", inline && "py-2.5")}>
                 <span aria-hidden="true" className={cn("flex size-4 shrink-0 items-center justify-center rounded-[4px] border shadow-xs",
                   checked ? "border-primary bg-primary" : "border-input dark:bg-input/30")}>
@@ -198,6 +198,11 @@ export default function FilterPicker({ dim, selected, counts, onChange, inline =
                 </span>
                 <span className={cn("min-w-0 flex-1 break-words", count === 0 && "text-muted-foreground")}>{dim.labelFor(v)}</span>
                 <span className="ml-auto pl-2 text-xs tabular text-muted-foreground">{count}</span>
+                {/* The ticked state in the row's name, so every screen reader says it:
+                    cmdk's aria-selected marks only the arrow-key cursor, and VoiceOver
+                    ignores aria-checked on an option. "checked", not "selected", so it is
+                    not confused with that cursor. */}
+                <span className="sr-only">{checked ? ", checked" : ", not checked"}</span>
                 {/* The state as a native checkbox, for scripts and tests; the row draws it. */}
                 <input type="checkbox" value={v} checked={checked} readOnly tabIndex={-1} aria-hidden="true"
                   onMouseDown={(e) => e.preventDefault() /* keep focus in the search */}
