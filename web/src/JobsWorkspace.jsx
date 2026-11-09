@@ -420,12 +420,28 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
         <Filters dims={dims} filters={filters} onChange={setFilters} onReset={reset} canUndo={canUndo} onUndo={undo}
           total={sorted.length} naming={naming} countsFor={(d) => countsFor(jobs, filters, d, dims, filterOpts)} showSalary={country === "US"} />
       ) : (
-        // The toolbar's place while the jobs load (its filters count them).
+        // The toolbar's place while the jobs load (its filters count them). It copies both
+        // of Filters' layouts, switching at the same 720px and wrapping where the real bar
+        // does (bones about as wide as its controls, one per main filter), so the list
+        // does not jump when the jobs land.
         <div className="border-b" aria-hidden="true">
-          <div className={cn(CONTAINER, "flex items-center gap-2 py-3")}>
-            <Bone className="h-9 w-full max-w-xs" />
-            {["w-20", "w-24", "w-28", "w-28"].map((w, i) => <Bone key={i} className={cn("hidden h-9 md:block", w)} />)}
-            <Bone className="h-9 w-24 md:hidden" />
+          <div className={cn(CONTAINER, "flex items-center gap-2 py-2 min-[721px]:hidden")}>
+            <Bone className="h-10 min-w-0 flex-1" />
+            <Bone className="h-10 w-24 shrink-0" />
+          </div>
+          <div className={cn(CONTAINER, "hidden flex-wrap items-center gap-2 py-3 min-[721px]:flex")}>
+            <Bone className="h-8 min-w-48 flex-1 lg:w-56 lg:flex-none" />
+            {/* One block below lg, separate items from lg up, as #primary-grid. */}
+            <div className="flex flex-wrap items-center gap-2 lg:contents">
+              {dims.filter((d) => d.group === "primary").map((d) => (
+                <Bone key={d.key} className={cn("h-8", { role: "w-[72px]", city: "w-[100px]", hq: "w-[154px]", seniority: "w-[117px]", career: "w-[128px]" }[d.key] || "w-28")} />
+              ))}
+            </div>
+            <Bone className="h-8 w-[118px]" />{/* More filters */}
+            <div className="ml-auto flex items-center gap-2">
+              <Bone className="h-8 w-[126px]" />{/* Saved filters */}
+              <Bone className="h-8 w-[75px]" />{/* View */}
+            </div>
           </div>
         </div>
       )}
