@@ -24,9 +24,13 @@ https://claude.ai/artifact/JrkT6vZ6c1tW1jYej8EYTa
 - **Palette:** shadcn neutral. Use the semantic tokens only: `bg-background`, `bg-card`,
   `bg-muted`, `text-foreground`, `text-muted-foreground`, `border`, `ring`, `primary`,
   `destructive`. Never a raw colour (`text-zinc-500`, `#fff`, `violet-600`).
-- **Brand:** one extra token, `brand` (violet), for the **selected job** in the list
-  and, sparingly, the one state that must stand out beside it (the active country in
-  the switcher). Not for buttons, links or focus rings.
+- **Primary is violet** (shadcn's violet theme): filled buttons (Apply, Upload resume,
+  Show N roles), checked boxes, progress and focus rings. Outline and ghost buttons
+  stay neutral. Dark mode keeps the same violet so white button text stays above
+  4.5:1. (Decided 2026-11-09, after the first build: the owner asked for purple
+  buttons.)
+- **Brand:** the same violet as a token of its own, `brand`, for the **selected job**
+  in the list and the active country in the switcher. Not for text links.
 - **Status:** `success` (green) and `warning` (amber), for resume-match results only
   (a requirement shown, partly shown). Everything else stays neutral.
 - **Dark mode:** automatic through the tokens. `<html data-theme>` always holds
