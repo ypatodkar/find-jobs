@@ -298,6 +298,13 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
     if (pickAfterPage.current) {
       const which = pickAfterPage.current;
       pickAfterPage.current = null;
+      // The new page's companies are all closed, so there are no rows to pick from yet:
+      // open its first (or last) company and take that role.
+      if (view === "grouped") {
+        const g = which === "last" ? visibleGroups.at(-1) : visibleGroups[0];
+        if (g) selectInGroup(g, which === "last" ? g.jobs.at(-1) : g.jobs[0]);
+        return;
+      }
       requestAnimationFrame(() => {
         const rows = listRef.current ? [...listRef.current.querySelectorAll(".job[data-job-id]")] : [];
         const row = which === "last" ? rows[rows.length - 1] : rows[0];
@@ -331,6 +338,38 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
     row.scrollIntoView({ block: "nearest" });
     if (!narrow) row.querySelector(".job-title")?.focus({ preventScroll: true });
   };
+  // In the Companies tab a closed company draws no rows, so the arrows step through the
+  // page's companies themselves: past a company's last role into the next company,
+  // which opens, and onto another page only from the first or last company. The opened
+  // company's row exists only after React renders it (a requestAnimationFrame can run
+  // before that), so the scroll and focus wait in pendingFocus for the effect below.
+  const pendingFocus = useRef(null);
+  const selectInGroup = (g, job) => {
+    setExpanded((s) => (s.has(g.company) ? s : new Set(s).add(g.company)));
+    selectJob(job.job_id, { reveal: false });
+    pendingFocus.current = job.job_id;
+  };
+  useEffect(() => {
+    const id = pendingFocus.current;
+    const row = id && listRef.current?.querySelector(`.job[data-job-id="${CSS.escape(id)}"]`);
+    if (!row) return;
+    pendingFocus.current = null;
+    row.scrollIntoView({ block: "nearest" });
+    if (!narrow) row.querySelector(".job-title")?.focus({ preventScroll: true });
+  }); // after every render, until the row is there
+  const stepGroups = (down) => {
+    const gi = visibleGroups.findIndex((g) => g.jobs.some((j) => j.job_id === selectedId));
+    const g = visibleGroups[gi];
+    if (g && expanded.has(g.company)) {
+      const next = g.jobs[g.jobs.findIndex((j) => j.job_id === selectedId) + (down ? 1 : -1)];
+      if (next) { selectInGroup(g, next); return; }
+    }
+    // Nothing on this page selected yet: the first company going down, the last going up.
+    const target = visibleGroups[gi === -1 ? (down ? 0 : visibleGroups.length - 1) : gi + (down ? 1 : -1)];
+    if (target) { selectInGroup(target, down ? target.jobs[0] : target.jobs.at(-1)); return; }
+    if (down && current < pageCount) { pickAfterPage.current = "first"; setPage(current + 1); scrollToResults(false); }
+    if (!down && current > 1) { pickAfterPage.current = "last"; setPage(current - 1); scrollToResults(false); }
+  };
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
@@ -340,6 +379,12 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
       const idle = !a || a === document.body || a === document.documentElement;
       if (!idle && !(listRef.current && listRef.current.contains(a))) return;
       if (document.querySelector(OPEN_OVERLAY)) return;
+      if (view === "grouped") {
+        if (!visibleGroups.length) return;
+        e.preventDefault();
+        stepGroups(e.key === "ArrowDown");
+        return;
+      }
       const rows = listRef.current ? [...listRef.current.querySelectorAll(".job[data-job-id]")] : [];
       if (!rows.length) return;
       e.preventDefault();
