@@ -8,10 +8,10 @@
 // Collapsible, whose open content would also count as an open overlay to the ↑ / ↓
 // handler.
 import { Fragment, useState } from "react";
-import { ChevronDownIcon, EyeIcon } from "lucide-react";
+import { ChevronDownIcon, EyeIcon, MapPinIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { relativeDate } from "../lib/jobs.js";
+import { compactPay, relativeDate } from "../lib/jobs.js";
 import { monogram, openedLabel } from "../lib/groups.js";
 import JobRow, { AcquiredNote, BELOW_TOOLBAR } from "./JobRow.jsx";
 
@@ -48,7 +48,7 @@ export default function CompanyCard({ group: g, open, onToggle, selectedId, onSe
     <section className={cn("cgroup overflow-hidden rounded-xl border bg-card text-card-foreground", open && "is-open")}>
       <button
         className={cn(
-          "cg-head group/head flex w-full cursor-pointer flex-col gap-2 px-4 py-3 text-left transition-colors outline-none hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset motion-reduce:transition-none",
+          "cg-head group/head flex w-full cursor-pointer flex-col gap-1.5 px-4 py-3 text-left transition-colors outline-none hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset motion-reduce:transition-none",
           BELOW_TOOLBAR,
         )}
         type="button" data-company={g.company} aria-expanded={open} onClick={(e) => onToggle(g.company, e.currentTarget)}
@@ -82,10 +82,12 @@ export default function CompanyCard({ group: g, open, onToggle, selectedId, onSe
           <ChevronDownIcon aria-hidden="true"
             className="cg-toggle mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-aria-expanded/head:rotate-180 motion-reduce:transition-none" />
         </span>
-        {/* Under the name, so it lines up with it rather than with the logo. */}
+        {/* Under the name, so it lines up with it rather than with the logo. A pin, not a
+            bold label: the cities are a fact like the ones above, not a heading. */}
         {cities.length ? (
           <span className="cg-cities pl-12 text-sm text-muted-foreground">
-            <span className="cg-label mr-1.5 font-medium text-foreground">Hiring in</span>
+            <span className="cg-label sr-only">Hiring in </span>
+            <MapPinIcon aria-hidden="true" className="mr-1 inline size-3.5 align-[-0.15em]" />
             <DotList items={cities.map(([c, k]) => ({
               key: c, className: "cg-city",
               node: <>{c}{n > 1 ? <>&nbsp;<span className="cg-n tabular text-foreground/70">{k}</span></> : null}</>,
@@ -94,7 +96,8 @@ export default function CompanyCard({ group: g, open, onToggle, selectedId, onSe
         ) : null}
       </button>
       {open ? (
-        <div className="cg-body border-t">
+        // data-pay: whether any role here shows pay, so the rows can drop an empty pay column.
+        <div className="cg-body @container flex flex-col gap-0.5 border-t bg-muted/30 py-2 dark:bg-muted/20" data-pay={g.jobs.some((j) => compactPay(j)) ? "yes" : "no"}>
           {g.jobs.map((j) => <JobRow key={j.job_id} job={j} inGroup selected={j.job_id === selectedId} onSelect={onSelect} seen={!!seen[j.job_id]} />)}
         </div>
       ) : null}

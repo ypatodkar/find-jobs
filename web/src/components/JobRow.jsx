@@ -1,7 +1,7 @@
 // One role in the list: its title, company and pay, where it is, and how long ago it was
-// posted. In the All jobs tab each row is a small card; inside a company card (the
-// Companies tab) rows are plain lines under the company's header, which already names
-// the company.
+// posted. In the All jobs tab each row is a small card. Inside a company card (the
+// Companies tab) a role is one line, title on the left and its facts on the right, under
+// the company's header, which already names the company (GroupRow).
 //
 // The selected row is the one place the brand colour appears in the list (DESIGN.md).
 // A role this browser has opened before (lib/seen.js) keeps a muted title and an
@@ -48,36 +48,32 @@ export default function JobRow({ job, selected, onSelect, inGroup = false, opene
     seen && "is-seen text-muted-foreground",
   );
 
+  const title = job.url ? (
+    <a className={cn(titleClass, "self-start")} href={withSource(job.url)} target="_blank" rel="noopener noreferrer"
+      data-job-id={job.job_id} data-company={job.company} data-city={job.city || ""} data-selects=""
+      title={seen ? "You've opened this one" : undefined}>
+      {job.title}
+    </a>
+  ) : <span className={titleClass}>{job.title}</span>;
+
+  if (inGroup) return <GroupRow job={job} title={title} pay={pay} when={when} selected={selected} seen={seen} onClick={onClick} />;
+
   return (
     <article
       className={cn(
-        "job group/row relative flex cursor-pointer items-start gap-x-4 gap-y-1 transition-colors motion-reduce:transition-none",
+        "job group/row relative flex cursor-pointer items-start gap-x-4 gap-y-1 rounded-lg border bg-card px-4 py-3 text-card-foreground transition-colors hover:bg-muted/50 motion-reduce:transition-none",
         BELOW_TOOLBAR,
-        inGroup
-          // A line in a company card: indented to the company's name, and the selected
-          // one marked by a bar on its left edge.
-          ? "border-b px-4 py-3 last:border-b-0 hover:bg-muted/50 sm:pl-16"
-          : "rounded-lg border bg-card px-4 py-3 text-card-foreground hover:bg-muted/50",
         seen && "row-seen",
-        selected && "is-selected bg-brand/5 hover:bg-brand/5 dark:bg-brand/10 dark:hover:bg-brand/10",
-        selected && (inGroup
-          ? "before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-brand"
-          : "border-brand/60 ring-1 ring-brand/25"),
+        selected && "is-selected border-brand/60 bg-brand/5 ring-1 ring-brand/25 hover:bg-brand/5 dark:bg-brand/10 dark:hover:bg-brand/10",
       )}
       data-job-id={job.job_id}
       onClick={onClick}
     >
       <div className="job-main flex min-w-0 flex-1 flex-col gap-1">
-        {job.url ? (
-          <a className={cn(titleClass, "self-start")} href={withSource(job.url)} target="_blank" rel="noopener noreferrer"
-            data-job-id={job.job_id} data-company={job.company} data-city={job.city || ""} data-selects=""
-            title={seen ? "You've opened this one" : undefined}>
-            {job.title}
-          </a>
-        ) : <span className={titleClass}>{job.title}</span>}
-        {inGroup && !pay ? null : (
+        {title}
+        {(
           <p className="job-sub flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            {inGroup ? null : <span className="job-company min-w-0 text-sm wrap-anywhere text-muted-foreground">{job.company}<AcquiredNote company={job.company} /></span>}
+            <span className="job-company min-w-0 text-sm wrap-anywhere text-muted-foreground">{job.company}<AcquiredNote company={job.company} /></span>
             {pay ? (
               <Badge variant="secondary" className="job-salary tabular max-w-full cursor-help" title={job.salary || undefined}>
                 <span className="truncate">{pay}</span>
@@ -98,9 +94,7 @@ export default function JobRow({ job, selected, onSelect, inGroup = false, opene
           </p>
         ) : null}
         {/* Empty for a company never opened: :empty keeps those rows as they were. */}
-        {inGroup ? null : (
-          <span className="job-company-opened text-xs text-muted-foreground empty:hidden" data-opened-for={job.company}>{openedLabel(opened)}</span>
-        )}
+        <span className="job-company-opened text-xs text-muted-foreground empty:hidden" data-opened-for={job.company}>{openedLabel(opened)}</span>
       </div>
       <div className="job-side flex shrink-0 flex-col items-end gap-1.5 pt-0.5 text-right">
         {when ? <p className="job-meta job-when text-xs whitespace-nowrap text-muted-foreground">{when}</p> : null}
@@ -109,6 +103,56 @@ export default function JobRow({ job, selected, onSelect, inGroup = false, opene
             <EyeIcon aria-hidden="true" />Opened
           </Badge>
         ) : null}
+      </div>
+    </article>
+  );
+}
+
+/**
+ * A role inside a company card, as a row of a small table: the title, then pay, place
+ * (with "Remote" when the role allows it) and when it was posted, each in its own column
+ * so the facts line up from role to role. A company that publishes no pay for any of its
+ * roles gets no pay column (CompanyCard sets data-pay on the card's body), so its titles
+ * keep the room. The columns appear only when the list itself is at least 42rem wide (a
+ * container query on the card's body); narrower, the facts wrap under the title. The title lines up with the company's name above.
+ * The selected role is a rounded highlight inset from the card's edges, in the brand
+ * colour like the selected card in All jobs. Same hooks as the card row:
+ * article.job[data-job-id], .is-selected, .row-seen, a.job-title.
+ */
+function GroupRow({ job, title, pay, when, selected, seen, onClick }) {
+  // A column's cell stays in the grid when empty, so the next column keeps its place;
+  // in the wrapped layout an empty cell takes no room.
+  const cell = "min-w-0 @max-2xl:empty:hidden";
+  // "Remote" joins the city instead of taking a column of its own; a role whose city is
+  // already "Remote" says it once.
+  const place = [job.city, job.remote && !/^remote\b/i.test(job.city || "") ? "Remote" : null].filter(Boolean).join(" · ");
+  return (
+    <article
+      className={cn(
+        "job group/row relative mx-2 flex cursor-pointer flex-col gap-1 rounded-md px-3 py-2.5 transition-colors hover:bg-muted motion-reduce:transition-none sm:pl-[3.25rem]",
+        "@2xl:grid @2xl:grid-cols-[minmax(0,1fr)_6.75rem_10.75rem_5rem] @2xl:items-center @2xl:gap-x-3 @2xl:in-data-[pay=no]:grid-cols-[minmax(0,1fr)_10.75rem_5rem]",
+        BELOW_TOOLBAR,
+        seen && "row-seen",
+        selected && "is-selected bg-brand/8 ring-1 ring-brand/35 ring-inset hover:bg-brand/8 dark:bg-brand/15 dark:hover:bg-brand/15",
+      )}
+      data-job-id={job.job_id}
+      onClick={onClick}
+    >
+      <div className="job-main flex min-w-0 items-center gap-2">
+        {title}
+        {seen ? <EyeIcon aria-label="Opened" className="job-opened size-3.5 shrink-0 text-muted-foreground" /> : null}
+      </div>
+      <div className="job-meta flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground @2xl:contents">
+        <span className={cn(cell, "job-salary tabular font-medium whitespace-nowrap text-foreground/80 in-data-[pay=no]:hidden @2xl:text-right")} title={job.salary || undefined}>{pay || null}</span>
+        <span className={cn(cell, "job-place inline-flex items-center gap-1")} title={place || undefined}>
+          {job.unlisted ? <span className="italic">No longer listed</span> : place ? (
+            <>
+              <MapPinIcon aria-hidden="true" className="size-3.5 shrink-0" />
+              <span className="min-w-0 truncate">{place}</span>
+            </>
+          ) : null}
+        </span>
+        <span className={cn(cell, "job-when text-xs whitespace-nowrap @2xl:text-right")}>{when || null}</span>
       </div>
     </article>
   );
