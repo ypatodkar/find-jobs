@@ -37,7 +37,7 @@ export default function IndiaJobs() {
   return (
     <>
       <SiteHeader active="jobs" country="IN" />
-      <h1 className="sr-only">Engineering jobs at VC-backed companies in India</h1>
+      <h1 id="content" tabIndex={-1} className="sr-only">Engineering jobs at VC-backed companies in India</h1>
       {empty ? (
         <div className={`${CONTAINER} pt-4`}>
           {intro}

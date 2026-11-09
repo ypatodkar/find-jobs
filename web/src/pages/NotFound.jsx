@@ -20,7 +20,7 @@ export default function NotFound() {
           <EmptyHeader>
             <EmptyMedia variant="icon"><Compass /></EmptyMedia>
             <p className="text-sm font-medium text-muted-foreground tabular">404</p>
-            <EmptyTitle><h1 className="text-2xl font-semibold tracking-tight">That page isn't here</h1></EmptyTitle>
+            <EmptyTitle><h1 id="content" tabIndex={-1} className="text-2xl font-semibold tracking-tight outline-none">That page isn't here</h1></EmptyTitle>
             <EmptyDescription>
               The link may be out of date, or the role may have come off the boards. Everything still open is on the main list.
             </EmptyDescription>

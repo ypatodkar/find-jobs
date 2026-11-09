@@ -148,7 +148,7 @@ export default function Firms() {
       <SiteHeader active="investors" country={null} account={false} />
       <div className={CONTAINER}>
         <header className="pt-8 pb-6 md:pt-10">
-          <h1 className="text-2xl font-semibold tracking-tight">Investors</h1>
+          <h1 id="content" tabIndex={-1} className="text-2xl font-semibold tracking-tight outline-none">Investors</h1>
           <p className="mt-2 max-w-3xl text-muted-foreground">
             A searchable directory of US venture firms worth tracking for software roles, grouped by how central AI is to each firm's current thesis. Portfolio job boards are checked twice daily for engineering roles across 19 US metros.
           </p>

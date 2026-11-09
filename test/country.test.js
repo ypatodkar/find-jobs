@@ -67,7 +67,7 @@ test("a choice made with the switch wins over the clock", () => {
 
 test("a shared link with filters or an anchor opens as it is", () => {
   assert.equal(openHome({ zone: "Asia/Kolkata", search: "?roles=backend" }).went, null);
-  assert.equal(openHome({ zone: "Asia/Kolkata", hash: "#main-content" }).went, null);
+  assert.equal(openHome({ zone: "Asia/Kolkata", hash: "#content" }).went, null);
   assert.equal(openHome({ local: { "vc-directory-country": "IN" }, search: "?q=rust" }).went, null);
   assert.deepEqual(openHome({ zone: "Asia/Kolkata", search: "?roles=backend" }).local, {}, "nor is a choice saved");
 });
