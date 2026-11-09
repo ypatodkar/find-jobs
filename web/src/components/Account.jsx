@@ -1,6 +1,21 @@
 // Google's sign-in button, the account menu in the header, and the popup that asks for
 // sign-in before a resume upload.
 import { useEffect, useRef, useState } from "react";
+import { LogOutIcon, XIcon } from "lucide-react";
+import { cn } from "cn";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { closeResumeSignIn, onButtonThemeChange, renderGoogleButton, signOut, useAuth } from "../lib/auth.js";
 
 /** Google's own button, drawn by GIS into a host element and redrawn when the theme changes. */
@@ -18,78 +33,117 @@ export function GoogleButton({ className = "", options, id }) {
     return onButtonThemeChange(draw);
   }, [enabled, key]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const cls = `${className} google-signin`.trim();
-  if (!enabled) return <div className={cls} id={id}><p className="auth-off">Sign-in isn't set up on this server yet.</p></div>;
-  if (failed) return <div className={cls} id={id}><p className="auth-off">{failed}</p></div>;
+  // GSI's iframe uses a light canvas even for its dark button. Keeping the embedding
+  // scheme light stops its transparent margins painting a white rectangle in dark mode.
+  const cls = cn(className, "google-signin scheme-only-light");
+  const off = "auth-off text-sm text-muted-foreground";
+  if (!enabled) return <div className={cls} id={id}><p className={off}>Sign-in isn't set up on this server yet.</p></div>;
+  if (failed) return <div className={cls} id={id}><p className={off}>{failed}</p></div>;
   return <div ref={host} className={cls} id={id}></div>;
 }
 
-function Face({ account }) {
+/** The signed-in face: the account's picture, or its initial when there is none or it will not load. */
+function Face({ account, className }) {
   const initial = (account.name || account.email || "?").trim().charAt(0).toUpperCase();
-  const [broken, setBroken] = useState(false);
-  // A picture that will not load falls back to the initial.
-  return account.picture && !broken
-    ? <img src={account.picture} alt="" referrerPolicy="no-referrer" width="32" height="32" onError={() => setBroken(true)} />
-    : initial;
+  return (
+    <Avatar className={className}>
+      {account.picture ? <AvatarImage src={account.picture} alt="" referrerPolicy="no-referrer" /> : null}
+      <AvatarFallback className="text-xs font-medium text-foreground">{initial}</AvatarFallback>
+    </Avatar>
+  );
 }
 
-/** The header's #account-slot: Google's round icon button, or the signed-in face and menu. */
+/**
+ * The header's #account-slot. Signed out: Google's round icon button, in a box the size
+ * of the header's other icon buttons. Signed in: the face, opening a menu with the
+ * account and Sign out. Without sign-in on this server (a static host), nothing.
+ */
 export function AccountSlot() {
   const { enabled, account } = useAuth();
-  const menu = useRef(null);
-
-  useEffect(() => {
-    const close = (e) => { const m = menu.current; if (m && m.open && !m.contains(e.target)) m.open = false; };
-    document.addEventListener("click", close);
-    return () => document.removeEventListener("click", close);
-  }, []);
 
   let body = null;
-  if (enabled && !account) body = <GoogleButton className="account-signin" id="account-signin" options={{ type: "icon", shape: "circle", size: "medium" }} />;
-  else if (enabled && account) {
+  if (enabled && !account) {
     body = (
-      <details className="account-menu" ref={menu}>
-        <summary className="account-face" aria-label={`Account: ${account.email}`} title={account.email}><Face account={account} /></summary>
-        <div className="account-panel">
-          <p className="account-name">{account.name || "Signed in"}</p>
-          <p className="account-email">{account.email}</p>
-          <p className="account-note">Your resumes, scores, saved jobs, opened jobs and saved filters are kept on this account.</p>
-          <button type="button" className="account-signout" id="account-signout" onClick={signOut}>Sign out</button>
-        </div>
-      </details>
+      <GoogleButton className="account-signin flex min-h-8 min-w-8 items-center justify-center [&_.auth-off]:max-w-40 [&_.auth-off]:text-xs [&_.auth-off]:leading-tight"
+        id="account-signin" options={{ type: "icon", shape: "circle", size: "medium" }} />
+    );
+  } else if (enabled && account) {
+    body = (
+      <DropdownMenu>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="ghost" size="icon-sm" className="account-face rounded-full" aria-label={`Account: ${account.email}`}>
+                <Face account={account} className="size-7" />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent>{account.email}</TooltipContent>
+        </Tooltip>
+        <DropdownMenuContent align="end" collisionPadding={16} className="account-panel w-72">
+          <DropdownMenuLabel className="flex items-center gap-3 py-2 font-normal">
+            <Face account={account} className="size-9" />
+            <span className="flex min-w-0 flex-col">
+              <span className="account-name truncate text-sm font-medium text-foreground">{account.name || "Signed in"}</span>
+              <span className="account-email text-xs break-all text-muted-foreground">{account.email}</span>
+            </span>
+          </DropdownMenuLabel>
+          <p className="account-note px-2 pb-2 text-xs leading-relaxed text-muted-foreground">
+            Your resumes, scores, saved jobs, opened jobs and saved filters are kept on this account.
+          </p>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="account-signout" id="account-signout" onSelect={signOut}>
+            <LogOutIcon aria-hidden="true" />Sign out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   }
-  return <div id="account-slot">{body}</div>;
+  return <div id="account-slot" className="flex items-center empty:hidden">{body}</div>;
 }
 
-/** The modal that asks for sign-in once someone chooses to add a resume. */
+/**
+ * The modal that asks for sign-in once someone chooses to add a resume. Radix's dialog
+ * owns Tab and Escape, and it sits above everything, the phone's job sheet included:
+ * its keys stop here, so Escape closes the popup without closing the sheet under it.
+ * Closing (the button, Escape, a click outside, signing in) hands focus back to what
+ * opened it, the Upload button.
+ */
 export function ResumeSignInDialog() {
   const { signInOpen, error } = useAuth();
-  const dialog = useRef(null);
+  const opener = useRef(null);
 
-  useEffect(() => {
-    const d = dialog.current;
-    if (signInOpen && d && !d.open) d.showModal();
-    if (!signInOpen && d && d.open) d.close();
-  }, [signInOpen]);
-
-  if (!signInOpen) return null;
-  const outside = (e) => {
-    if (e.target !== dialog.current) return;
-    const b = dialog.current.getBoundingClientRect();
-    if (e.clientX < b.left || e.clientX > b.right || e.clientY < b.top || e.clientY > b.bottom) dialog.current.close();
-  };
   return (
-    // The native modal owns Tab and Escape, including above the mobile job sheet.
-    <dialog ref={dialog} className="resume-signin-dialog" aria-labelledby="resume-signin-title" aria-describedby="resume-signin-description"
-      onClick={outside} onKeyDown={(e) => e.stopPropagation()} onClose={closeResumeSignIn}>
-      <button type="button" className="resume-signin-close" aria-label="Close sign-in popup" autoFocus onClick={() => dialog.current.close()}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
-      </button>
-      <h2 id="resume-signin-title">Sign in to upload your resume</h2>
-      <p id="resume-signin-description">Sign in with Google to save your resume and analyze how it matches this job.</p>
-      <GoogleButton className="match-signin" options={{ size: "large", text: "continue_with" }} />
-      <p className="resume-signin-error" role="alert" hidden={!error}>{error}</p>
-    </dialog>
+    <Dialog open={signInOpen} onOpenChange={(open) => { if (!open) closeResumeSignIn(); }}>
+      <DialogContent showCloseButton={false} className="resume-signin-dialog gap-5 sm:max-w-[420px]"
+        aria-labelledby="resume-signin-title" aria-describedby="resume-signin-description"
+        onKeyDown={(e) => e.stopPropagation()}
+        onOpenAutoFocus={(e) => {
+          opener.current = document.activeElement;
+          e.preventDefault();
+          e.currentTarget.querySelector(".resume-signin-close")?.focus();
+        }}
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          const back = opener.current;
+          opener.current = null;
+          if (back && back.isConnected) back.focus();
+        }}>
+        <Button type="button" variant="ghost" size="icon-sm" className="resume-signin-close absolute top-3 right-3 text-muted-foreground"
+          aria-label="Close sign-in popup" onClick={closeResumeSignIn}>
+          <XIcon />
+        </Button>
+        <DialogHeader>
+          <DialogTitle id="resume-signin-title" className="pr-8 text-lg font-semibold">Sign in to upload your resume</DialogTitle>
+          <p id="resume-signin-description" className="text-sm leading-relaxed text-muted-foreground">
+            Sign in with Google to save your resume and analyze how it matches this job.
+          </p>
+        </DialogHeader>
+        <GoogleButton className="match-signin min-h-10" options={{ size: "large", text: "continue_with" }} />
+        <Alert variant="destructive" className="resume-signin-error" role="alert" hidden={!error}>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </DialogContent>
+    </Dialog>
   );
 }
