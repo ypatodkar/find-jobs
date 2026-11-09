@@ -16,6 +16,7 @@ import { useSeen } from "../lib/seen.js";
 
 const FOOT_H = "mb-2 text-sm font-medium text-foreground";
 const FOOT_P = "leading-6";
+const FOOT_P_NEXT = "mt-2 leading-6";
 
 export default function IndiaJobs() {
   const [jobs, setJobs] = useState(null);
@@ -49,7 +50,9 @@ export default function IndiaJobs() {
       <SiteFooter>
         <section>
           <h3 className={FOOT_H}>About this list</h3>
-          <p className={FOOT_P} id="all-note">{jobs && jobs.length
+          {/* The description line from under the old title; Company HQ is the India list's own filter. */}
+          <p className={FOOT_P}>Engineering roles in India at VC-backed companies: Indian startups, and the Indian offices of startups based abroad. Use Company HQ to choose which.</p>
+          <p className={FOOT_P_NEXT} id="all-note">{jobs && jobs.length
             ? `${jobs.length.toLocaleString()} roles at ${companies.toLocaleString()} companies. They come from the portfolio job boards of US and Indian investors, and from the careers pages of companies in Indian investors' portfolios. Company HQ is where most of a company's openings are.`
             : "Roles come from the portfolio job boards of US and Indian investors, and from the careers pages of companies in Indian investors' portfolios."}</p>
         </section>

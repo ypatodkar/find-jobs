@@ -32,6 +32,13 @@ const Role = ({ r }) => (r.url ? (
     href={withSource(r.url)} target="_blank" rel="noopener noreferrer">{r.title}</a>
 ) : r.title);
 
+// For <time dateTime>. History comes from localStorage and account sync, so a stamp may
+// not be a usable time; toISOString would throw on it and take the page down.
+function iso(ts) {
+  const d = new Date(Number(ts));
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+}
+
 const reducedMotion = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export default function Viewed({ jobs, seen }) {
@@ -94,7 +101,7 @@ export default function Viewed({ jobs, seen }) {
                   {c.roles.length > 4 ? <><span aria-hidden="true"> · </span>+{c.roles.length - 4} more</> : null}
                 </span>
                 <time className="col-start-2 row-start-1 text-right text-xs whitespace-nowrap text-muted-foreground sm:col-start-3"
-                  dateTime={new Date(c.last).toISOString()}>{when(c.last)}</time>
+                  dateTime={iso(c.last)}>{when(c.last)}</time>
               </li>
             ))}
           </ul>

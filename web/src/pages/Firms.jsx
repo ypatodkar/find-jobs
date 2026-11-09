@@ -137,7 +137,9 @@ export default function Firms() {
     return true;
   });
   const groups = TIER_ORDER.map((t) => ({ tier: t, firms: shown.filter((f) => f.tier === t) })).filter((g) => g.firms.length);
-  const clear = () => { setQuery(""); setTier("all"); setOnlyBoard(false); setOnlyJobs(false); };
+  // The button that calls this disappears with the empty state, so focus goes back to
+  // the search box rather than falling to <body>.
+  const clear = () => { setQuery(""); setTier("all"); setOnlyBoard(false); setOnlyJobs(false); search.current?.focus(); };
 
   return (
     <>
@@ -154,10 +156,14 @@ export default function Firms() {
           <InputGroup className="lg:w-64">
             <InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon>
             {/* The browser's own clear button is swapped for one that matches; Escape still
-                clears the box, as in any search field. */}
+                clears the box, as in any search field. It is handled here rather than left to
+                the browser: Firefox doesn't do it, and while the Clear button's tooltip is
+                still up, Radix takes that Escape to close the tooltip (preventDefault), so
+                the browser would leave the text in place. */}
             <InputGroupInput ref={search} id="search" type="search" placeholder="Search firm name…" aria-label="Search firms" autoComplete="off"
               className="[&::-webkit-search-cancel-button]:appearance-none"
-              value={query} onChange={(e) => setQuery(e.target.value)} />
+              value={query} onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Escape" && query) setQuery(""); }} />
             {query ? (
               <InputGroupAddon align="inline-end">
                 <Tooltip>

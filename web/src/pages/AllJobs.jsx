@@ -3,6 +3,8 @@
 // The frame is the site header, then the job workspace full width (it lays out its own
 // toolbar and results inside CONTAINER), then the footer. There is no title row: the
 // header names the page, and the <h1> is for screen readers and search engines only.
+// The description line that used to sit under the title opens the footer's "About this
+// list" instead.
 // Between the filter toolbar and the results (JobsWorkspace's `intro`) sit the country
 // note, the startup of the day and "Companies you've opened", next to the filters they
 // belong with rather than up in the header.
@@ -22,6 +24,8 @@ import { useSeen } from "../lib/seen.js";
 // The page's footer blocks: a heading and a paragraph each (SiteFooter adds the rest).
 const FOOT_H = "mb-2 text-sm font-medium text-foreground";
 const FOOT_P = "leading-6";
+// A second paragraph in the same block.
+const FOOT_P_NEXT = "mt-2 leading-6";
 
 /**
  * What a jobs page shows instead of the list when there is nothing to list: the data
@@ -91,7 +95,8 @@ export default function AllJobs() {
       <SiteFooter>
         <section>
           <h3 className={FOOT_H}>About this list</h3>
-          <p className={FOOT_P} id="all-note">{jobs && jobs.length
+          <p className={FOOT_P}>Engineering roles across all 16 tracked portfolios in a single list. Search across 19 US metros and choose the filters that fit you.</p>
+          <p className={FOOT_P_NEXT} id="all-note">{jobs && jobs.length
             ? `Merged across every tracked portfolio and deduplicated on company, title, and city — ${multi.toLocaleString()} of these roles are at companies backed by more than one investor. Where a company publishes to its own applicant tracking system, that live listing is preferred over the investor's board.`
             : "Roles are merged across every tracked portfolio and deduplicated on company, title, and city. Where a company publishes to its own applicant tracking system, that live listing is preferred over the investor's board."}</p>
         </section>
