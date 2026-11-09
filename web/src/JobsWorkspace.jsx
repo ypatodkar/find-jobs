@@ -2,11 +2,24 @@
 // filters, the list and its pages, the Companies tab, the divider, keyboard browsing,
 // and the description pane (a sheet on narrow screens).
 //
-// Shared by the all-jobs page and each investor's page, which load the jobs and
-// supply the header and footer around it. `jobs` is null while they load.
+// Shared by the jobs pages (US, India) and each investor's page, which load the jobs
+// and supply the header and footer around it. `jobs` is null while they load.
+//
+// Rendered full width: the filter toolbar is a full-bleed sticky bar, and the intro and
+// the results each sit in CONTAINER, so their edges line up with the header's. From
+// 1100px the results are three grid columns, the list | the divider | the job pane,
+// and the pane docks under the header and toolbar while the list scrolls with the page.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { ArrowDownIcon, ArrowUpIcon, SearchXIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { CONTAINER } from "@/lib/layout.js";
+import { tabsListVariants } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import Filters from "./components/Filters.jsx";
-import JobRow from "./components/JobRow.jsx";
+import JobRow, { BELOW_TOOLBAR } from "./components/JobRow.jsx";
 import CompanyCard from "./components/CompanyCard.jsx";
 import Pagination from "./components/Pagination.jsx";
 import DetailPane from "./components/DetailPane.jsx";
@@ -41,12 +54,75 @@ function useMedia(query) {
 
 const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+// Beside the list, the job pane and the divider dock just under the sticky header and
+// filter toolbar (--toolbar-height is published below), and reach down to a little above
+// the viewport's bottom edge. Literal class strings, so Tailwind finds them.
+const DOCK_TOP = "top-[calc(var(--header-height)+var(--toolbar-height,0px)+1rem)]";
+const DOCK_HEIGHT = "h-[calc(100dvh-var(--header-height)-var(--toolbar-height,0px)-2rem)]";
+
+// An open overlay wants the arrow keys for itself (DESIGN.md, "Keyboard"): a Radix /
+// shadcn overlay's content (data-slot "…-content", data-state "open"), or an open
+// <details> menu. Not a Collapsible's content, which is open in the page rather than
+// over it, and not the disclosures inside the job pane (the resume match's requirement
+// rows), which stay open while the list is browsed.
+const OPEN_OVERLAY = '[data-state="open"][data-slot$="-content"]:not([data-slot="collapsible-content"]):not([data-slot="accordion-content"]), details[open]:not(#job-detail details)';
+
+// The All jobs / Companies switch: two pressed-state buttons drawn as shadcn's TabsList
+// and TabsTrigger. Buttons rather than Radix Tabs, because the view lives in the address
+// bar (lib/useFilterState.js) and there are no tab panels to point at.
+const VIEW_TAB = "seg relative inline-flex h-full flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-transparent px-2.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none dark:text-muted-foreground dark:hover:text-foreground aria-pressed:bg-background aria-pressed:text-foreground aria-pressed:shadow-sm dark:aria-pressed:border-input dark:aria-pressed:bg-input/30 dark:aria-pressed:text-foreground";
+
+// While the first jobs load: the shape of the list and the pane, so nothing jumps when
+// they land.
+function ListSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <div className="mb-3 flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-4">
+          <Skeleton className="h-9 w-56 rounded-lg" />
+          <Skeleton className="h-9 w-40" />
+        </div>
+        <Skeleton className="h-5 w-56" />
+      </div>
+      <div className="flex flex-col gap-2">
+        {Array.from({ length: 8 }, (_, i) => (
+          <div key={i} className="flex items-start gap-4 rounded-lg border bg-card px-4 py-3.5">
+            <div className="flex flex-1 flex-col gap-2.5">
+              <Skeleton className={cn("h-4", ["w-3/5", "w-4/5", "w-2/3"][i % 3])} />
+              <Skeleton className="h-3.5 w-40" />
+              <Skeleton className="h-3.5 w-28" />
+            </div>
+            <Skeleton className="h-3 w-16" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PaneSkeleton() {
+  return (
+    <div className="flex h-full flex-col gap-3 rounded-xl border bg-card p-6" aria-hidden="true">
+      <Skeleton className="h-4 w-32" />
+      <Skeleton className="h-6 w-3/4" />
+      <Skeleton className="h-4 w-1/2" />
+      <div className="mt-2 flex gap-2"><Skeleton className="h-9 w-28" /><Skeleton className="size-9" /></div>
+      <Skeleton className="mt-6 h-24 w-full" />
+      <Skeleton className="mt-4 h-4 w-full" />
+      <Skeleton className="h-4 w-11/12" />
+      <Skeleton className="h-4 w-4/5" />
+    </div>
+  );
+}
+
 /**
  * `showFirms`: offer the Investor filter (the all-jobs page). `contextLabel`: the
  * investor a page is about, which names its saved filters. `country`: whose list this
  * is, "US" or "IN" (in.html), which picks the filters that make sense for it.
+ * `intro`: a node shown between the toolbar and the results, in CONTAINER (the country
+ * note, the featured company, the companies you have opened).
  */
-export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = null, country = "US" }) {
+export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = null, country = "US", intro = null }) {
   const [selectedId, setSelectedId] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false); // the description over the list, under 1100px
   const [expanded, setExpanded] = useState(() => new Set());
@@ -55,7 +131,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   const dims = useMemo(() => dimensions({ showFirms, firmLabel, country }), [showFirms, country]);
   const { filters, setFilters, page, setPage, view, setView, canUndo, undo, reset, settle } = useFilterState(dims);
 
-  const splitRef = useRef(null), dividerRef = useRef(null), paneRef = useRef(null), listRef = useRef(null);
+  const splitRef = useRef(null), dividerRef = useRef(null), paneRef = useRef(null), dockRef = useRef(null), listRef = useRef(null);
   const { style: columnStyle, dividerProps, narrowColumn } = useColumns(splitRef, dividerRef, wide);
 
   // A shared saved-filter link (?f=) applies once, over whatever the URL said.
@@ -104,8 +180,9 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   // Beside the list, a click brings the workspace into view below the filters once;
   // after that, browsing never moves the page. Under 1100px the description opens as a
   // sheet with its own history entry, so Back closes it.
+  // What docks is the pane's wrapper (dockRef), so that is what is measured.
   const revealWorkspace = () => {
-    const pane = paneRef.current;
+    const pane = dockRef.current;
     if (!pane || narrow) return;
     const top = pane.getBoundingClientRect().top;
     const dock = parseFloat(getComputedStyle(pane).top) || 0;
@@ -178,10 +255,11 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   }, [jobs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The sheet is a dialog: focus goes into it, Escape closes it, Tab stays inside, and
-  // the page behind does not scroll.
+  // the page behind does not scroll (overflow-hidden on <body>; detail-open is the hook).
   useEffect(() => {
     const on = narrow && open;
     document.body.classList.toggle("detail-open", on);
+    document.body.classList.toggle("overflow-hidden", on);
     if (!on) return;
     requestAnimationFrame(() => document.getElementById("detail-title")?.focus({ preventScroll: true }));
     const onKey = (e) => {
@@ -196,7 +274,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
       else if (!e.shiftKey && (document.activeElement === last || !pane.contains(document.activeElement))) { e.preventDefault(); first && first.focus(); }
     };
     document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("keydown", onKey); document.body.classList.remove("detail-open"); };
+    return () => { document.removeEventListener("keydown", onKey); document.body.classList.remove("detail-open", "overflow-hidden"); };
   }, [narrow, open, closeDetail]);
 
   // ---- the first role, selected ----
@@ -241,7 +319,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   // ---- ↑ / ↓ through the list ----
   // Moves the selection without leaving the keyboard, past the last row onto the next
   // page and before the first onto the previous one. Only while nothing else wants the
-  // arrows: focus on the list or nowhere, and no menu open.
+  // arrows: focus on the list or nowhere, and no overlay open (OPEN_OVERLAY).
   const selectRow = (row) => {
     selectJob(row.dataset.jobId, { reveal: false });
     row.scrollIntoView({ block: "nearest" });
@@ -255,7 +333,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
       const a = document.activeElement;
       const idle = !a || a === document.body || a === document.documentElement;
       if (!idle && !(listRef.current && listRef.current.contains(a))) return;
-      if (document.querySelector("details.company-picker[open], details.preset-picker[open], details.account-menu[open], details.advanced-picker[open]")) return;
+      if (document.querySelector(OPEN_OVERLAY)) return;
       const rows = listRef.current ? [...listRef.current.querySelectorAll(".job[data-job-id]")] : [];
       if (!rows.length) return;
       e.preventDefault();
@@ -273,19 +351,22 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   const scrollToResults = (smooth = true) => document.getElementById("job-results-bar")?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
   const goTo = (n) => { setPage(n); scrollToResults(); };
 
-  // When the filter bar is pinned, the pane docks under it: its height is published as
-  // --toolbar-height for styles.css.
+  // While the filter toolbar is pinned (sticky, under the sticky site header), the pane
+  // and the divider dock under it and rows scroll into view below it: its height is
+  // published as --toolbar-height (DOCK_TOP, BELOW_TOOLBAR). At any width, since the
+  // header is sticky at every width; a toolbar that is not sticky counts as 0.
   useEffect(() => {
     const controls = document.getElementById("job-controls");
     if (!controls) return;
     const update = () => {
-      const pinned = wide && getComputedStyle(controls).position === "sticky";
+      const pinned = getComputedStyle(controls).position === "sticky";
       document.documentElement.style.setProperty("--toolbar-height", pinned ? controls.offsetHeight + "px" : "0px");
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(controls);
-    return () => ro.disconnect();
+    addEventListener("resize", update); // a breakpoint can unpin the bar without resizing it
+    return () => { ro.disconnect(); removeEventListener("resize", update); };
   }, [wide, jobs]);
 
   const toggleCompany = (company) => setExpanded((s) => { const n = new Set(s); if (n.has(company)) n.delete(company); else n.add(company); return n; });
@@ -294,49 +375,112 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
     ? (groups.length ? `Showing ${start + 1}–${start + visibleGroups.length} of ${groups.length} companies · ${sorted.length} roles` : "0 companies · 0 roles")
     : (sorted.length ? `Showing ${start + 1}–${start + visibleJobs.length} of ${sorted.length} matching roles` : "0 matching roles");
 
+  const noResults = (
+    <Empty className="empty border">
+      <EmptyHeader>
+        <EmptyMedia variant="icon"><SearchXIcon /></EmptyMedia>
+        <EmptyTitle>No roles match those filters.</EmptyTitle>
+        <EmptyDescription>Try a broader search, or remove a filter or two.</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button type="button" variant="outline" size="sm" onClick={reset}>Reset filters</Button>
+      </EmptyContent>
+    </Empty>
+  );
+
   return (
     <>
       {jobs ? (
         <Filters dims={dims} filters={filters} onChange={setFilters} onReset={reset} canUndo={canUndo} onUndo={undo}
           total={sorted.length} naming={naming} countsFor={(d) => countsFor(jobs, filters, d, dims, filterOpts)} showSalary={country === "US"} />
-      ) : null}
-      <div ref={splitRef} className={`results-split${wide ? " is-split" : ""}`} id="results-split" style={columnStyle}>
-        <div className="results-main">
-          <div className="results-bar" id="job-results-bar" hidden={!jobs}>
-            <div className="list-head" id="list-head">
-              <div className="view-tabs" id="job-view-tabs" role="group" aria-label="List view">
-                <button type="button" className="seg" id="view-flat" aria-pressed={view === "flat"} onClick={() => view !== "flat" && setView("flat")}>
-                  All jobs<span className="seg-n" id="count-flat">{sorted.length.toLocaleString()}</span>
-                </button>
-                <button type="button" className="seg" id="view-grouped" aria-pressed={view === "grouped"} onClick={() => view !== "grouped" && setView("grouped")}>
-                  Companies<span className="seg-n" id="count-grouped">{companyCount.toLocaleString()}</span>
-                </button>
-              </div>
-              <div className="sort-wrap list-sort" id="list-sort"><span aria-hidden="true">Sort</span>
-                <SelectMenu id="sort-select" label="Sort roles" options={SORTS} value={filters.sort} onChange={(v) => setFilters({ ...filters, sort: v })} />
-              </div>
-            </div>
-            <p className="results-meta" id="job-count" data-total={total.toLocaleString()}>{countText}</p>
-            <p className="results-hint" aria-hidden="true"><kbd>↑</kbd><kbd>↓</kbd> to move between jobs</p>
+      ) : (
+        // The toolbar's place while the jobs load (its filters count them).
+        <div className="border-b" aria-hidden="true">
+          <div className={cn(CONTAINER, "flex items-center gap-2 py-3")}>
+            <Skeleton className="h-9 w-full max-w-xs" />
+            {["w-20", "w-24", "w-28", "w-28"].map((w, i) => <Skeleton key={i} className={cn("hidden h-9 md:block", w)} />)}
+            <Skeleton className="h-9 w-24 md:hidden" />
           </div>
-          {!jobs ? <p className="results-meta">Loading roles…</p> : (
-            <div ref={listRef} id="job-list" className="job-list">
-              {view === "flat"
-                ? (visibleJobs.length
-                  ? visibleJobs.map((j) => <JobRow key={j.job_id} job={j} selected={j.job_id === selectedId} onSelect={selectJob} opened={openedByCompany.get(j.company) || 0} seen={!!seenMap[j.job_id]} />)
-                  : <p className="empty">No roles match those filters.</p>)
-                : (visibleGroups.length
-                  ? visibleGroups.map((g) => (
-                    <CompanyCard key={g.company} group={g} open={expanded.has(g.company)} onToggle={toggleCompany}
-                      selectedId={selectedId} onSelect={selectJob} opened={openedByCompany.get(g.company) || 0} seen={seenMap} />
-                  ))
-                  : <p className="empty">No roles match those filters.</p>)}
-            </div>
-          )}
-          <Pagination page={current} pageCount={jobs ? pageCount : 1} onPage={goTo} />
         </div>
-        <div {...dividerProps}></div>
-        <DetailPane ref={paneRef} job={selected} open={open} sheet={narrow && open} narrowColumn={narrowColumn} onClose={() => closeDetail()} />
+      )}
+      {/* :empty hides it when every part of the intro renders nothing. */}
+      {intro ? <div className={cn(CONTAINER, "flex flex-col gap-3 pt-4 empty:hidden")}>{intro}</div> : null}
+      <div className={cn(CONTAINER, "pt-4 pb-8")}>
+        {/* No padding on the grid itself: useColumns measures its clientWidth. */}
+        <div ref={splitRef} id="results-split" style={columnStyle}
+          className={cn("results-split grid items-start", wide
+            ? "is-split grid-cols-[minmax(350px,var(--job-list-width,60fr))_1rem_minmax(440px,var(--job-detail-width,40fr))] gap-x-2"
+            : "grid-cols-1")}>
+          <div className="results-main min-w-0">
+            <div className={cn("results-bar mb-3 flex flex-col gap-2", BELOW_TOOLBAR)} id="job-results-bar" hidden={!jobs}>
+              {/* Tabs and Sort share a line; useColumns keeps the list wide enough for
+                  both, and wrapping is only the fallback. */}
+              <div className="list-head flex flex-wrap items-center gap-x-4 gap-y-2" id="list-head">
+                <div className={cn(tabsListVariants(), "view-tabs h-9 w-full sm:w-fit")} id="job-view-tabs" role="group" aria-label="List view">
+                  <button type="button" className={VIEW_TAB} id="view-flat" aria-pressed={view === "flat"} onClick={() => view !== "flat" && setView("flat")}>
+                    All jobs<span className="seg-n tabular font-normal text-muted-foreground" id="count-flat">{sorted.length.toLocaleString()}</span>
+                  </button>
+                  <button type="button" className={VIEW_TAB} id="view-grouped" aria-pressed={view === "grouped"} onClick={() => view !== "grouped" && setView("grouped")}>
+                    Companies<span className="seg-n tabular font-normal text-muted-foreground" id="count-grouped">{companyCount.toLocaleString()}</span>
+                  </button>
+                </div>
+                <div className="sort-wrap list-sort flex items-center gap-2 sm:ml-auto" id="list-sort">
+                  <span aria-hidden="true" className="text-sm text-muted-foreground">Sort</span>
+                  <SelectMenu id="sort-select" label="Sort roles" options={SORTS} value={filters.sort} onChange={(v) => setFilters({ ...filters, sort: v })} />
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                <p className="results-meta tabular text-sm text-muted-foreground" id="job-count" data-total={total.toLocaleString()}>{countText}</p>
+                {/* Said only where the arrows work: beside the pane, with a keyboard. */}
+                <p className="results-hint flex items-center gap-1.5 text-xs text-muted-foreground" aria-hidden="true" hidden={!wide}>
+                  <KbdGroup><Kbd><ArrowUpIcon /></Kbd><Kbd><ArrowDownIcon /></Kbd></KbdGroup>
+                  to move between jobs
+                </p>
+              </div>
+            </div>
+            {!jobs ? (
+              <>
+                <p className="sr-only" role="status">Loading roles…</p>
+                <ListSkeleton />
+              </>
+            ) : (
+              <div ref={listRef} id="job-list" className={cn("job-list flex flex-col", view === "grouped" ? "gap-3" : "gap-2")}>
+                {view === "flat"
+                  ? (visibleJobs.length
+                    ? visibleJobs.map((j) => <JobRow key={j.job_id} job={j} selected={j.job_id === selectedId} onSelect={selectJob} opened={openedByCompany.get(j.company) || 0} seen={!!seenMap[j.job_id]} />)
+                    : noResults)
+                  : (visibleGroups.length
+                    ? visibleGroups.map((g) => (
+                      <CompanyCard key={g.company} group={g} open={expanded.has(g.company)} onToggle={toggleCompany}
+                        selectedId={selectedId} onSelect={selectJob} opened={openedByCompany.get(g.company) || 0} seen={seenMap} />
+                    ))
+                    : noResults)}
+              </div>
+            )}
+            <Pagination page={current} pageCount={jobs ? pageCount : 1} onPage={goTo} />
+          </div>
+          {/* The divider: a hairline with a grip that shows on hover, focus and drag, as
+              shadcn's ResizableHandle withHandle. Its behaviour is useColumns'. */}
+          <div {...dividerProps}
+            className={cn(dividerProps.className, "group/divider sticky flex w-4 cursor-col-resize touch-none justify-center self-start outline-none", DOCK_TOP, DOCK_HEIGHT)}>
+            <span aria-hidden="true"
+              className="h-full w-px bg-border transition-colors group-hover/divider:bg-ring group-focus-visible/divider:bg-ring in-[.is-resizing-columns]:bg-ring motion-reduce:transition-none" />
+            <span aria-hidden="true"
+              className="absolute top-1/2 left-1/2 h-8 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ring opacity-0 transition-opacity group-hover/divider:opacity-100 group-focus-visible/divider:opacity-100 group-focus-visible/divider:ring-3 group-focus-visible/divider:ring-ring/50 in-[.is-resizing-columns]:opacity-100 motion-reduce:transition-none" />
+          </div>
+          {/* The pane's dock: sticky beside the list, so the pane (DetailPane, the scroll
+              container) stays in view and scrolls on its own. Under 1100px it is a plain
+              box and the pane opens as a sheet over the list. */}
+          <div ref={dockRef}
+            className={cn("job-dock min-w-0", wide && [
+              "sticky self-start", DOCK_TOP, DOCK_HEIGHT,
+              "[&>#job-detail]:max-h-full [&>#job-detail]:overflow-y-auto [&>#job-detail]:overscroll-contain",
+              !jobs && "[&>#job-detail]:hidden",
+            ])}>
+            {wide && !jobs ? <PaneSkeleton /> : null}
+            <DetailPane ref={paneRef} job={selected} open={open} sheet={narrow && open} narrowColumn={narrowColumn} onClose={() => closeDetail()} />
+          </div>
+        </div>
       </div>
       <ResumeSignInDialog />
     </>
