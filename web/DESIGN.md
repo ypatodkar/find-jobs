@@ -76,6 +76,12 @@ full-bleed sticky bar and applies `CONTAINER` inside itself, and so do the resul
 `JobsWorkspace`'s `intro` prop (a React node) renders between the toolbar and the
 results: the country note, the featured company and "Companies you've opened" go there.
 Each page also has an `<h1>` (visually hidden on the jobs pages, which have no title row).
+It is the skip link's target (`id="content"`, `tabIndex={-1}`; `#firm-name` on an
+investor's page), since `<main>` starts with the site header.
+
+Investors (`pages/Firms.jsx`): the cards sit in one section per tier (`TIER_ORDER`), each
+headed with its count, matching the page's "grouped by how central AI is". The old
+firm-count line under the title is dropped, since the tier toggles show the same counts.
 
 ## Which component for what
 
@@ -120,7 +126,13 @@ mechanics and style the markup with the same tokens and classes the primitive us
   (`lib/saved.js`), saved filters (`lib/presets.js`), theme, column ratio, country:
   same storage keys.
 - **Country routing:** `lib/country.js` and the inline script in `index.html`.
-- **First paint:** the first jobs render before the whole list has downloaded.
+- **First paint:** the header, intro and `Skeleton` rows (and a toolbar skeleton the
+  real toolbar's size) render at once; the list draws once `api/all-jobs.json`
+  (`api/in/all-jobs.json` on /in) has loaded (`lib/jobs.js` `loadJobs`). Don't make the
+  first render wait on anything more than that file. (Showing the first jobs before the
+  whole list arrives is on the unmerged branch `feat/jobs-first-batch`, 317e3e2; if it
+  lands, port `loadJobs(onRecent)`, its wiring in AllJobs.jsx / JobsWorkspace.jsx and
+  FilterPicker's "Loading roles…" state, and update this line.)
 - **DOM that `lib/` code uses:**
   - `lib/jdMarks.js` reads `#detail-bar` (the slim bar, whose height is what covers
     the text: `coveredHeight`) and `#detail-body` (the description), and adds `.jd-mark`
