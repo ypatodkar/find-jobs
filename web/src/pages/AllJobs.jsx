@@ -5,9 +5,9 @@
 // header names the page, and the <h1> is for screen readers and search engines only.
 // The description line that used to sit under the title opens the footer's "About this
 // list" instead.
-// Between the filter toolbar and the results (JobsWorkspace's `intro`) sit the country
-// note, the startup of the day and "Companies you've opened", next to the filters they
-// belong with rather than up in the header.
+// "Companies you've opened" sits at the top, under the header (OpenedTop). Between the
+// filter toolbar and the results (JobsWorkspace's `intro`) sit the country note and the
+// startup of the day.
 import { useEffect, useMemo, useState } from "react";
 import { CloudOff, Inbox } from "lucide-react";
 import SiteHeader from "../components/SiteHeader.jsx";
@@ -61,6 +61,19 @@ export function Intro({ children }) {
   return <div className="flex min-w-0 flex-col gap-3 empty:hidden [&>:empty]:hidden">{children}</div>;
 }
 
+/**
+ * "Companies you've opened", at the top of a jobs page: under the header, above the
+ * filter toolbar, where it is the first thing a returning visitor sees. Takes no room
+ * when there is nothing to show (Viewed renders an empty #viewed-slot).
+ */
+export function OpenedTop({ jobs, seen }) {
+  return (
+    <div className={`${CONTAINER} pt-3 has-[#viewed-slot:empty]:hidden`}>
+      <Viewed jobs={jobs} seen={seen} />
+    </div>
+  );
+}
+
 export default function AllJobs() {
   const [jobs, setJobs] = useState(null);
   const [error, setError] = useState(null);
@@ -75,7 +88,6 @@ export default function AllJobs() {
       <CountryNote page="US" />
       {/* One small company a day, written up by hand through the /feature command. */}
       <Featured />
-      <Viewed jobs={jobs} seen={seen} />
     </Intro>
   );
 
@@ -83,6 +95,7 @@ export default function AllJobs() {
     <>
       <SiteHeader active="jobs" country="US" />
       <h1 className="sr-only">Engineering jobs at VC-backed companies in the United States</h1>
+      <OpenedTop jobs={jobs} seen={seen} />
       {empty ? (
         <div className={`${CONTAINER} pt-4`}>
           {intro}

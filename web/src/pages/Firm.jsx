@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, ArrowUpRight, Ban, ChevronRight, CloudOff, Inbox, SearchX, TriangleAlert } from "lucide-react";
 import SiteHeader from "../components/SiteHeader.jsx";
 import SiteFooter from "../components/SiteFooter.jsx";
-import Viewed from "../components/Viewed.jsx";
+import { OpenedTop } from "./AllJobs.jsx";
 import JobsWorkspace from "../JobsWorkspace.jsx";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
@@ -116,8 +116,12 @@ export default function Firm() {
         </header>
       </div>
       {showList ? (
-        // Your opened roles at this firm's companies sit between its filters and its list.
-        <JobsWorkspace jobs={jobs} contextLabel={firm.short || firm.name} intro={<Viewed jobs={jobs} seen={seen} />} />
+        // Your opened roles at this firm's companies sit at the top, above its filters,
+        // as on the jobs pages.
+        <>
+          <OpenedTop jobs={jobs} seen={seen} />
+          <JobsWorkspace jobs={jobs} contextLabel={firm.short || firm.name} />
+        </>
       ) : null}
       {message ? (
         <div className={CONTAINER}>

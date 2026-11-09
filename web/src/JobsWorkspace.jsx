@@ -137,7 +137,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   const dims = useMemo(() => dimensions({ showFirms, firmLabel, country }), [showFirms, country]);
   const { filters, setFilters, page, setPage, view, setView, canUndo, undo, reset, settle } = useFilterState(dims);
 
-  const splitRef = useRef(null), dividerRef = useRef(null), paneRef = useRef(null), dockRef = useRef(null), listRef = useRef(null);
+  const splitRef = useRef(null), dividerRef = useRef(null), paneRef = useRef(null), listRef = useRef(null);
   const { style: columnStyle, dividerProps, narrowColumn } = useColumns(splitRef, dividerRef, wide);
 
   // A shared saved-filter link (?f=) applies once, over whatever the URL said.
@@ -183,19 +183,12 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   const open = wide ? !!selected : sheetOpen && !!selected;
 
   // ---- selecting and closing ----
-  // Beside the list, a click brings the workspace into view below the filters once;
-  // after that, browsing never moves the page. Under 1100px the description opens as a
-  // sheet with its own history entry, so Back closes it.
-  // What docks is the pane's wrapper (dockRef), so that is what is measured.
-  const revealWorkspace = () => {
-    const pane = dockRef.current;
-    if (!pane || narrow) return;
-    const top = pane.getBoundingClientRect().top;
-    const dock = parseFloat(getComputedStyle(pane).top) || 0;
-    if (top > dock + 1) scrollTo({ top: scrollY + top - dock, behavior: reducedMotion() ? "auto" : "smooth" });
-  };
-
-  const selectJob = useCallback((id, { reveal = true, fromHistory = false } = {}) => {
+  // Beside the list, choosing a role never moves the page. (It used to scroll the page
+  // once so the pane sat under the filters; with the compact header and toolbar the
+  // pane is already in view, and the jump was jarring, so it went on the owner's
+  // request, 2026-11-09.) Under 1100px the description opens as a sheet with its own
+  // history entry, so Back closes it.
+  const selectJob = useCallback((id, { fromHistory = false } = {}) => {
     if (narrow && !fromHistory) {
       const state = { ...history.state, [DETAIL_KEY]: id };
       // Switching roles inside an open sheet still needs only one Back to the list.
@@ -204,9 +197,6 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
     }
     setSelectedId(id);
     if (narrow) setSheetOpen(true);
-    // At once: the pane is always beside the list, so its place is
-    // known before the new role draws.
-    else if (reveal) revealWorkspace();
   }, [narrow, sheetOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Closing returns focus to the role's row, however the sheet was closed (Back, the
@@ -327,7 +317,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   // page and before the first onto the previous one. Only while nothing else wants the
   // arrows: focus on the list or nowhere, and no overlay open (OPEN_OVERLAY).
   const selectRow = (row) => {
-    selectJob(row.dataset.jobId, { reveal: false });
+    selectJob(row.dataset.jobId);
     row.scrollIntoView({ block: "nearest" });
     if (!narrow) row.querySelector(".job-title")?.focus({ preventScroll: true });
   };
@@ -430,7 +420,9 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
           <div ref={introRef} className="flex min-w-0 flex-col gap-3">{intro}</div>
         </div>
       ) : null}
-      <div className={cn(CONTAINER, "pt-4 pb-8")}>
+      {/* pt-3 matches DOCK_TOP's 0.75rem: the pane starts where it docks, so it does not
+          shift as the page begins to scroll, and its first screen shows the description. */}
+      <div className={cn(CONTAINER, "pt-3 pb-8")}>
         {/* No padding on the grid itself: useColumns measures its clientWidth. */}
         <div ref={splitRef} id="results-split" style={columnStyle}
           className={cn("results-split grid items-start", wide
@@ -496,7 +488,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
           {/* The pane's dock: sticky beside the list, so the pane (DetailPane, the scroll
               container) stays in view and scrolls on its own. Under 1100px it is a plain
               box and the pane opens as a sheet over the list. */}
-          <div ref={dockRef}
+          <div
             className={cn("job-dock min-w-0", wide && [
               "sticky self-start", DOCK_TOP, DOCK_HEIGHT,
               "[&>#job-detail]:max-h-full [&>#job-detail]:overflow-y-auto [&>#job-detail]:overscroll-contain",

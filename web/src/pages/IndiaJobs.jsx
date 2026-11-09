@@ -7,9 +7,8 @@ import { useEffect, useState } from "react";
 import SiteHeader from "../components/SiteHeader.jsx";
 import SiteFooter from "../components/SiteFooter.jsx";
 import { CountryNote } from "../components/Country.jsx";
-import Viewed from "../components/Viewed.jsx";
 import JobsWorkspace from "../JobsWorkspace.jsx";
-import { Intro, NoJobs } from "./AllJobs.jsx";
+import { Intro, NoJobs, OpenedTop } from "./AllJobs.jsx";
 import { CONTAINER } from "../lib/layout.js";
 import { loadJobs } from "../lib/jobs.js";
 import { useSeen } from "../lib/seen.js";
@@ -30,7 +29,6 @@ export default function IndiaJobs() {
     <Intro>
       {/* Mounted whenever the page is: it also settles which country this visitor is on. */}
       <CountryNote page="IN" />
-      <Viewed jobs={jobs} seen={seen} />
     </Intro>
   );
 
@@ -38,6 +36,7 @@ export default function IndiaJobs() {
     <>
       <SiteHeader active="jobs" country="IN" />
       <h1 className="sr-only">Engineering jobs at VC-backed companies in India</h1>
+      <OpenedTop jobs={jobs} seen={seen} />
       {empty ? (
         <div className={`${CONTAINER} pt-4`}>
           {intro}

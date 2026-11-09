@@ -219,11 +219,13 @@ async function main(){
       description:document.querySelector('#detail-body').getBoundingClientRect().top,
       viewport:innerHeight,
     }));
-    assert.ok(openingPosition.page>0,'opening a job scrolls past the landing header');
-    assert.ok(Math.abs(openingPosition.pane-openingPosition.dock)<2,'the pane aligns with its reading position');
+    // Choosing a job no longer scrolls the page (the owner's request, 2026-11-09: with the
+    // compact header and toolbar the pane is already in view, and the jump was jarring).
+    assert.equal(openingPosition.page,0,'opening a job leaves the page where it is');
+    assert.ok(openingPosition.pane<openingPosition.viewport/2,'the job pane is in view without scrolling');
     assert.ok(openingPosition.pane>=openingPosition.filters,'pinned filters do not cover the job header');
     assert.ok(openingPosition.description<openingPosition.viewport,'the job description starts within the viewport');
-    await page.screenshot({path:path.join(artifactDir,'job-open-autoscroll.png')});
+    await page.screenshot({path:path.join(artifactDir,'job-open.png')});
     assert.equal(postCalls,0,'cached assessments appear without calling the model');
     const up=page.getByRole('button',{name:'Helpful analysis',exact:true});
     const down=page.getByRole('button',{name:'Not helpful analysis',exact:true});
