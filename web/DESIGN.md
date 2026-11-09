@@ -27,6 +27,8 @@ https://claude.ai/artifact/JrkT6vZ6c1tW1jYej8EYTa
 - **Brand:** one extra token, `brand` (violet), for the **selected job** in the list
   and, sparingly, the one state that must stand out beside it (the active country in
   the switcher). Not for buttons, links or focus rings.
+- **Status:** `success` (green) and `warning` (amber), for resume-match results only
+  (a requirement shown, partly shown). Everything else stays neutral.
 - **Dark mode:** automatic through the tokens. `<html data-theme>` always holds
   `light` or `dark`; the `dark:` variant keys off it. Reach for `dark:` only when a
   token can't express it.
@@ -64,6 +66,12 @@ in a bottom sheet. Under 1100 px the job opens as a full-height sheet over the l
 
 `SiteHeader({ active, country })` and `SiteFooter({ children })` are the frame's API;
 see the comments at the top of each file.
+
+Pages render `JobsWorkspace` full width, outside `CONTAINER`: the toolbar is a
+full-bleed sticky bar and applies `CONTAINER` inside itself, and so do the results.
+`JobsWorkspace`'s `intro` prop (a React node) renders between the toolbar and the
+results: the country note, the featured company and "Companies you've opened" go there.
+Each page also has an `<h1>` (visually hidden on the jobs pages, which have no title row).
 
 ## Which component for what
 
