@@ -22,8 +22,7 @@
 //
 // `inline` (the phone sheet) opens the list in place under the trigger instead of in a
 // popover, so nothing floats over the sheet and opening it doesn't summon the keyboard.
-import { useMemo, useRef, useState } from "react";
-import { useCommandState } from "cmdk";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckIcon, ChevronDownIcon, CirclePlusIcon, SearchIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -44,15 +43,29 @@ const MAX_BADGES = 2; // more choices than this read "N selected" on the trigger
  * the input by that id, so the #q-<key> hook can't live on it. cmdk's arrow keys and
  * Enter still work from here (they are handled on the Command around it). The
  * browser's own clear glyph is swapped for a quiet X, as in the toolbar's search.
+ * As a combobox it points at cmdk's listbox and at the highlighted row, both by the ids
+ * cmdk generates. They are read from the DOM as cmdk marks them: cmdk keeps the row's
+ * id current only for its own input, and marks a row a render after it mounts.
  */
-function SearchField({ controls, className, onClear, ...props }) {
-  const active = useCommandState((s) => s.selectedItemId);
-  const input = useRef(null);
+function SearchField({ input, className, onClear, ...props }) {
+  const [ids, setIds] = useState({});
+  useEffect(() => {
+    const root = input.current?.closest("[cmdk-root]");
+    if (!root) return;
+    const read = () => {
+      const list = root.querySelector("[cmdk-list]")?.id, active = root.querySelector('[cmdk-item][aria-selected="true"]')?.id;
+      setIds((cur) => (cur.list === list && cur.active === active ? cur : { list, active }));
+    };
+    read();
+    const watch = new MutationObserver(read);
+    watch.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ["aria-selected"] });
+    return () => watch.disconnect();
+  }, [input]);
   return (
     <div data-slot="command-input-wrapper" className="p-1 pb-0">
       <InputGroup className="h-8! rounded-lg! border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
-        <input ref={input} type="search" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls={controls}
-          aria-activedescendant={active} autoComplete="off" autoCorrect="off" spellCheck={false} data-slot="command-input"
+        <input ref={input} type="search" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls={ids.list}
+          aria-activedescendant={ids.active} autoComplete="off" autoCorrect="off" spellCheck={false} data-slot="command-input"
           className={cn("w-full bg-transparent text-sm outline-hidden placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:appearance-none", className)}
           {...props} />
         <InputGroupAddon><SearchIcon className="size-4 shrink-0 opacity-50" /></InputGroupAddon>
@@ -72,10 +85,11 @@ function SearchField({ controls, className, onClear, ...props }) {
 }
 
 export default function FilterPicker({ dim, selected, counts, onChange, inline = false, className }) {
-  const trigger = useRef(null), panel = useRef(null);
+  const trigger = useRef(null), panel = useRef(null), search = useRef(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [order, setOrder] = useState([]);
+  const [highlight, setHighlight] = useState(""); // the row Enter ticks (cmdk's value)
   const chosen = useMemo(() => new Set(selected), [selected]);
   const n = selected.length;
   const all = !!dim.allChecked && n === 0; // every option counts as ticked
@@ -93,18 +107,29 @@ export default function FilterPicker({ dim, selected, counts, onChange, inline =
     });
   };
 
-  // Re-ordered on opening and on a new search, not on a tick.
+  const matchesFor = (list, text) => {
+    const t = text.trim().toLowerCase();
+    return t ? list.filter((v) => dim.labelFor(v).toLowerCase().includes(t)) : list;
+  };
+  // Re-ordered on opening and on a new search, not on a tick. Either way the first row
+  // is highlighted, so typing a few letters and pressing Enter ticks the first match:
+  // cmdk does that only for its own input, which this list doesn't use.
+  const reorder = (text) => {
+    const next = sortEntries();
+    setOrder(next);
+    setHighlight(String(matchesFor(next, text)[0] ?? "").trim());
+  };
   const onOpenChange = (next) => {
-    if (next) setOrder(sortEntries());
+    if (next) reorder(query);
     setOpen(next);
     // In the sheet the list opens below the trigger; bring it into view.
     if (next && inline) requestAnimationFrame(() => panel.current?.scrollIntoView({ block: "nearest" }));
   };
-  const onQuery = (value) => { setQuery(value); setOrder(sortEntries()); };
+  const onQuery = (value) => { setQuery(value); reorder(value); };
 
   const current = open ? new Map(counts()) : new Map();
   const q = query.trim().toLowerCase();
-  const matching = q ? order.filter((v) => dim.labelFor(v).toLowerCase().includes(q)) : order;
+  const matching = matchesFor(order, query);
   const capped = !q && order.length > MAX_OPTIONS;
   const visible = capped ? matching.slice(0, MAX_OPTIONS) : matching;
   // "Select all" takes the matches when searching, else every option, not just the
@@ -113,6 +138,13 @@ export default function FilterPicker({ dim, selected, counts, onChange, inline =
   const canSelectAll = !(dim.exclude || dim.allChecked || target.length === 0);
 
   const summary = all ? `${dim.label}: All` : n === 0 ? dim.label : n === 1 ? dim.labelFor(selected[0]) : `(${n}) ${dim.pluralLabel}`;
+  // Select all and Clear hide themselves once used. Focus moves on rather than falling
+  // to the page, where ↑ / ↓ would start moving the job list under the open menu: to the
+  // search in the popover, to the trigger in the sheet (no keyboard pops up).
+  const bulk = (values) => {
+    onChange(values);
+    requestAnimationFrame(() => (inline ? trigger : search).current?.focus());
+  };
   const toggle = (v, on) => {
     if (!dim.allChecked) return onChange(on ? [...selected, v] : selected.filter((x) => x !== v));
     const options = [...new Map(counts()).keys()];
@@ -123,7 +155,8 @@ export default function FilterPicker({ dim, selected, counts, onChange, inline =
   const face = (
     <>
       <CirclePlusIcon className="text-muted-foreground" />
-      <span className="truncate">{all ? summary : dim.label}</span>
+      {/* The filter's own name stays whole; the chosen values give way first. */}
+      <span className={n > 0 ? "shrink-0" : "truncate"}>{all ? summary : dim.label}</span>
       {n > 0 ? (
         <>
           <Separator orientation="vertical" className="mx-1 h-4 data-vertical:self-center" />
@@ -148,8 +181,8 @@ export default function FilterPicker({ dim, selected, counts, onChange, inline =
   };
 
   const body = (
-    <Command shouldFilter={false} label={`Search ${dim.label}`} className="rounded-none! bg-transparent">
-      <SearchField id={`q-${dim.key}`} controls={`list-${dim.key}`} placeholder="Find…" aria-label={`Search ${dim.label}`}
+    <Command shouldFilter={false} value={highlight} onValueChange={setHighlight} label={`Search ${dim.label}`} className="rounded-none! bg-transparent">
+      <SearchField input={search} id={`q-${dim.key}`} placeholder="Find…" aria-label={`Search ${dim.label}`}
         value={query} onChange={(e) => onQuery(e.target.value)} onClear={() => onQuery("")} className={cn(inline && "text-base")} />
       <CommandList label={`${dim.label} options`} className={inline ? "max-h-64" : "max-h-72"}>
         <div id={`list-${dim.key}`} role="group" aria-label={`Select ${dim.label}`} className="p-1">
@@ -180,11 +213,11 @@ export default function FilterPicker({ dim, selected, counts, onChange, inline =
       </CommandList>
       <div className="flex items-center gap-1 border-t p-1" hidden={!canSelectAll && n === 0}>
         <Button type="button" variant="ghost" size="sm" id={`sa-${dim.key}`} hidden={!canSelectAll}
-          className={cn("tabular", inline && "h-11")} onClick={() => onChange([...selected, ...target])}>
+          className={cn("tabular", inline && "h-11")} onClick={() => bulk([...selected, ...target])}>
           {q ? `Select all ${target.length} matching` : `Select all ${target.length}`}
         </Button>
         <Button type="button" variant="ghost" size="sm" id={`clr-${dim.key}`} hidden={n === 0}
-          className={cn("ml-auto", inline && "h-11")} onClick={() => onChange([])}>
+          className={cn("ml-auto", inline && "h-11")} onClick={() => bulk([])}>
           {dim.allChecked ? "Select all" : "Clear"}
         </Button>
       </div>
@@ -220,7 +253,7 @@ export default function FilterPicker({ dim, selected, counts, onChange, inline =
         <PopoverTrigger asChild>
           <Button size="sm" {...triggerProps}>{face}</Button>
         </PopoverTrigger>
-        <PopoverContent align="start" collisionPadding={8} className="w-72 gap-0 p-0">{body}</PopoverContent>
+        <PopoverContent align="start" collisionPadding={8} aria-label={`${dim.label} filter`} className="w-72 gap-0 p-0">{body}</PopoverContent>
       </Popover>
     </div>
   );

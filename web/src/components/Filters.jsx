@@ -63,7 +63,7 @@ function AdvancedFilters({ count, onReset, inline, children }) {
     return (
       <Collapsible open={open} onOpenChange={setOpen} id="advanced-filters" onKeyDown={onKeyDown}>
         <CollapsibleTrigger asChild>
-          <Button ref={toggle} type="button" variant="outline" aria-controls="advanced-panel" className="h-11 w-full justify-start">
+          <Button ref={toggle} type="button" variant="outline" aria-controls={open ? "advanced-panel" : undefined} className="h-11 w-full justify-start">
             <SlidersHorizontalIcon />{label}
             <ChevronDownIcon className="ml-auto text-muted-foreground transition-transform group-aria-expanded/button:rotate-180 motion-reduce:transition-none" />
           </Button>
@@ -209,9 +209,15 @@ function useDrawer(mobile, controls, toggle, closeBtn) {
 // `showSalary`: the salary floors are in dollars, so the India list leaves them out.
 export default function Filters({ dims, filters, countsFor, onChange, onReset, canUndo, onUndo, total, naming, showSalary = true }) {
   const mobile = useMobile();
-  const controls = useRef(null), toggle = useRef(null), closeBtn = useRef(null), searchInput = useRef(null);
+  const controls = useRef(null), toggle = useRef(null), closeBtn = useRef(null), applyBtn = useRef(null), searchInput = useRef(null);
   const [drawerOpen, setDrawerOpen] = useDrawer(mobile, controls, toggle, closeBtn);
   const closeDrawer = () => { setDrawerOpen(false); toggle.current?.focus(); };
+  // Reset and Undo hide once there is nothing left to reset or undo. In the sheet (a
+  // modal dialog) focus then moves to the button beside them instead of leaving it.
+  const staysInSheet = (fn, next) => () => {
+    fn();
+    requestAnimationFrame(() => { if (controls.current && !controls.current.contains(document.activeElement)) next.current?.focus(); });
+  };
   const set = (patch) => onChange({ ...filters, ...patch });
   const setDim = (key, values) => onChange({ ...filters, selected: { ...filters.selected, [key]: values } });
   const picker = (d, className) => (
@@ -260,7 +266,7 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
   );
   // Words in the sheet; an icon with a tooltip in the toolbar, where the row is full.
   const undo = mobile ? (
-    <Button type="button" variant="ghost" id="undo-filters" className="h-11" hidden={!canUndo} disabled={!canUndo} onClick={onUndo}>
+    <Button type="button" variant="ghost" id="undo-filters" className="h-11" hidden={!canUndo} disabled={!canUndo} onClick={staysInSheet(onUndo, closeBtn)}>
       <Undo2Icon />Undo
     </Button>
   ) : (
@@ -281,14 +287,17 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
             <Button ref={toggle} type="button" variant="outline" id="mobile-filter-toggle" className="h-10 shrink-0" aria-controls="job-controls"
               aria-expanded={drawerOpen} aria-label={`${drawerOpen ? "Hide" : "Show"} filters${n ? `, ${n} active` : ""}`}
               onClick={() => mobile && setDrawerOpen(!drawerOpen)}>
-              <SlidersHorizontalIcon />{n ? `Filters · ${n} active` : "Filters"}
+              {/* The count as a badge, like View's, so the search beside it keeps its width. */}
+              <SlidersHorizontalIcon />Filters
+              {n ? <Badge variant="secondary" className="rounded-sm px-1 font-normal tabular">{n}</Badge> : null}
             </Button>
           </div>
         </div>
       ) : null}
       {mobile ? (
+        // shadcn Sheet's own overlay.
         <div id="mobile-filter-backdrop" hidden={!drawerOpen} onClick={closeDrawer}
-          className="fixed inset-0 z-50 bg-black/50 duration-200 animate-in fade-in-0 motion-reduce:animate-none" />
+          className="fixed inset-0 z-50 bg-black/10 duration-100 animate-in fade-in-0 supports-backdrop-filter:backdrop-blur-xs motion-reduce:animate-none" />
       ) : null}
 
       {/* One element at every width, so JobsWorkspace keeps measuring the same node: a
@@ -321,8 +330,8 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
             </div>
             {/* The list is behind the sheet, so its footer says what the filters left. */}
             <div className="sticky bottom-0 z-10 mt-auto flex gap-2 border-t bg-background px-4 pt-3 pb-[calc(0.75rem_+_env(safe-area-inset-bottom,0px))]">
-              <Button type="button" variant="outline" id="reset-filters" className="h-11" hidden={n === 0} onClick={onReset}>{resetLabel}</Button>
-              <Button type="button" variant={total === 0 ? "secondary" : "default"} id="filter-drawer-apply" className="h-11 min-w-0 flex-1" onClick={closeDrawer}>
+              <Button type="button" variant="outline" id="reset-filters" className="h-11" hidden={n === 0} onClick={staysInSheet(onReset, applyBtn)}>{resetLabel}</Button>
+              <Button ref={applyBtn} type="button" variant={total === 0 ? "secondary" : "default"} id="filter-drawer-apply" className="h-11 min-w-0 flex-1" onClick={closeDrawer}>
                 {total === 0 ? "No matches — adjust filters" : `Show ${total.toLocaleString()} ${total === 1 ? "role" : "roles"}`}
               </Button>
             </div>

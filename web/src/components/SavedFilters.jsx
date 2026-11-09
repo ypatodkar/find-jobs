@@ -1,4 +1,4 @@
-// Saved filters (lib/presets.js): a "Saved" button in the toolbar, beside View, opening
+// Saved filters (lib/presets.js): a "Saved filters" button in the toolbar, beside View, opening
 // a small panel that lists them. Each can be applied, renamed or removed, the one on
 // screen is marked, and "Save current filters" names the view on screen. Naming offers
 // a suggested name (describe()), focused and selected, so Enter accepts it and typing
@@ -144,18 +144,19 @@ export default function SavedFilters({ filters, onApply, naming, inline = false 
     <div id="preset-bar" className="contents">
       <Popover open={open} onOpenChange={(next) => { setOpen(next); if (!next) setEditing(null); }}>
         {/* The button keeps one width in a full row: a saved view on screen shows as the
-            ticked bookmark here (and by name in its label), and as the marked row inside. */}
+            ticked bookmark here (and by name in its label), and as the marked row inside.
+            "Saved filters", not "Saved": the header's Saved is the saved jobs. */}
         <PopoverTrigger asChild>
           <Button type="button" variant="outline" size="sm" id="preset-picker"
             aria-label={`Saved filters${items.length ? `, ${items.length} saved` : ""}${active ? `, showing ${active.name}` : ""}`}>
-            {active ? <BookmarkCheckIcon /> : <BookmarkIcon />}Saved
+            {active ? <BookmarkCheckIcon /> : <BookmarkIcon />}Saved filters
             {items.length ? <Badge variant="secondary" className="rounded-sm px-1 font-normal tabular">{items.length}</Badge> : null}
           </Button>
         </PopoverTrigger>
-        <PopoverContent ref={root} align="end" collisionPadding={8} className="w-80 gap-0 p-0"
+        <PopoverContent ref={root} align="end" collisionPadding={8} aria-labelledby="preset-panel-title" className="w-80 gap-0 p-0"
           // Escape while naming cancels the naming; the next one closes the panel.
           onEscapeKeyDown={(e) => { if (editing) { e.preventDefault(); stopEditing(); } }}>
-          <div className="border-b px-3 py-2.5 text-sm font-medium">Saved filters</div>
+          <div id="preset-panel-title" className="border-b px-3 py-2.5 text-sm font-medium">Saved filters</div>
           <div className="max-h-72 overflow-y-auto p-1">{list}</div>
           <div className="border-t p-1">{save}</div>
         </PopoverContent>
