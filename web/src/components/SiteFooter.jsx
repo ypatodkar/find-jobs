@@ -49,11 +49,12 @@ function LinkedIn() {
   );
 }
 
-// The page's blocks: a heading and a few lines each, side by side from md.
+// The page's blocks: a heading and a few lines (or a list) each, side by side from md.
 const BLOCKS = cn(
   "grid gap-x-12 gap-y-8 md:grid-cols-2",
   "[&_h3]:mb-2 [&_h3]:text-sm [&_h3]:font-medium [&_h3]:text-foreground",
   "[&_p]:max-w-prose [&_p]:text-sm [&_p]:leading-relaxed [&_p]:text-muted-foreground [&_p+p]:mt-2",
+  "[&_ul]:max-w-prose [&_ul]:text-sm [&_ul]:leading-relaxed [&_ul]:text-muted-foreground",
   "[&_a]:font-medium [&_a]:text-foreground [&_a]:underline [&_a]:underline-offset-4",
 );
 

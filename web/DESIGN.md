@@ -25,7 +25,8 @@ https://claude.ai/artifact/JrkT6vZ6c1tW1jYej8EYTa
   `bg-muted`, `text-foreground`, `text-muted-foreground`, `border`, `ring`, `primary`,
   `destructive`. Never a raw colour (`text-zinc-500`, `#fff`, `violet-600`).
 - **Primary is violet** (shadcn's violet theme): filled buttons (Apply, Upload resume,
-  Show N roles), checked boxes, progress and focus rings. Outline and ghost buttons
+  Show N roles), checked boxes and progress. Focus rings stay near-black (near-white in
+  dark) so the halo keeps 3:1 contrast. Outline and ghost buttons
   stay neutral. Dark mode keeps the same violet so white button text stays above
   4.5:1. (Decided 2026-11-09, after the first build: the owner asked for purple
   buttons.)
@@ -65,7 +66,9 @@ Results        two columns from 1100 px: the list (tabs, sort, rows, pagination)
 SiteFooter     page blocks, privacy note, like, LinkedIn
 ```
 
-Under 720 px the toolbar collapses to a search box and a Filters button; filters open
+Under 720 px the toolbar collapses to a search box and a Filters button
+(`#job-search-bar`, pinned under the header like the desktop toolbar, and measured into
+`--toolbar-height` the same way); filters open
 in a bottom sheet. Under 1100 px the job opens as a full-height sheet over the list.
 
 `SiteHeader({ active, country, account })` and `SiteFooter({ children })` are the
@@ -78,6 +81,12 @@ full-bleed sticky bar and applies `CONTAINER` inside itself, and so do the resul
 `JobsWorkspace`'s `intro` prop (a React node) renders between the toolbar and the
 results: the country note, the featured company and "Companies you've opened" go there.
 Each page also has an `<h1>` (visually hidden on the jobs pages, which have no title row).
+It is the skip link's target (`id="content"`, `tabIndex={-1}`; `#firm-name` on an
+investor's page), since `<main>` starts with the site header.
+
+Investors (`pages/Firms.jsx`): the cards sit in one section per tier (`TIER_ORDER`), each
+headed with its count, matching the page's "grouped by how central AI is". The old
+firm-count line under the title is dropped, since the tier toggles show the same counts.
 
 ## Which component for what
 
@@ -122,7 +131,13 @@ mechanics and style the markup with the same tokens and classes the primitive us
   (`lib/saved.js`), saved filters (`lib/presets.js`), theme, column ratio, country:
   same storage keys.
 - **Country routing:** `lib/country.js` and the inline script in `index.html`.
-- **First paint:** the first jobs render before the whole list has downloaded.
+- **First paint:** the header, intro and `Skeleton` rows (and a toolbar skeleton the
+  real toolbar's size) render at once; the list draws once `api/all-jobs.json`
+  (`api/in/all-jobs.json` on /in) has loaded (`lib/jobs.js` `loadJobs`). Don't make the
+  first render wait on anything more than that file. (Showing the first jobs before the
+  whole list arrives is on the unmerged branch `feat/jobs-first-batch`, 317e3e2; if it
+  lands, port `loadJobs(onRecent)`, its wiring in AllJobs.jsx / JobsWorkspace.jsx and
+  FilterPicker's "Loading roles…" state, and update this line.)
 - **DOM that `lib/` code uses:**
   - `lib/jdMarks.js` reads `#detail-bar` (the slim bar, whose height is what covers
     the text: `coveredHeight`) and `#detail-body` (the description), and adds `.jd-mark`

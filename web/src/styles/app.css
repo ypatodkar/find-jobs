@@ -109,13 +109,18 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  /* Darker than shadcn's stock 0.556: muted text also sits on tinted surfaces (the
+     selected job's brand tint, bg-muted chips and tab counts), where 0.556 falls just
+     short of 4.5:1. 0.51 keeps it at about 5:1 or more on all of them. */
+  --muted-foreground: oklch(0.51 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.702 0.183 293.541);
+  /* Near-black rather than shadcn v4's pale grey, so the focus halo (ring/50) is at
+     least 3:1 against white and keyboard users can see where they are. */
+  --ring: oklch(0.205 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -129,7 +134,7 @@
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: oklch(0.205 0 0);
 }
 
 [data-theme="dark"] {
@@ -157,7 +162,9 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.606 0.25 292.717);
+  /* Light grey on dark for the same reason: ring/50 stays above 3:1 on the card and
+     the background. */
+  --ring: oklch(0.87 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -170,7 +177,7 @@
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.87 0 0);
 }
 
 @layer base {
@@ -180,6 +187,10 @@
   html {
     @apply font-sans;
     -webkit-text-size-adjust: 100%;
+    /* Tab and Shift+Tab scroll the focused element into view; without this it can land
+       under the sticky header and filter toolbar. --toolbar-height is published by
+       JobsWorkspace and is 0px while no toolbar is pinned. */
+    scroll-padding-top: calc(var(--header-height) + var(--toolbar-height, 0px) + 0.75rem);
   }
   body {
     @apply bg-background text-foreground antialiased;

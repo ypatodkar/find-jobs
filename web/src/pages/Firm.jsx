@@ -102,7 +102,7 @@ export default function Firm() {
             </ol>
           </nav>
           <p className="mt-5 text-xs font-medium tracking-wide text-muted-foreground uppercase" id="firm-tier">{firm ? meta.label : "Find Jobs"}</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight" id="firm-name">{firm ? firm.name : "Firm not found"}</h1>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight outline-none" id="firm-name" tabIndex={-1}>{firm ? firm.name : "Firm not found"}</h1>
           <p className="mt-1.5 max-w-3xl text-muted-foreground" id="firm-focus">{firm ? firm.focus : "No investor matches that link. Browse the investor directory to choose one."}</p>
           {/* Each count carries a "·" in the gap to its left; the one that starts a line
               has it clipped by the overflow, so a wrapped line never begins with a dot. */}

@@ -27,7 +27,7 @@ export default function About() {
       <div className={CONTAINER}>
         <article className={`mx-auto max-w-2xl pt-10 pb-4 md:pt-14 ${PROSE}`}>
           <header>
-            <h1 className="text-3xl font-semibold tracking-tight">About</h1>
+            <h1 id="content" tabIndex={-1} className="text-3xl font-semibold tracking-tight outline-none">About</h1>
             <p className="mt-3 text-lg text-muted-foreground">Why this list exists, who it is for, and what it does not claim to do.</p>
             <div className="mt-4 text-sm text-muted-foreground empty:hidden"><Counter /></div>
           </header>

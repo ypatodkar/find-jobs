@@ -26,10 +26,10 @@
   </script>
 </head>
 <body>
-  <a id="skip-link" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:border focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-md" href="#main-content">Skip to content</a>
-  <!-- Under <base href="/"> a bare "#main-content" would mean "/#main-content", the home
+  <a id="skip-link" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:border focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-md" href="#content">Skip to content</a>
+  <!-- Under <base href="/"> a bare "#content" would mean "/#content", the home
        page; point the skip link at this document instead. -->
-  <script>document.getElementById("skip-link").href = location.pathname + location.search + "#main-content";</script>
+  <script>document.getElementById("skip-link").href = location.pathname + location.search + "#content";</script>
   <main id="main-content"></main>
   <script type="module" src="/src/notfound.jsx"></script>
 </body>

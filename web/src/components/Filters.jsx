@@ -4,7 +4,8 @@
 // sticky under the site header on desktop; JobsWorkspace reads its height into
 // --toolbar-height so the job pane docks below it.
 //
-// Under 720px the bar is the search box and a Filters button, and #job-controls
+// Under 720px the bar is the search box and a Filters button (#job-search-bar, also
+// pinned under the header), and #job-controls
 // becomes a bottom sheet (role="dialog") holding every filter, stacked and opening in
 // place, with a footer that says how many roles they leave.
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -228,11 +229,15 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
   const big = mobile ? "lg" : "sm"; // 44px touch targets in the sheet
 
   const search = (
-    // Fills the first line on mid widths, where the row wraps anyway; a set width on wide ones.
+    // Fills the first line on mid widths, where the row wraps anyway; a set width on wide
+    // ones, where the pickers (#primary-grid is display:contents there) wrap one by one
+    // beside it rather than as a block below it.
     <div id="filter-primary" className={mobile ? "min-w-0 flex-1" : "min-w-48 flex-1 lg:w-56 lg:flex-none"}>
       <InputGroup className={mobile ? "h-10" : "h-8"}>
-        {/* type=search keeps Escape-to-clear; the browser's clear glyph gives way to ours. */}
-        <InputGroupInput ref={searchInput} id="job-search" type="search" placeholder="Search title or company…" aria-label="Search roles" autoComplete="off"
+        {/* type=search keeps Escape-to-clear; the browser's clear glyph gives way to ours.
+            On a phone the box shares its line with Filters, so a shorter placeholder,
+            which still fits at 320px. */}
+        <InputGroupInput ref={searchInput} id="job-search" type="search" placeholder={mobile ? "Title or company…" : "Search title or company…"} aria-label="Search roles" autoComplete="off"
           className={cn("[&::-webkit-search-cancel-button]:appearance-none", mobile ? "h-10" : "h-8")}
           value={filters.query} onChange={(e) => set({ query: e.target.value })} />
         <InputGroupAddon><SearchIcon /></InputGroupAddon>
@@ -249,7 +254,7 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
     </div>
   );
   const primary = (
-    <div id="primary-grid" role="group" aria-label="Main filters" className={mobile ? "flex flex-col gap-2" : "flex flex-wrap items-center gap-2"}>
+    <div id="primary-grid" role="group" aria-label="Main filters" className={mobile ? "flex flex-col gap-2" : "flex flex-wrap items-center gap-2 lg:contents"}>
       {dims.filter((d) => d.group === "primary").map((d) => picker(d))}
     </div>
   );
@@ -281,8 +286,12 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
   return (
     <>
       {mobile ? (
-        <div role="search" aria-label="Job search" className="border-b bg-background">
-          <div className={cn(CONTAINER, "flex items-center gap-2 py-3")}>
+        // Pinned under the header like the desktop toolbar, so the search and Filters stay
+        // in reach deep in a long list (the old site pinned its Filters button too).
+        // JobsWorkspace reads its height into --toolbar-height.
+        <div id="job-search-bar" role="search" aria-label="Job search"
+          className="sticky top-(--header-height) z-30 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
+          <div className={cn(CONTAINER, "flex items-center gap-2 py-2")}>
             {search}
             <Button ref={toggle} type="button" variant="outline" id="mobile-filter-toggle" className="h-10 shrink-0" aria-controls="job-controls"
               aria-expanded={drawerOpen} aria-label={`${drawerOpen ? "Hide" : "Show"} filters${n ? `, ${n} active` : ""}`}

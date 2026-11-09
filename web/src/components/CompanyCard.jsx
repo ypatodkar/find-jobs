@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { compactPay, relativeDate } from "../lib/jobs.js";
 import { monogram, openedLabel } from "../lib/groups.js";
-import JobRow, { AcquiredNote, BELOW_TOOLBAR } from "./JobRow.jsx";
+import JobRow, { AcquiredNote } from "./JobRow.jsx";
 
 const SIZE_LABELS = { "1-10": "1–10", "11-50": "11–50", "51-200": "51–200", "201-1000": "201–1,000", "1000+": "1,000+" };
 
@@ -47,10 +47,7 @@ export default function CompanyCard({ group: g, open, onToggle, selectedId, onSe
   return (
     <section className={cn("cgroup overflow-hidden rounded-xl border bg-card text-card-foreground", open && "is-open")}>
       <button
-        className={cn(
-          "cg-head group/head flex w-full cursor-pointer flex-col gap-1.5 px-4 py-3 text-left transition-colors outline-none hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset motion-reduce:transition-none",
-          BELOW_TOOLBAR,
-        )}
+        className="cg-head group/head flex w-full cursor-pointer flex-col gap-1.5 px-4 py-3 text-left transition-colors outline-none hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset motion-reduce:transition-none"
         type="button" data-company={g.company} aria-expanded={open} onClick={(e) => onToggle(g.company, e.currentTarget)}
       >
         <span className="cg-top flex w-full items-start gap-3">

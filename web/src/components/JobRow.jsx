@@ -13,10 +13,6 @@ import { acquirerOf, compactPay, relativeDate } from "../lib/jobs.js";
 import { openedLabel } from "../lib/groups.js";
 import { withSource } from "../lib/outbound.js";
 
-// Rows scrolled into view (↑ / ↓, and the first row of a new page) stop below the
-// sticky header and filter toolbar rather than under them.
-export const BELOW_TOOLBAR = "scroll-mt-[calc(var(--header-height)+var(--toolbar-height,0px)+0.75rem)]";
-
 /** "(acquired by …)" after a company's name, for companies that have been sold. */
 export function AcquiredNote({ company }) {
   const by = acquirerOf(company);
@@ -62,7 +58,6 @@ export default function JobRow({ job, selected, onSelect, inGroup = false, opene
     <article
       className={cn(
         "job group/row relative flex cursor-pointer items-start gap-x-4 gap-y-1 rounded-lg border bg-card px-4 py-3 text-card-foreground transition-colors hover:bg-muted/50 motion-reduce:transition-none",
-        BELOW_TOOLBAR,
         seen && "row-seen",
         selected && "is-selected border-brand/60 bg-brand/5 ring-1 ring-brand/25 hover:bg-brand/5 dark:bg-brand/10 dark:hover:bg-brand/10",
       )}
@@ -131,7 +126,6 @@ function GroupRow({ job, title, pay, when, selected, seen, onClick }) {
       className={cn(
         "job group/row relative mx-2 flex cursor-pointer flex-col gap-1 rounded-md px-3 py-2.5 transition-colors hover:bg-muted motion-reduce:transition-none sm:pl-[3.25rem]",
         "@2xl:grid @2xl:grid-cols-[minmax(0,1fr)_6.75rem_10.75rem_5rem] @2xl:items-center @2xl:gap-x-3 @2xl:in-data-[pay=no]:grid-cols-[minmax(0,1fr)_10.75rem_5rem]",
-        BELOW_TOOLBAR,
         seen && "row-seen",
         selected && "is-selected bg-brand/8 ring-1 ring-brand/35 ring-inset hover:bg-brand/8 dark:bg-brand/15 dark:hover:bg-brand/15",
       )}

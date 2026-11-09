@@ -45,7 +45,9 @@ function Signal({ signal }) {
 function JobsBadge({ firm, r }) {
   if (!firm.id || !r) return null;
   if (r.status === "unsupported") return <Badge variant="outline" className="text-muted-foreground" title={r.reason || ""}>no board</Badge>;
-  if (r.status === "error") return <Badge variant="destructive" title={r.reason || ""}>update failed</Badge>;
+  // Outline with destructive text rather than the destructive variant: its red-on-pink
+  // tint is under 4.5:1 at this size, red on the card's own background is not.
+  if (r.status === "error") return <Badge variant="outline" className="text-destructive" title={r.reason || ""}>update failed</Badge>;
   if (r.count === 0) return <Badge variant="outline" className="text-muted-foreground tabular">0 roles</Badge>;
   return (
     <Badge asChild variant="secondary" className="h-6 px-2.5 tabular">
@@ -146,7 +148,7 @@ export default function Firms() {
       <SiteHeader active="investors" country={null} account={false} />
       <div className={CONTAINER}>
         <header className="pt-8 pb-6 md:pt-10">
-          <h1 className="text-2xl font-semibold tracking-tight">Investors</h1>
+          <h1 id="content" tabIndex={-1} className="text-2xl font-semibold tracking-tight outline-none">Investors</h1>
           <p className="mt-2 max-w-3xl text-muted-foreground">
             A searchable directory of US venture firms worth tracking for software roles, grouped by how central AI is to each firm's current thesis. Portfolio job boards are checked twice daily for engineering roles across 19 US metros.
           </p>
@@ -225,7 +227,7 @@ export default function Firms() {
       <SiteFooter>
         <section>
           <h3 className={FOOT_H}>Reading this list</h3>
-          <ul className="list-disc space-y-1.5 pl-5 leading-6 marker:text-muted-foreground">
+          <ul className="list-disc space-y-1.5 pl-5 marker:text-muted-foreground">
             <li>Firms marked <span className="rounded-sm bg-muted px-1 py-0.5 text-xs text-foreground">no public board</span> still hire into portfolio companies — check the firm's own careers page or LinkedIn instead of a dedicated board.</li>
             <li>Most dedicated boards (Getro-powered) let you filter by role — search each one for “backend” / “software engineer” directly rather than browsing.</li>
             <li>The three signal dots show how central AI is to a firm's public investment thesis: more filled dots means a stronger AI focus, not more open jobs.</li>

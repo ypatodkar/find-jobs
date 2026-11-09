@@ -143,13 +143,16 @@ export default function SavedFilters({ filters, onApply, naming, inline = false 
   return (
     <div id="preset-bar" className="contents">
       <Popover open={open} onOpenChange={(next) => { setOpen(next); if (!next) setEditing(null); }}>
-        {/* The button keeps one width in a full row: a saved view on screen shows as the
-            ticked bookmark here (and by name in its label), and as the marked row inside.
-            "Saved filters", not "Saved": the header's Saved is the saved jobs. */}
+        {/* A saved view on screen is named on the button, as before the redesign, with the
+            ticked bookmark; the name is capped in width so the toolbar row stays put. The
+            label still says "Saved filters" first, so the button's role stays clear when
+            the name replaces the words. "Saved filters", not "Saved": the header's Saved
+            is the saved jobs. */}
         <PopoverTrigger asChild>
           <Button type="button" variant="outline" size="sm" id="preset-picker"
             aria-label={`Saved filters${items.length ? `, ${items.length} saved` : ""}${active ? `, showing ${active.name}` : ""}`}>
-            {active ? <BookmarkCheckIcon /> : <BookmarkIcon />}Saved filters
+            {active ? <BookmarkCheckIcon /> : <BookmarkIcon />}
+            {active ? <span className="max-w-40 truncate">{active.name}</span> : "Saved filters"}
             {items.length ? <Badge variant="secondary" className="rounded-sm px-1 font-normal tabular">{items.length}</Badge> : null}
           </Button>
         </PopoverTrigger>

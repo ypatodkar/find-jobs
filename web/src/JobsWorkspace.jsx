@@ -19,10 +19,10 @@ import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import Filters from "./components/Filters.jsx";
-import JobRow, { BELOW_TOOLBAR } from "./components/JobRow.jsx";
+import JobRow from "./components/JobRow.jsx";
 import CompanyCard from "./components/CompanyCard.jsx";
 import Pagination from "./components/Pagination.jsx";
-import DetailPane from "./components/DetailPane.jsx";
+import DetailPane, { preloadResumeMatch } from "./components/DetailPane.jsx";
 import SelectMenu from "./components/SelectMenu.jsx";
 import { ResumeSignInDialog } from "./components/Account.jsx";
 import "./lib/track.js";
@@ -164,8 +164,14 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   const openedCompanies = useMemo(() => new Set(openedByCompany.keys()), [openedByCompany]);
   const filterOpts = { seen, openedCompanies };
 
-  const results = useMemo(() => (jobs ? filterJobs(jobs, filters, dims, filterOpts) : []), [jobs, filters, dims, seen, openedCompanies]); // eslint-disable-line react-hooks/exhaustive-deps
-  const sorted = useMemo(() => sortJobs(results, filters.sort), [results, filters.sort]);
+  // Sorted once per order, then filtered: the sort (it parses dates on every comparison)
+  // was most of the work, and running it per keystroke blocked typing for 150-450 ms on
+  // a slow CPU. filter() keeps the order, so the result is the same, except for "Most
+  // roles", which ranks companies by their count among the matches and so still sorts
+  // after the filter.
+  const ordered = useMemo(() => (jobs && filters.sort !== "count" ? sortJobs(jobs, filters.sort) : jobs), [jobs, filters.sort]);
+  const results = useMemo(() => (ordered ? filterJobs(ordered, filters, dims, filterOpts) : []), [ordered, filters, dims, seen, openedCompanies]); // eslint-disable-line react-hooks/exhaustive-deps
+  const sorted = useMemo(() => (filters.sort === "count" ? sortJobs(results, "count") : results), [results, filters.sort]);
   const groups = useMemo(() => (view === "grouped" ? buildGroups(sorted, filters.sort) : []), [view, sorted, filters.sort]);
   const companyCount = useMemo(() => new Set(sorted.map((j) => j.company)).size, [sorted]);
 
@@ -178,6 +184,8 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   const visibleGroups = view === "grouped" ? groups.slice(start, start + perPage) : [];
 
   useEffect(() => { if (jobs) settle(pageCount); }, [jobs]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The resume match card is a separate chunk (DetailPane); fetch it once the jobs are in.
+  useEffect(() => { if (jobs) preloadResumeMatch(); }, [!!jobs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selected = selectedId ? (jobs || []).find((j) => j.job_id === selectedId) : null;
   const open = wide ? !!selected : sheetOpen && !!selected;
@@ -288,6 +296,13 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
     if (pickAfterPage.current) {
       const which = pickAfterPage.current;
       pickAfterPage.current = null;
+      // The new page's companies are all closed, so there are no rows to pick from yet:
+      // open its first (or last) company and take that role.
+      if (view === "grouped") {
+        const g = which === "last" ? visibleGroups.at(-1) : visibleGroups[0];
+        if (g) selectInGroup(g, which === "last" ? g.jobs.at(-1) : g.jobs[0]);
+        return;
+      }
       requestAnimationFrame(() => {
         const rows = listRef.current ? [...listRef.current.querySelectorAll(".job[data-job-id]")] : [];
         const row = which === "last" ? rows[rows.length - 1] : rows[0];
@@ -321,6 +336,38 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
     row.scrollIntoView({ block: "nearest" });
     if (!narrow) row.querySelector(".job-title")?.focus({ preventScroll: true });
   };
+  // In the Companies tab a closed company draws no rows, so the arrows step through the
+  // page's companies themselves: past a company's last role into the next company,
+  // which opens, and onto another page only from the first or last company. The opened
+  // company's row exists only after React renders it (a requestAnimationFrame can run
+  // before that), so the scroll and focus wait in pendingFocus for the effect below.
+  const pendingFocus = useRef(null);
+  const selectInGroup = (g, job) => {
+    setExpanded((s) => (s.has(g.company) ? s : new Set(s).add(g.company)));
+    selectJob(job.job_id, { reveal: false });
+    pendingFocus.current = job.job_id;
+  };
+  useEffect(() => {
+    const id = pendingFocus.current;
+    const row = id && listRef.current?.querySelector(`.job[data-job-id="${CSS.escape(id)}"]`);
+    if (!row) return;
+    pendingFocus.current = null;
+    row.scrollIntoView({ block: "nearest" });
+    if (!narrow) row.querySelector(".job-title")?.focus({ preventScroll: true });
+  }); // after every render, until the row is there
+  const stepGroups = (down) => {
+    const gi = visibleGroups.findIndex((g) => g.jobs.some((j) => j.job_id === selectedId));
+    const g = visibleGroups[gi];
+    if (g && expanded.has(g.company)) {
+      const next = g.jobs[g.jobs.findIndex((j) => j.job_id === selectedId) + (down ? 1 : -1)];
+      if (next) { selectInGroup(g, next); return; }
+    }
+    // Nothing on this page selected yet: the first company going down, the last going up.
+    const target = visibleGroups[gi === -1 ? (down ? 0 : visibleGroups.length - 1) : gi + (down ? 1 : -1)];
+    if (target) { selectInGroup(target, down ? target.jobs[0] : target.jobs.at(-1)); return; }
+    if (down && current < pageCount) { pickAfterPage.current = "first"; setPage(current + 1); scrollToResults(false); }
+    if (!down && current > 1) { pickAfterPage.current = "last"; setPage(current - 1); scrollToResults(false); }
+  };
   useEffect(() => {
     const onKey = (e) => {
       if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
@@ -330,6 +377,12 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
       const idle = !a || a === document.body || a === document.documentElement;
       if (!idle && !(listRef.current && listRef.current.contains(a))) return;
       if (document.querySelector(OPEN_OVERLAY)) return;
+      if (view === "grouped") {
+        if (!visibleGroups.length) return;
+        e.preventDefault();
+        stepGroups(e.key === "ArrowDown");
+        return;
+      }
       const rows = listRef.current ? [...listRef.current.querySelectorAll(".job[data-job-id]")] : [];
       if (!rows.length) return;
       e.preventDefault();
@@ -349,14 +402,19 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
 
   // While the filter toolbar is pinned (sticky, under the sticky site header), the pane
   // and the divider dock under it and rows scroll into view below it: its height is
-  // published as --toolbar-height (DOCK_TOP, BELOW_TOOLBAR). At any width, since the
-  // header is sticky at every width; a toolbar that is not sticky counts as 0.
+  // published as --toolbar-height (DOCK_TOP, and the page's scroll-padding-top in
+  // app.css, which keeps focused and scrolled-to rows clear of both bars). At any width,
+  // since the header is sticky at every width; a toolbar that is not sticky counts as 0.
+  // On a phone #job-controls is the filter sheet and the pinned bar is #job-search-bar,
+  // which mounts and unmounts at 720px, so it is looked up on every update.
   useEffect(() => {
     const controls = document.getElementById("job-controls");
     if (!controls) return;
     const update = () => {
-      const pinned = getComputedStyle(controls).position === "sticky";
-      document.documentElement.style.setProperty("--toolbar-height", pinned ? controls.offsetHeight + "px" : "0px");
+      const bar = document.getElementById("job-search-bar");
+      const sticky = (el) => el && getComputedStyle(el).position === "sticky";
+      const pinned = sticky(controls) ? controls : sticky(bar) ? bar : null;
+      document.documentElement.style.setProperty("--toolbar-height", pinned ? pinned.offsetHeight + "px" : "0px");
     };
     update();
     const ro = new ResizeObserver(update);
@@ -394,7 +452,9 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
         <EmptyDescription>Try a broader search, or remove a filter or two.</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button type="button" variant="outline" size="sm" onClick={reset}>Reset filters</Button>
+        {/* The button disappears with the empty state, so focus goes back to the search
+            box (always mounted, on a phone too) rather than falling to <body>. */}
+        <Button type="button" variant="outline" size="sm" onClick={() => { reset(); document.getElementById("job-search")?.focus(); }}>Reset filters</Button>
       </EmptyContent>
     </Empty>
   );
@@ -405,12 +465,28 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
         <Filters dims={dims} filters={filters} onChange={setFilters} onReset={reset} canUndo={canUndo} onUndo={undo}
           total={sorted.length} naming={naming} countsFor={(d) => countsFor(jobs, filters, d, dims, filterOpts)} showSalary={country === "US"} />
       ) : (
-        // The toolbar's place while the jobs load (its filters count them).
+        // The toolbar's place while the jobs load (its filters count them). It copies both
+        // of Filters' layouts, switching at the same 720px and wrapping where the real bar
+        // does (bones about as wide as its controls, one per main filter), so the list
+        // does not jump when the jobs land.
         <div className="border-b" aria-hidden="true">
-          <div className={cn(CONTAINER, "flex items-center gap-2 py-3")}>
-            <Bone className="h-9 w-full max-w-xs" />
-            {["w-20", "w-24", "w-28", "w-28"].map((w, i) => <Bone key={i} className={cn("hidden h-9 md:block", w)} />)}
-            <Bone className="h-9 w-24 md:hidden" />
+          <div className={cn(CONTAINER, "flex items-center gap-2 py-2 min-[721px]:hidden")}>
+            <Bone className="h-10 min-w-0 flex-1" />
+            <Bone className="h-10 w-24 shrink-0" />
+          </div>
+          <div className={cn(CONTAINER, "hidden flex-wrap items-center gap-2 py-3 min-[721px]:flex")}>
+            <Bone className="h-8 min-w-48 flex-1 lg:w-56 lg:flex-none" />
+            {/* One block below lg, separate items from lg up, as #primary-grid. */}
+            <div className="flex flex-wrap items-center gap-2 lg:contents">
+              {dims.filter((d) => d.group === "primary").map((d) => (
+                <Bone key={d.key} className={cn("h-8", { role: "w-[72px]", city: "w-[100px]", hq: "w-[154px]", seniority: "w-[117px]", career: "w-[128px]" }[d.key] || "w-28")} />
+              ))}
+            </div>
+            <Bone className="h-8 w-[118px]" />{/* More filters */}
+            <div className="ml-auto flex items-center gap-2">
+              <Bone className="h-8 w-[126px]" />{/* Saved filters */}
+              <Bone className="h-8 w-[75px]" />{/* View */}
+            </div>
           </div>
         </div>
       )}
@@ -429,7 +505,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
             ? "is-split grid-cols-[minmax(350px,var(--job-list-width,60fr))_1rem_minmax(440px,var(--job-detail-width,40fr))] gap-x-2"
             : "grid-cols-1")}>
           <div className="results-main min-w-0">
-            <div className={cn("results-bar mb-3 flex flex-col gap-2", BELOW_TOOLBAR)} id="job-results-bar" hidden={!jobs}>
+            <div className={"results-bar mb-3 flex flex-col gap-2"} id="job-results-bar" hidden={!jobs}>
               {/* Tabs and Sort share a line; useColumns keeps the list wide enough for
                   both, and wrapping is only the fallback. */}
               <div className="list-head flex flex-wrap items-center gap-x-4 gap-y-2" id="list-head">

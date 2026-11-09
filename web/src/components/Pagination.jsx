@@ -29,15 +29,17 @@ export default function Pagination({ page, pageCount, onPage }) {
     onPage(n);
   };
 
-  // Phones: the numbers take the first line, then Previous · status · Next, then the
-  // jump box. From 640px: one line, the jump box pushed to the right.
+  // Phones: the numbers take the first two lines, five to a line as before the
+  // redesign (ten in one line would leave "10" alone on a 360-375px phone), then
+  // Previous · status · Next, then the jump box. From 640px: one line, the jump box
+  // pushed to the right.
   return (
     <nav id="job-pagination" aria-label={LABEL}
       className="pagination mt-6 flex flex-wrap items-center justify-between gap-x-1 gap-y-3 border-t pt-4 sm:justify-start">
       <Button type="button" variant="ghost" size="sm" className="page-prev order-2 sm:order-none" disabled={page === 1} onClick={() => onPage(page - 1)}>
         <ChevronLeftIcon data-icon="inline-start" aria-hidden="true" />Previous
       </Button>
-      <span className="page-numbers order-1 flex w-full flex-wrap items-center justify-center gap-1 sm:order-none sm:w-auto" role="group" aria-label="Choose a results page">
+      <span className="page-numbers order-1 grid w-full grid-cols-5 justify-items-center gap-1 sm:order-none sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-center" role="group" aria-label="Choose a results page">
         {numbers.map((n) => (
           <Button key={n} type="button" variant={n === page ? "outline" : "ghost"} size="icon-sm" className="page-number tabular" aria-label={`Page ${n}`}
             aria-current={n === page ? "page" : undefined} onClick={() => onPage(n)}>{n}</Button>
