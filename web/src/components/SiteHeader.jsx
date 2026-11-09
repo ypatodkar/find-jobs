@@ -46,13 +46,13 @@ export default function SiteHeader({ active = null, country = null, account = tr
 
   return (
     <header data-slot="site-header"
-      className="sticky top-0 z-40 h-(--header-height) shrink-0 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
+      className="sticky top-0 z-40 h-(--header-height) shrink-0 border-b bg-background">
       <div className={cn(CONTAINER, "flex h-full items-center gap-1")} data-active={active || undefined} data-country={country || undefined}>
         {/* Below 380 px (a 360 px Android phone, a 375 px iPhone mini) the row cannot
             hold the wordmark beside India, Feedback, theme, account and Menu without
             pushing the page sideways, so the compass stands alone there; the words
             stay as the link's name. */}
-        <a href={jobs} className="-ml-1 mr-1 flex shrink-0 items-center gap-2 rounded-md px-1 py-1 text-sm font-semibold whitespace-nowrap outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+        <a href={jobs} className="-ml-1 mr-1 flex shrink-0 items-center gap-2 rounded-md px-1 py-1 text-sm font-semibold whitespace-nowrap outline-none focus-visible:ring-3 focus-visible:ring-ring">
           <CompassIcon className="size-5" aria-hidden="true" />
           <span className="max-[379px]:sr-only">Find Jobs</span>
         </a>

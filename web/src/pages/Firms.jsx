@@ -26,7 +26,7 @@ import { withSource } from "../lib/outbound.js";
 
 const TIER_ORDER = ["ai-mega", "generalist", "ai-native", "accelerator"];
 
-const LINK = "rounded-sm underline decoration-muted-foreground/50 underline-offset-4 outline-none hover:text-foreground hover:decoration-foreground focus-visible:ring-3 focus-visible:ring-ring/50";
+const LINK = "rounded-sm underline decoration-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:decoration-foreground focus-visible:ring-3 focus-visible:ring-ring";
 const FOOT_H = "mb-2 text-sm font-medium text-foreground";
 
 // Three dots, filled up to the firm's signal: how central AI is to its thesis.
@@ -35,7 +35,7 @@ function Signal({ signal }) {
   return (
     <span className="inline-flex shrink-0 gap-1" role="img" aria-label={label} title={label}>
       {[1, 2, 3].map((i) => (
-        <i key={i} aria-hidden="true" className={cn("block size-1.5 rounded-full", i <= signal ? "bg-foreground" : "bg-foreground/15")}></i>
+        <i key={i} aria-hidden="true" className={cn("block size-1.5 rounded-full", i <= signal ? "bg-foreground" : "bg-border")}></i>
       ))}
     </span>
   );
@@ -87,7 +87,7 @@ function FirmCard({ firm, r }) {
     // look like a link: no hover, no pointer, not in the tab order. The badge and the
     // external site link still work.
     <Card size="sm" data-name={firm.name.toLowerCase()} onClick={go} onKeyDown={onKey}
-      className={cn("gap-3 outline-none", openable && "cursor-pointer transition-[background-color,box-shadow] hover:bg-muted/40 hover:ring-foreground/20 focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none")}
+      className={cn("gap-3 outline-none", openable && "cursor-pointer transition-[background-color,box-shadow] hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring motion-reduce:transition-none")}
       {...(openable ? { "data-href": href, tabIndex: 0, role: "link", "aria-label": `${firm.name} — view ${r.count} roles` } : {})}>
       <CardHeader>
         <CardTitle className="min-w-0 wrap-break-word">
@@ -182,7 +182,7 @@ export default function Firms() {
             {chips.map((c) => (
               <Toggle key={c.key} variant="outline" size="sm" data-tier={c.key} pressed={c.key === tier}
                 onPressedChange={() => setTier(c.key)}
-                className="data-[state=on]:border-foreground/25 data-[state=on]:bg-secondary data-[state=on]:text-foreground">
+                className="data-[state=on]:border-foreground data-[state=on]:bg-secondary data-[state=on]:text-foreground">
                 {c.label}<span className="text-muted-foreground tabular">{counts[c.key]}</span>
               </Toggle>
             ))}

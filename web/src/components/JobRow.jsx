@@ -3,7 +3,7 @@
 // Companies tab) a role is one line, title on the left and its facts on the right, under
 // the company's header, which already names the company (GroupRow).
 //
-// The selected row is the one place the brand colour appears in the list (DESIGN.md).
+// The selected row: the wash with an ink outline, the one selected style (DESIGN.md).
 // A role this browser has opened before (lib/seen.js) keeps a muted title and an
 // "Opened" badge, so a second pass through the list skips what has been read.
 import { EyeIcon, MapPinIcon } from "lucide-react";
@@ -40,7 +40,7 @@ export default function JobRow({ job, selected, onSelect, inGroup = false, opene
   // wrap-anywhere: a title with one very long word ("SoC/Microcontroller/DSP/…") wraps
   // inside the row instead of widening the page on a phone.
   const titleClass = cn(
-    "job-title max-w-full rounded-sm text-[15px] leading-snug font-medium wrap-anywhere text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50",
+    "job-title max-w-full rounded-sm text-[15px] leading-snug font-medium wrap-anywhere text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring",
     seen && "is-seen text-muted-foreground",
   );
 
@@ -57,9 +57,9 @@ export default function JobRow({ job, selected, onSelect, inGroup = false, opene
   return (
     <article
       className={cn(
-        "job group/row relative flex cursor-pointer items-start gap-x-4 gap-y-1 rounded-lg border bg-card px-4 py-3 text-card-foreground transition-colors hover:bg-muted/50 motion-reduce:transition-none",
+        "job group/row relative flex cursor-pointer items-start gap-x-4 gap-y-1 rounded-lg border bg-card px-4 py-3 text-card-foreground transition-colors hover:bg-muted motion-reduce:transition-none",
         seen && "row-seen",
-        selected && "is-selected border-brand/60 bg-brand/5 ring-1 ring-brand/25 hover:bg-brand/5 dark:bg-brand/10 dark:hover:bg-brand/10",
+        selected && "is-selected border-foreground bg-muted hover:bg-muted",
       )}
       data-job-id={job.job_id}
       onClick={onClick}
@@ -110,8 +110,8 @@ export default function JobRow({ job, selected, onSelect, inGroup = false, opene
  * roles gets no pay column (CompanyCard sets data-pay on the card's body), so its titles
  * keep the room. The columns appear only when the list itself is at least 42rem wide (a
  * container query on the card's body); narrower, the facts wrap under the title. The title lines up with the company's name above.
- * The selected role is a rounded highlight inset from the card's edges, in the brand
- * colour like the selected card in All jobs. Same hooks as the card row:
+ * The selected role is a rounded highlight inset from the card's edges, the wash with
+ * an ink outline like the selected card in All jobs. Same hooks as the card row:
  * article.job[data-job-id], .is-selected, .row-seen, a.job-title.
  */
 function GroupRow({ job, title, pay, when, selected, seen, onClick }) {
@@ -127,7 +127,7 @@ function GroupRow({ job, title, pay, when, selected, seen, onClick }) {
         "job group/row relative mx-2 flex cursor-pointer flex-col gap-1 rounded-md px-3 py-2.5 transition-colors hover:bg-muted motion-reduce:transition-none sm:pl-[3.25rem]",
         "@2xl:grid @2xl:grid-cols-[minmax(0,1fr)_6.75rem_10.75rem_5rem] @2xl:items-center @2xl:gap-x-3 @2xl:in-data-[pay=no]:grid-cols-[minmax(0,1fr)_10.75rem_5rem]",
         seen && "row-seen",
-        selected && "is-selected bg-brand/8 ring-1 ring-brand/35 ring-inset hover:bg-brand/8 dark:bg-brand/15 dark:hover:bg-brand/15",
+        selected && "is-selected bg-muted ring-1 ring-foreground ring-inset hover:bg-muted",
       )}
       data-job-id={job.job_id}
       onClick={onClick}
@@ -137,7 +137,7 @@ function GroupRow({ job, title, pay, when, selected, seen, onClick }) {
         {seen ? <EyeIcon aria-label="Opened" className="job-opened size-3.5 shrink-0 text-muted-foreground" /> : null}
       </div>
       <div className="job-meta flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground @2xl:contents">
-        <span className={cn(cell, "job-salary tabular font-medium whitespace-nowrap text-foreground/80 in-data-[pay=no]:hidden @2xl:text-right")} title={job.salary || undefined}>{pay || null}</span>
+        <span className={cn(cell, "job-salary tabular font-medium whitespace-nowrap text-foreground in-data-[pay=no]:hidden @2xl:text-right")} title={job.salary || undefined}>{pay || null}</span>
         <span className={cn(cell, "job-place inline-flex items-center gap-1")} title={place || undefined}>
           {job.unlisted ? <span className="italic">No longer listed</span> : place ? (
             <>

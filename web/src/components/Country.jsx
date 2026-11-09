@@ -101,8 +101,8 @@ export function CountrySwitcher({ country = null, className }) {
                   <span className="font-medium">{c.name}</span>
                   <span className="text-xs text-muted-foreground">{c.detail}</span>
                 </span>
-                {/* The one brand mark in the header: which list this is. */}
-                {isCurrent ? <CheckIcon className="mt-0.5 text-brand!" aria-hidden="true" /> : <span className="size-4 shrink-0" aria-hidden="true" />}
+                {/* A check marks which list this is. */}
+                {isCurrent ? <CheckIcon className="mt-0.5" aria-hidden="true" /> : <span className="size-4 shrink-0" aria-hidden="true" />}
               </a>
             </DropdownMenuItem>
           );

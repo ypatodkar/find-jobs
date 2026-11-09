@@ -122,11 +122,11 @@ function ResumePicker({ selected, disabled, onChoose, onRemove, onAdd }) {
   return (
     <details ref={ref} className={cn("company-picker select-picker resume-picker group/picker relative w-full", disabled && "is-disabled")} onToggle={onToggle}>
       <summary aria-haspopup="true" aria-label={`Resume: ${label}`} title={label} aria-disabled={disabled ? "true" : undefined}
-        className={cn(SUMMARY_RESET, "flex h-8 w-full cursor-pointer items-center justify-between gap-1.5 rounded-md border border-input bg-transparent pr-2 pl-2.5 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none select-none hover:bg-muted/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-disabled:pointer-events-none aria-disabled:opacity-50 dark:bg-input/30 dark:hover:bg-input/50")}>
+        className={cn(SUMMARY_RESET, "flex h-8 w-full cursor-pointer items-center justify-between gap-1.5 rounded-md border border-input bg-transparent pr-2 pl-2.5 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none select-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring aria-disabled:pointer-events-none aria-disabled:opacity-50")}>
         <span className="min-w-0 truncate">{label}</span>
         <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted-foreground transition-transform group-open/picker:rotate-180 motion-reduce:transition-none" />
       </summary>
-      <div className="company-panel select-panel resume-picker-panel absolute top-full left-0 z-30 mt-1 flex w-72 flex-col max-w-[calc(100vw-2rem)] gap-0.5 rounded-md bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10"
+      <div className="company-panel select-panel resume-picker-panel absolute top-full left-0 z-30 mt-1 flex w-72 flex-col max-w-[calc(100vw-2rem)] gap-0.5 rounded-md bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-border"
         role="group" aria-label="Your resumes">
         {items.map((r) => (
           <div className="resume-picker-row flex items-center gap-1" key={r.id}>
@@ -162,7 +162,7 @@ function Locate({ text, mappable, onJump, children, fallback, label, className }
   const mapped = mappable.has(text);
   return (
     <>
-      <a className={cn("requirement-locate rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50", className)} href="#detail-body"
+      <a className={cn("requirement-locate rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring", className)} href="#detail-body"
         data-passage={text} aria-label={label} hidden={!mapped}
         onClick={(e) => { e.preventDefault(); onJump(text); }}>{children}</a>
       <span hidden={mapped}>{fallback}</span>
@@ -192,13 +192,13 @@ function Insights({ rows, mappable, onJump }) {
           const text = insightSummary(f.text);
           const lead = { shown: "Supported", partial: "Clarify evidence", unclear: "Review evidence" }[f.status];
           return (
-            <li key={i} title={f.text} className="flex gap-3 rounded-lg bg-muted/60 px-3 py-2.5">
+            <li key={i} title={f.text} className="flex gap-3 rounded-lg bg-muted px-3 py-2.5">
               <StatusIcon status={f.status} className="mt-px" />
               <div className="grid min-w-0 gap-0.5">
                 <span className="insight-lead text-xs font-medium text-muted-foreground">{lead}</span>
                 <div className="insight-copy text-sm leading-snug wrap-anywhere">
                   <Locate text={f.text} mappable={mappable} onJump={onJump} label={`Find in job description: ${f.text}`} fallback={text}
-                    className="text-foreground underline decoration-foreground/25 underline-offset-4 hover:decoration-foreground">{text}</Locate>
+                    className="text-foreground underline decoration-muted-foreground underline-offset-4 hover:decoration-foreground">{text}</Locate>
                 </div>
               </div>
             </li>
@@ -556,10 +556,10 @@ export default function ResumeMatch({ job, paneRef, description }) {
               <div className="relative flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
                 <h4 className="text-sm font-medium">Resume evidence score</h4>
                 <details className="scoring-help">
-                  <summary className={cn(SUMMARY_RESET, "inline-flex cursor-pointer items-center gap-1 rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50")}>
+                  <summary className={cn(SUMMARY_RESET, "inline-flex cursor-pointer items-center gap-1 rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring")}>
                     <Info aria-hidden="true" className="size-3.5" />How scoring works
                   </summary>
-                  <div className="scoring-explanation absolute top-full right-0 z-30 mt-2 grid w-72 max-w-[calc(100vw-3rem)] gap-2 rounded-md bg-popover p-3 text-xs leading-relaxed text-popover-foreground shadow-md ring-1 ring-foreground/10">
+                  <div className="scoring-explanation absolute top-full right-0 z-30 mt-2 grid w-72 max-w-[calc(100vw-3rem)] gap-2 rounded-md bg-popover p-3 text-xs leading-relaxed text-popover-foreground shadow-md ring-1 ring-border">
                     <p>The score measures resume evidence coverage of extracted requirements. Required items carry more weight than responsibilities or preferences, and partial evidence contributes to coverage. It is not a prediction of hiring outcomes.</p>
                     <Notes result={result} />
                   </div>
@@ -598,7 +598,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
                     <Tooltip key={rating}>
                       <TooltipTrigger asChild>
                         <button type="button" data-act="review" data-rating={rating} aria-label={label} aria-pressed={fb.rating === rating}
-                          className={cn(toggleVariants({ variant: "outline", size: "sm" }), "size-8 px-0 text-muted-foreground aria-pressed:text-foreground aria-pressed:[&_svg]:fill-[color-mix(in_oklch,currentColor_25%,transparent)]")}
+                          className={cn(toggleVariants({ variant: "outline", size: "sm" }), "size-8 px-0 text-muted-foreground aria-pressed:text-foreground aria-pressed:[&_svg]:fill-current")}
                           disabled={fb.disabled} onClick={(e) => review(rating, e.detail === 0)}><Thumb aria-hidden="true" className="size-3.5" /></button>
                       </TooltipTrigger>
                       <TooltipContent>{label}</TooltipContent>
@@ -615,7 +615,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
         {rows.length ? (
           // A native modal, drawn with the classes of shadcn's DialogContent and, on
           // ::backdrop, its DialogOverlay (the same scrim as the site's other dialogs).
-          <dialog ref={dialog} className="requirement-breakdown m-auto max-h-[min(760px,calc(100dvh-2rem))] w-[min(720px,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl bg-popover p-0 text-sm text-popover-foreground ring-1 ring-foreground/10 backdrop:bg-black/10 supports-backdrop-filter:backdrop:backdrop-blur-xs open:flex"
+          <dialog ref={dialog} className="requirement-breakdown m-auto max-h-[min(760px,calc(100dvh-2rem))] w-[min(720px,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl bg-popover p-0 text-sm text-popover-foreground ring-1 ring-border backdrop:bg-black/10 supports-backdrop-filter:backdrop:backdrop-blur-xs open:flex"
             id="requirement-breakdown" aria-labelledby="breakdown-title"
             onCancel={(e) => { e.preventDefault(); setBreakdownOpen(false); }}
             onClick={(e) => {
@@ -634,7 +634,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
               <div className="breakdown-filters flex flex-wrap gap-1.5" role="group" aria-label="Filter requirements by status">
                 {[["all", "All"], ["shown", "Demonstrated"], ["partial", "Partial"], ["unclear", "Not found"]].map(([status, label]) => (
                   <button key={status} type="button" data-act="filter-status" data-filter-status={status} aria-pressed={s.breakdownFilter === status}
-                    className={cn(toggleVariants({ variant: "outline", size: "sm" }), "gap-1.5 aria-pressed:border-foreground/20 aria-pressed:text-foreground")}
+                    className={cn(toggleVariants({ variant: "outline", size: "sm" }), "gap-1.5 aria-pressed:border-foreground aria-pressed:text-foreground")}
                     onClick={() => update({ breakdownFilter: status })}>
                     {status === "all" ? null : <StatusIcon status={status} className="size-3.5" />}
                     {label} <span className="text-xs text-muted-foreground tabular">{status === "all" ? rows.length : metric(status)}</span>
@@ -665,7 +665,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
                                 if (open) next.add(index); else next.delete(index);
                                 update({ expanded: next });
                               }}>
-                              <summary className={cn(SUMMARY_RESET, "-mx-2 flex cursor-pointer items-start gap-3 rounded-md px-2 py-2.5 outline-none hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50")}>
+                              <summary className={cn(SUMMARY_RESET, "-mx-2 flex cursor-pointer items-start gap-3 rounded-md px-2 py-2.5 outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring")}>
                                 <StatusIcon status={f.status} className={`requirement-dot is-${f.status} mt-0.5`} />
                                 <span className="flex min-w-0 flex-1 flex-wrap items-start gap-x-3 gap-y-1">
                                   <span className="requirement-row-text min-w-0 flex-[1_1_14rem] text-sm leading-5 wrap-anywhere">{f.text}</span>
@@ -754,13 +754,13 @@ export default function ResumeMatch({ job, paneRef, description }) {
         <CardContent className="analysis-shell gap-4" aria-busy={String(!!busy)}>
           {content}
           {limit && !limit.canUnlock ? (
-            <Alert role="status" className="limit-box bg-muted/50">
+            <Alert role="status" className="limit-box bg-muted">
               <Info aria-hidden="true" />
               <AlertDescription className="text-foreground"><p><strong className="font-medium">You've used all {limit.limit} resume checks for today.</strong> More open up {untilReset(limit.resetsAt)}. Saved results stay available.</p></AlertDescription>
             </Alert>
           ) : null}
           {limit && limit.canUnlock ? (
-            <form className="limit-box limit-form grid gap-4 rounded-lg border bg-muted/40 p-4" data-limit-form="" noValidate
+            <form className="limit-box limit-form grid gap-4 rounded-lg border bg-muted p-4" data-limit-form="" noValidate
               onSubmit={(e) => { e.preventDefault(); if (sRef.current.busy !== "unlocking") unlock(e.currentTarget); }}>
               <p className="text-sm"><strong className="font-medium">You've used today's {limit.limit} resume checks.</strong> <span className="text-muted-foreground">Tell us how resume matching is working for you to unlock {limit.bonus} more today.</span></p>
               <fieldset className="limit-rating grid gap-2">
@@ -769,7 +769,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
                   {[1, 2, 3, 4, 5].map((n) => (
                     <label key={n} className="relative">
                       <input type="radio" name="limit-rating" value={n} required className="peer sr-only" />
-                      <span className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md border border-input bg-background text-sm font-medium shadow-xs transition-colors tabular hover:bg-muted peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:hover:bg-primary/90 peer-focus-visible:border-ring peer-focus-visible:ring-3 peer-focus-visible:ring-ring/50 dark:bg-input/30">{n}</span>
+                      <span className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md border border-input bg-background text-sm font-medium shadow-xs transition-colors tabular hover:bg-muted peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:hover:bg-primary/90 peer-focus-visible:border-ring peer-focus-visible:ring-3 peer-focus-visible:ring-ring">{n}</span>
                     </label>
                   ))}
                   <span className="limit-scale ml-1 text-xs text-muted-foreground" aria-hidden="true">1 not useful · 5 very useful</span>
@@ -795,10 +795,10 @@ export default function ResumeMatch({ job, paneRef, description }) {
             </Alert>
           ) : null}
           {hasDescription === false ? (
-            <Alert role={undefined} className="match-msg bg-muted/50"><Info aria-hidden="true" /><AlertDescription>This job has no description to compare against.</AlertDescription></Alert>
+            <Alert role={undefined} className="match-msg bg-muted"><Info aria-hidden="true" /><AlertDescription>This job has no description to compare against.</AlertDescription></Alert>
           ) : null}
           {outdated && !result ? (
-            <Alert role={undefined} className="match-msg bg-muted/50"><Info aria-hidden="true" /><AlertDescription>{outdated === "description" ? "The job description has changed." : "The analysis has been updated."} Analyze your resume for current results.</AlertDescription></Alert>
+            <Alert role={undefined} className="match-msg bg-muted"><Info aria-hidden="true" /><AlertDescription>{outdated === "description" ? "The job description has changed." : "The analysis has been updated."} Analyze your resume for current results.</AlertDescription></Alert>
           ) : null}
         </CardContent>
         <input ref={input} type="file" accept={Import.ACCEPT} hidden
@@ -813,7 +813,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
           <input type="checkbox" role="switch" aria-label="Match highlights" aria-controls="detail-body" checked={marksOn}
             className="peer absolute top-1/2 right-0 m-0 h-[18.4px] w-8 -translate-y-1/2 cursor-pointer opacity-0"
             onChange={(e) => { setMarksEnabled(e.target.checked); setMarksOn(e.target.checked); }} />
-          <span className="highlight-switch pointer-events-none inline-flex h-[18.4px] w-8 shrink-0 items-center rounded-full border border-transparent bg-input shadow-xs transition-all motion-reduce:transition-none peer-checked:bg-primary peer-focus-visible:border-ring peer-focus-visible:ring-3 peer-focus-visible:ring-ring/50 dark:bg-input/80" aria-hidden="true">
+          <span className="highlight-switch pointer-events-none inline-flex h-[18.4px] w-8 shrink-0 items-center rounded-full border border-transparent bg-input shadow-xs transition-all motion-reduce:transition-none peer-checked:bg-primary peer-focus-visible:border-ring peer-focus-visible:ring-3 peer-focus-visible:ring-ring" aria-hidden="true">
             <span className="block size-4 rounded-full bg-background transition-transform group-has-[:checked]/hl:translate-x-[calc(100%-2px)] motion-reduce:transition-none dark:bg-foreground dark:group-has-[:checked]/hl:bg-primary-foreground"></span>
           </span>
         </label>

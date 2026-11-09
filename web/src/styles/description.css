@@ -25,7 +25,7 @@
   max-width: 60ch;
   font-size: 0.9375rem;
   line-height: 1.75rem;
-  color: color-mix(in oklch, var(--foreground) 88%, transparent);
+  color: var(--foreground);
   overflow-wrap: anywhere;
 }
 
@@ -67,17 +67,17 @@
 :where(#detail-body) :is(strong, b) { font-weight: 600; color: var(--foreground); }
 :where(#detail-body) :is(em, i) { font-style: italic; }
 
-/* Links read as links without colour: brand violet is kept for the selected job. */
+/* Links read as links without colour: an underline in the grey, ink on hover. */
 :where(#detail-body) a {
   color: var(--foreground);
   text-decoration: underline;
-  text-decoration-color: color-mix(in oklch, var(--foreground) 35%, transparent);
+  text-decoration-color: var(--muted-foreground);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
   border-radius: 2px;
 }
 :where(#detail-body) a:hover { text-decoration-color: var(--foreground); }
-:where(#detail-body) a:focus-visible { outline: 3px solid color-mix(in oklch, var(--ring) 50%, transparent); outline-offset: 2px; }
+:where(#detail-body) a:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
 
 :where(#detail-body) blockquote {
   margin: 0 0 1rem;
@@ -119,19 +119,19 @@
 
 /* Where a "Find in JD" jump lands: the paragraph or bullet takes a brief tint (the
    class comes off after 2.4 s), and the exact words a stronger one. With motion
-   allowed, the tint fades out instead of switching off. Neutral, a wash of the text
-   colour: brand violet is kept for the selected job (DESIGN.md, "Brand"), and green
-   and amber mean resume-match results. */
+   allowed, the tint fades out instead of switching off. Neutral: the wash, and the
+   line shade for the words (DESIGN.md, "Palette"); green and amber mean resume-match
+   results. */
 :where(#detail-body) .desc-hit {
-  background-color: color-mix(in oklch, var(--foreground) 6%, transparent);
-  box-shadow: 0 0 0 4px color-mix(in oklch, var(--foreground) 6%, transparent);
+  background-color: var(--muted);
+  box-shadow: 0 0 0 4px var(--muted);
   border-radius: 4px;
 }
 /* The jump also moves focus to the passage (tabindex -1), so a screen reader reads on
    from there; the tint is its visible mark, not a focus ring. */
 :where(#detail-body) :is(p, li)[tabindex="-1"]:focus { outline: none; }
 ::highlight(match-passage) {
-  background-color: color-mix(in oklch, var(--foreground) 16%, transparent);
+  background-color: var(--border);
   color: var(--foreground);
 }
 @media (prefers-reduced-motion: no-preference) {

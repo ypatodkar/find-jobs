@@ -115,7 +115,7 @@ export function Counter() {
   return (
     <div id="counter-slot" className="inline-flex">
       <Tip label={`${Number(stats.jobs).toLocaleString()} different roles opened by ${Number(stats.users).toLocaleString()} people`}>
-        <span tabIndex={0} className="inline-flex cursor-help items-center gap-2 rounded-md text-sm whitespace-nowrap text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+        <span tabIndex={0} className="inline-flex cursor-help items-center gap-2 rounded-md text-sm whitespace-nowrap text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring">
           <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground motion-safe:animate-pulse" aria-hidden="true"></span>
           <span className="tabular font-medium text-foreground">{stats.clicks.toLocaleString()}</span>
           <span>job clicks</span>
@@ -224,7 +224,7 @@ export function Feedback() {
                     aria-label="What is this about? Optional." value={topic || ""} onValueChange={(v) => setTopic(v || null)}>
                     {TOPICS.map((t) => (
                       <ToggleGroupItem key={t.k} value={t.k} data-topic={t.k}
-                        className="h-7 rounded-full px-2.5 text-xs font-normal data-[state=on]:border-foreground/30 data-[state=on]:bg-muted data-[state=on]:font-medium">
+                        className="h-7 rounded-full px-2.5 text-xs font-normal data-[state=on]:border-foreground data-[state=on]:bg-muted data-[state=on]:font-medium">
                         {t.label}
                       </ToggleGroupItem>
                     ))}

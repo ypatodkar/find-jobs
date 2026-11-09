@@ -20,7 +20,7 @@ import { useSeen } from "../lib/seen.js";
 import { withSource } from "../lib/outbound.js";
 
 const UNAVAILABLE = "Listings for this investor are temporarily unavailable; its board will be checked again automatically.";
-const LINK = "rounded-sm underline decoration-muted-foreground/50 underline-offset-4 outline-none hover:text-foreground hover:decoration-foreground focus-visible:ring-3 focus-visible:ring-ring/50";
+const LINK = "rounded-sm underline decoration-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:decoration-foreground focus-visible:ring-3 focus-visible:ring-ring";
 const FOOT_H = "mb-2 text-sm font-medium text-foreground";
 
 export default function Firm() {
@@ -96,7 +96,7 @@ export default function Firm() {
         <header className="pt-6 pb-5 md:pt-8">
           <nav aria-label="Breadcrumb">
             <ol className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-              <li><a href="firms.html" className="rounded-sm transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50">Investors</a></li>
+              <li><a href="firms.html" className="rounded-sm transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring">Investors</a></li>
               <li aria-hidden="true"><ChevronRight className="size-3.5" /></li>
               <li className="min-w-0 truncate text-foreground" aria-current="page">{firm ? firm.name : "Firm not found"}</li>
             </ol>

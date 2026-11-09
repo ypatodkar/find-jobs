@@ -248,7 +248,7 @@ const DetailPane = forwardRef(function DetailPane({ job, open, sheet, narrowColu
         <div id="detail-bar" inert={!barShown}
           className={cn(
             "detail-bar absolute inset-x-0 top-0 flex items-center gap-3 border-b px-(--pane-x) py-2 backdrop-blur-sm",
-            sheet ? "bg-background/95" : "bg-card/95",
+            sheet ? "bg-background" : "bg-card",
             barShown ? "is-shown opacity-100" : "pointer-events-none -translate-y-1.5 opacity-0",
             "motion-safe:transition-[opacity,translate] motion-safe:duration-150 motion-safe:ease-out",
           )}>

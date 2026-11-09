@@ -63,7 +63,7 @@ function SearchField({ input, className, onClear, ...props }) {
   }, [input]);
   return (
     <div data-slot="command-input-wrapper" className="p-1 pb-0">
-      <InputGroup className="h-8! rounded-lg! border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
+      <InputGroup className="h-8! rounded-lg! border-transparent bg-muted shadow-none! *:data-[slot=input-group-addon]:pl-2!">
         <input ref={input} type="search" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls={ids.list}
           aria-activedescendant={ids.active} autoComplete="off" autoCorrect="off" spellCheck={false} data-slot="command-input"
           className={cn("w-full bg-transparent text-sm outline-hidden placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:appearance-none", className)}
@@ -193,7 +193,7 @@ export default function FilterPicker({ dim, selected, counts, onChange, inline =
               <CommandItem key={v} value={v} onSelect={() => toggle(v, !checked)}
                 className={cn("[&>svg:last-child]:hidden", inline && "py-2.5")}>
                 <span aria-hidden="true" className={cn("flex size-4 shrink-0 items-center justify-center rounded-[4px] border shadow-xs",
-                  checked ? "border-primary bg-primary" : "border-input dark:bg-input/30")}>
+                  checked ? "border-primary bg-primary" : "border-input")}>
                   {checked ? <CheckIcon className="size-3.5 text-primary-foreground!" /> : null}
                 </span>
                 <span className={cn("min-w-0 flex-1 break-words", count === 0 && "text-muted-foreground")}>{dim.labelFor(v)}</span>

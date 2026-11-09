@@ -28,7 +28,7 @@ function when(ts) {
 // Underlined only on hover: with four titles separated by dots on one line, four
 // permanent underlines read as one striped block rather than as separate links.
 const Role = ({ r }) => (r.url ? (
-  <a className="rounded-sm underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+  <a className="rounded-sm underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring"
     href={withSource(r.url)} target="_blank" rel="noopener noreferrer">{r.title}</a>
 ) : r.title);
 
@@ -83,7 +83,7 @@ export default function Viewed({ jobs, seen }) {
             "*-content" slot as an overlay and pauses ↑/↓ list browsing while one is open,
             and this panel is part of the page, not an overlay over it. */}
         <CollapsibleContent ref={panel} data-slot="viewed-panel"
-          className="mt-2 max-h-80 max-w-3xl overflow-y-auto rounded-xl bg-card text-sm text-card-foreground shadow-xs ring-1 ring-foreground/10">
+          className="mt-2 max-h-80 max-w-3xl overflow-y-auto rounded-xl bg-card text-sm text-card-foreground shadow-xs ring-1 ring-border">
           <p className="px-4 pt-3 pb-2 text-muted-foreground tabular">
             {roles} role{roles === 1 ? "" : "s"} across {list.length} compan{list.length === 1 ? "y" : "ies"}
           </p>

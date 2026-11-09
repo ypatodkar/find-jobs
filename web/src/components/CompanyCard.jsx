@@ -47,7 +47,7 @@ export default function CompanyCard({ group: g, open, onToggle, selectedId, onSe
   return (
     <section className={cn("cgroup overflow-hidden rounded-xl border bg-card text-card-foreground", open && "is-open")}>
       <button
-        className="cg-head group/head flex w-full cursor-pointer flex-col gap-1.5 px-4 py-3 text-left transition-colors outline-none hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset motion-reduce:transition-none"
+        className="cg-head group/head flex w-full cursor-pointer flex-col gap-1.5 px-4 py-3 text-left transition-colors outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring focus-visible:ring-inset motion-reduce:transition-none"
         type="button" data-company={g.company} aria-expanded={open} onClick={(e) => onToggle(g.company, e.currentTarget)}
       >
         <span className="cg-top flex w-full items-start gap-3">
@@ -87,14 +87,14 @@ export default function CompanyCard({ group: g, open, onToggle, selectedId, onSe
             <MapPinIcon aria-hidden="true" className="mr-1 inline size-3.5 align-[-0.15em]" />
             <DotList items={cities.map(([c, k]) => ({
               key: c, className: "cg-city",
-              node: <>{c}{n > 1 ? <>&nbsp;<span className="cg-n tabular text-foreground/70">{k}</span></> : null}</>,
+              node: <>{c}{n > 1 ? <>&nbsp;<span className="cg-n tabular text-muted-foreground">{k}</span></> : null}</>,
             }))} />
           </span>
         ) : null}
       </button>
       {open ? (
         // data-pay: whether any role here shows pay, so the rows can drop an empty pay column.
-        <div className="cg-body @container flex flex-col gap-0.5 border-t bg-muted/30 py-2 dark:bg-muted/20" data-pay={g.jobs.some((j) => compactPay(j)) ? "yes" : "no"}>
+        <div className="cg-body @container flex flex-col gap-0.5 border-t py-2" data-pay={g.jobs.some((j) => compactPay(j)) ? "yes" : "no"}>
           {g.jobs.map((j) => <JobRow key={j.job_id} job={j} inGroup selected={j.job_id === selectedId} onSelect={onSelect} seen={!!seen[j.job_id]} />)}
         </div>
       ) : null}

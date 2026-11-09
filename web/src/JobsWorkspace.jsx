@@ -76,7 +76,7 @@ const OPEN_OVERLAY = '[data-state="open"][data-slot$="-content"]:not([data-slot=
 // The All jobs / Companies switch: two pressed-state buttons drawn as shadcn's TabsList
 // and TabsTrigger. Buttons rather than Radix Tabs, because the view lives in the address
 // bar (lib/useFilterState.js) and there are no tab panels to point at.
-const VIEW_TAB = "seg relative inline-flex h-full flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-transparent px-2.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 motion-reduce:transition-none dark:text-muted-foreground dark:hover:text-foreground aria-pressed:bg-background aria-pressed:text-foreground aria-pressed:shadow-sm dark:aria-pressed:border-input dark:aria-pressed:bg-input/30 dark:aria-pressed:text-foreground";
+const VIEW_TAB = "seg relative inline-flex h-full flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-transparent px-2.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-all outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring motion-reduce:transition-none dark:text-muted-foreground dark:hover:text-foreground aria-pressed:bg-background aria-pressed:text-foreground aria-pressed:shadow-sm dark:aria-pressed:text-foreground";
 
 // While the first jobs load: the shape of the list and the pane, so nothing jumps when
 // they land.
@@ -559,7 +559,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
             <span aria-hidden="true"
               className="h-full w-px bg-border transition-colors group-hover/divider:bg-ring group-focus-visible/divider:bg-ring in-[.is-resizing-columns]:bg-ring motion-reduce:transition-none" />
             <span aria-hidden="true"
-              className="absolute top-1/2 left-1/2 h-8 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ring opacity-0 transition-opacity group-hover/divider:opacity-100 group-focus-visible/divider:opacity-100 group-focus-visible/divider:ring-3 group-focus-visible/divider:ring-ring/50 in-[.is-resizing-columns]:opacity-100 motion-reduce:transition-none" />
+              className="absolute top-1/2 left-1/2 h-8 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ring opacity-0 transition-opacity group-hover/divider:opacity-100 group-focus-visible/divider:opacity-100 group-focus-visible/divider:ring-3 group-focus-visible/divider:ring-ring in-[.is-resizing-columns]:opacity-100 motion-reduce:transition-none" />
           </div>
           {/* The pane's dock: sticky beside the list, so the pane (DetailPane, the scroll
               container) stays in view and scrolls on its own. Under 1100px it is a plain

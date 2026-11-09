@@ -290,7 +290,7 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
         // in reach deep in a long list (the old site pinned its Filters button too).
         // JobsWorkspace reads its height into --toolbar-height.
         <div id="job-search-bar" role="search" aria-label="Job search"
-          className="sticky top-(--header-height) z-30 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
+          className="sticky top-(--header-height) z-30 border-b bg-background">
           <div className={cn(CONTAINER, "flex items-center gap-2 py-2")}>
             {search}
             <Button ref={toggle} type="button" variant="outline" id="mobile-filter-toggle" className="h-10 shrink-0" aria-controls="job-controls"
@@ -318,11 +318,11 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
         } : { role: "search" })}
         className={mobile
           ? "fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] scroll-pt-16 scroll-pb-24 flex-col overflow-y-auto overscroll-contain rounded-t-xl border-t bg-background shadow-lg duration-200 animate-in slide-in-from-bottom motion-reduce:animate-none"
-          : "sticky top-(--header-height) z-30 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80"}>
+          : "sticky top-(--header-height) z-30 border-b bg-background"}>
         {mobile ? (
           <>
             <div className="sticky top-0 z-10 rounded-t-xl bg-background">
-              <div aria-hidden="true" className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-muted-foreground/30" />
+              <div aria-hidden="true" className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-border" />
               <div className="flex items-center justify-between gap-2 border-b py-1 pr-2 pl-4">
                 <h2 id="filter-drawer-title" className="text-base font-semibold">Filters</h2>
                 <div className="flex items-center gap-1">

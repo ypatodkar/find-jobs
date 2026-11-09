@@ -42,26 +42,9 @@
 @theme inline {
   --font-sans: "Geist Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-heading: var(--font-sans);
-  /* Ours: the one colour beyond shadcn's neutrals. It marks the selected job and
-     little else (DESIGN.md, "Colour"). */
-  --color-brand: var(--brand);
-  --color-brand-foreground: var(--brand-foreground);
   /* Ours: resume-match results only (a requirement shown, partly shown). */
   --color-success: var(--success);
   --color-warning: var(--warning);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -89,97 +72,70 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* The palette: four shades and a grey (DESIGN.md, "Palette"). Every colour token below
+   is one of them, so a component never introduces a shade of its own.
+     paper  page, cards, menus, dialogs
+     wash   every fill: hover, selected, pressed, chips, skeletons, secondary buttons
+     line   borders, inputs, dividers; hover on something already in the wash
+     grey   secondary text, icons, focus rings
+     ink    text, filled buttons, the outline of what is selected
+   Colour beyond these means something: red for errors and removal, green and amber for
+   resume-match results. */
 :root {
   color-scheme: light;
   /* The sticky site header's height; the toolbar and the job pane dock below it. */
   --header-height: 3.5rem;
-  --brand: oklch(0.541 0.281 293.009);
-  --brand-foreground: oklch(0.985 0 0);
+  --radius: 0.625rem;
+
+  --paper: oklch(1 0 0);
+  --wash: oklch(0.97 0 0);
+  --line: oklch(0.922 0 0);
+  /* About 5:1 on paper and on the wash, so grey text and the focus ring read on both. */
+  --grey: oklch(0.51 0 0);
+  --ink: oklch(0.145 0 0);
+
   --success: oklch(0.527 0.154 150.069);
   --warning: oklch(0.666 0.179 58.318);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  /* Darker than shadcn's stock 0.556: muted text also sits on tinted surfaces (the
-     selected job's brand tint, bg-muted chips and tab counts), where 0.556 falls just
-     short of 4.5:1. 0.51 keeps it at about 5:1 or more on all of them. */
-  --muted-foreground: oklch(0.51 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  /* Near-black rather than shadcn v4's pale grey, so the focus halo (ring/50) is at
-     least 3:1 against white and keyboard users can see where they are. */
-  --ring: oklch(0.205 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.205 0 0);
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --brand: oklch(0.702 0.183 293.541);
-  --brand-foreground: oklch(0.145 0 0);
+  --paper: oklch(0.145 0 0);
+  --wash: oklch(0.225 0 0);
+  --line: oklch(0.3 0 0);
+  --grey: oklch(0.708 0 0);
+  --ink: oklch(0.985 0 0);
+
   --success: oklch(0.792 0.209 151.711);
   --warning: oklch(0.828 0.189 84.429);
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  /* Light grey on dark for the same reason: ring/50 stays above 3:1 on the card and
-     the background. */
-  --ring: oklch(0.87 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.87 0 0);
+}
+
+/* shadcn's tokens, each one of the shades above (both themes). */
+:root {
+  --background: var(--paper);
+  --card: var(--paper);
+  --popover: var(--paper);
+  --foreground: var(--ink);
+  --card-foreground: var(--ink);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--paper);
+  --secondary: var(--wash);
+  --secondary-foreground: var(--ink);
+  --muted: var(--wash);
+  --muted-foreground: var(--grey);
+  --accent: var(--wash);
+  --accent-foreground: var(--ink);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--grey);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
   html {
     @apply font-sans;

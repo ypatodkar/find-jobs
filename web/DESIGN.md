@@ -21,16 +21,30 @@ https://claude.ai/artifact/JrkT6vZ6c1tW1jYej8EYTa
 
 ## Look
 
-- **Palette:** shadcn neutral. Use the semantic tokens only: `bg-background`, `bg-card`,
-  `bg-muted`, `text-foreground`, `text-muted-foreground`, `border`, `ring`, `primary`,
-  `destructive`. Never a raw colour (`text-zinc-500`, `#fff`, `violet-600`).
-- **Primary is black** (near-white in dark mode), shadcn's neutral: filled buttons
-  (Apply, Upload resume, Show N roles), checked boxes and progress. Focus rings are
-  near-black (near-white in dark) so the halo keeps 3:1 contrast. (Violet buttons were
-  tried on 2026-11-09 and dropped the same day: the owner preferred black and white.)
-- **Brand:** one extra token, `brand` (violet), for the **selected job** in the list
-  and, sparingly, the one state that must stand out beside it (the active country in
-  the switcher). Not for buttons, links or focus rings.
+- **Palette:** four shades and a grey, defined once at the top of `src/styles/app.css`.
+  Every shadcn token points at one of them, in both themes:
+
+  | Shade | Tokens | Used for |
+  |---|---|---|
+  | paper | `background`, `card`, `popover` | the page, cards, menus, dialogs |
+  | wash | `muted`, `secondary`, `accent` | every fill: hover, selected, pressed, chips, skeletons |
+  | line | `border`, `input` | borders, inputs, dividers; hover on something already washed |
+  | grey | `muted-foreground`, `ring` | secondary text, icons, the focus ring |
+  | ink | `foreground`, `primary` | text, filled buttons, the outline of what is selected |
+
+  Rules that keep it to those five:
+  - **No opacity on a neutral** (`bg-muted/50`, `ring-foreground/10`, `text-foreground/60`):
+    each one is a new shade. Use the token itself. The one exception is a filled button's
+    hover, `hover:bg-primary/90`.
+  - **No `dark:` colour overrides.** Dark mode is the same tokens with dark values.
+  - **Hover:** paper goes to the wash; the wash goes to the line; ink goes to ink at 90%.
+  - **Selected / pressed / on:** the wash with an ink outline (`border-foreground` or
+    `ring-1 ring-foreground`). The selected job, toggles that are on, checked fields.
+  - **Focus:** `focus-visible:ring-3 focus-visible:ring-ring` (solid grey).
+  - Never a raw colour (`text-zinc-500`, `#fff`, `violet-600`). (Violet buttons and a violet
+    selected job were tried on 2026-11-09 and dropped the same day: the owner preferred
+    black and white with a few shared shades.)
+- **Errors:** `destructive` (red), for errors and removing things only.
 - **Status:** `success` (green) and `warning` (amber), for resume-match results only
   (a requirement shown, partly shown). Everything else stays neutral.
 - **Dark mode:** automatic through the tokens. `<html data-theme>` always holds
@@ -159,5 +173,5 @@ mechanics and style the markup with the same tokens and classes the primitive us
 
 Radix gives roles, focus management and Escape. Beyond that: every icon-only control
 has an `aria-label`; text contrast uses the tokens (never `opacity` on text below
-`text-muted-foreground`); focus stays visible (`focus-visible:ring-3 ring-ring/50`,
-shadcn's default); motion respects `motion-reduce:`.
+`text-muted-foreground`); focus stays visible (`focus-visible:ring-3 ring-ring`,
+solid grey); motion respects `motion-reduce:`.
