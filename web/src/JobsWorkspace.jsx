@@ -409,7 +409,9 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
         <EmptyDescription>Try a broader search, or remove a filter or two.</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button type="button" variant="outline" size="sm" onClick={reset}>Reset filters</Button>
+        {/* The button disappears with the empty state, so focus goes back to the search
+            box (always mounted, on a phone too) rather than falling to <body>. */}
+        <Button type="button" variant="outline" size="sm" onClick={() => { reset(); document.getElementById("job-search")?.focus(); }}>Reset filters</Button>
       </EmptyContent>
     </Empty>
   );
