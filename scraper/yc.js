@@ -106,8 +106,20 @@ function ycSponsorship(visa, descriptionText) {
 
 const escapeHtml = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+// YC's Markdown arrives with some characters already HTML-encoded ("We&#x27;re"). Escaping
+// that again for the page made "We&amp;#x27;re", which showed as "We&#x27;re". So the
+// text is decoded first, then escaped once.
+const NAMED = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+function decodeEntities(s) {
+  return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => {
+    if (e[0] !== "#") return NAMED[e.toLowerCase()] ?? m;
+    const n = /^#x/i.test(e) ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+    return Number.isFinite(n) && n > 0 && n < 0x110000 ? String.fromCodePoint(n) : m;
+  });
+}
+
 function inlineMarkdown(s) {
-  return escapeHtml(s)
+  return escapeHtml(decodeEntities(s))
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2">$1</a>')
     .replace(/\*\*([^*]+)\*\*|__([^_]+)__/g, (_, a, b) => `<strong>${a || b}</strong>`)
     .replace(/(^|[^*\w])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
