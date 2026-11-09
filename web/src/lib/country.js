@@ -9,9 +9,10 @@
 // way back. That script runs before this module exists, so it repeats the key names;
 // test/country.test.js runs it as written.
 
+// `inTitle` completes "Find Jobs in …"; `name` and `detail` are the menu's two lines.
 export const COUNTRIES = [
-  { code: "US", label: "US", name: "the United States", href: "./" },
-  { code: "IN", label: "India", name: "India", href: "in.html" },
+  { code: "US", inTitle: "the US", name: "United States", detail: "San Francisco, New York, Seattle and 16 more metros", href: "./" },
+  { code: "IN", inTitle: "India", name: "India", detail: "Bengaluru, Delhi NCR, Hyderabad and 5 more cities", href: "in.html" },
 ];
 
 const KEY = "vc-directory-country";

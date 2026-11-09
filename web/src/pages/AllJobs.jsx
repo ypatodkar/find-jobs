@@ -1,7 +1,7 @@
 // The all-jobs page (index.html): every role, with the Investor filter.
 import { useEffect, useMemo, useState } from "react";
 import Masthead, { PRIVACY_NOTE } from "../components/Masthead.jsx";
-import { CountryNote, CountrySwitch } from "../components/Country.jsx";
+import { CountryNote, CountryTitle } from "../components/Country.jsx";
 import { Featured } from "../components/HeaderExtras.jsx";
 import Viewed from "../components/Viewed.jsx";
 import JobsWorkspace from "../JobsWorkspace.jsx";
@@ -20,10 +20,7 @@ export default function AllJobs() {
     <div className="wrap">
       <Masthead compact nav={[["firms.html", "Browse by investor →"], ["about.html", "About"]]} account>
         <div className="masthead-main">
-          <div className="title-row">
-            <h1 className="title">Find Jobs</h1>
-            <CountrySwitch current="US" />
-          </div>
+          <CountryTitle current="US" />
           <div className="stats" id="all-stats">{error ? <span>No job data</span> : empty ? <span>No data yet</span> : null}</div>
         </div>
         <p className="dek">Engineering roles across all 16 tracked portfolios in a single list. Search across 19 US metros and choose the filters that fit you.</p>
