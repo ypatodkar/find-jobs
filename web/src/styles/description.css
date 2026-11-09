@@ -1,0 +1,143 @@
+/* The job description in the job pane (DetailPane, #detail-body), and the highlight a
+   "Find in JD" jump leaves on it (lib/jdMarks.js adds .desc-hit and the match-passage
+   highlight).
+
+   The description is HTML we don't write: lib/descriptions.js rebuilds each board's
+   markup from an allowlist (p, br, ul, ol, li, h3, h4, strong, em, a), and marks a
+   paragraph that is only bold text as .desc-label, because most boards write their
+   section headings that way. So it can't carry Tailwind classes, and its look lives
+   here, in the theme's tokens only (web/DESIGN.md). Rules for tags the allowlist drops
+   today (h1, h2, tables, code, images) keep the text readable if it ever lets them
+   through.
+
+   Reading comfort first: 15px text on a 28px line, at most about 70 characters to a
+   line. Geist's figures are wide, so that is 60ch (about 600px), not 70ch. At the
+   default split the pane is narrower than that and the text fills it, as before; widen
+   the pane and the line stops growing. Headings come in two sizes, set apart by weight
+   and space more than size.
+
+   Scoped with :where(#detail-body), which adds no specificity: lib/jdMarks.js also puts
+   resume-match marks and evidence notes (.jd-mark, .jd-note) inside the description,
+   and their own stylesheet (with ResumeMatch) must win over these defaults with a
+   plain class selector. */
+
+:where(#detail-body) {
+  max-width: 60ch;
+  font-size: 0.9375rem;
+  line-height: 1.75rem;
+  color: color-mix(in oklch, var(--foreground) 88%, transparent);
+  overflow-wrap: anywhere;
+}
+
+/* Headings: the bigger size for a board's own h1 to h3, the body size for h4 to h6 and
+   the bold-paragraph headings (.desc-label), which are most of them. */
+:where(#detail-body) :is(h1, h2, h3) {
+  margin: 2rem 0 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+:where(#detail-body) :is(h4, h5, h6, .desc-label) {
+  margin: 1.75rem 0 0.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+/* A heading straight after another keeps them together. */
+:where(#detail-body) :is(h1, h2, h3, h4, h5, h6, .desc-label) + :is(h1, h2, h3, h4, h5, h6, .desc-label) { margin-top: 0.5rem; }
+
+:where(#detail-body) p { margin: 0 0 1rem; }
+
+:where(#detail-body) :is(ul, ol) { margin: 0 0 1rem; padding-left: 1.375rem; }
+:where(#detail-body) ul { list-style: disc; }
+:where(#detail-body) ol { list-style: decimal; }
+:where(#detail-body) ul ul { list-style: circle; }
+:where(#detail-body) :is(ul, ol) :is(ul, ol) { margin: 0.25rem 0 0.5rem; }
+:where(#detail-body) li { margin: 0.375rem 0; padding-left: 0.25rem; }
+:where(#detail-body) li::marker { color: var(--muted-foreground); }
+:where(#detail-body) li > p { margin: 0; }
+/* No space above the first block or below the last (after the rules above, which they
+   tie with). */
+:where(#detail-body) > :first-child { margin-top: 0; }
+:where(#detail-body) > :last-child { margin-bottom: 0; }
+
+:where(#detail-body) :is(strong, b) { font-weight: 600; color: var(--foreground); }
+:where(#detail-body) :is(em, i) { font-style: italic; }
+
+/* Links read as links without colour: brand violet is kept for the selected job. */
+:where(#detail-body) a {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklch, var(--foreground) 35%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  border-radius: 2px;
+}
+:where(#detail-body) a:hover { text-decoration-color: var(--foreground); }
+:where(#detail-body) a:focus-visible { outline: 3px solid color-mix(in oklch, var(--ring) 50%, transparent); outline-offset: 2px; }
+
+:where(#detail-body) blockquote {
+  margin: 0 0 1rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--border);
+  color: var(--muted-foreground);
+}
+:where(#detail-body) :is(code, kbd, samp) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875em;
+  padding: 0.125rem 0.3rem;
+  border-radius: calc(var(--radius) * 0.6);
+  background: var(--muted);
+}
+:where(#detail-body) pre {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  border-radius: calc(var(--radius) * 0.8);
+  background: var(--muted);
+}
+:where(#detail-body) pre code { padding: 0; background: none; }
+:where(#detail-body) table {
+  display: block;
+  max-width: 100%;
+  margin: 0 0 1rem;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+}
+:where(#detail-body) :is(th, td) { padding: 0.375rem 0.75rem; border: 1px solid var(--border); text-align: left; vertical-align: top; }
+:where(#detail-body) th { font-weight: 600; color: var(--foreground); background: var(--muted); }
+:where(#detail-body) :is(img, video, iframe) { max-width: 100%; height: auto; }
+:where(#detail-body) hr { margin: 2rem 0; border: 0; border-top: 1px solid var(--border); }
+
+/* The pane's own notes in place of a description: loading, failed, none. */
+.detail-note { margin: 0; color: var(--muted-foreground); }
+
+/* Where a "Find in JD" jump lands: the paragraph or bullet takes a brief tint (the
+   class comes off after 2.4 s), and the exact words a stronger one. With motion
+   allowed, the tint fades out instead of switching off. Neutral, a wash of the text
+   colour: brand violet is kept for the selected job (DESIGN.md, "Brand"), and green
+   and amber mean resume-match results. */
+:where(#detail-body) .desc-hit {
+  background-color: color-mix(in oklch, var(--foreground) 6%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in oklch, var(--foreground) 6%, transparent);
+  border-radius: 4px;
+}
+/* The jump also moves focus to the passage (tabindex -1), so a screen reader reads on
+   from there; the tint is its visible mark, not a focus ring. */
+:where(#detail-body) :is(p, li)[tabindex="-1"]:focus { outline: none; }
+::highlight(match-passage) {
+  background-color: color-mix(in oklch, var(--foreground) 16%, transparent);
+  color: var(--foreground);
+}
+@media (prefers-reduced-motion: no-preference) {
+  :where(#detail-body) :is(p, li) { transition: background-color 400ms ease, box-shadow 400ms ease; }
+}
+
+/* The phone sheet (DetailPane under 1100px) covers the page; while it is open the page
+   behind it does not scroll. JobsWorkspace sets the class. */
+body.detail-open { overflow: hidden; }
