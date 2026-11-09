@@ -13,10 +13,6 @@ import { acquirerOf, compactPay, relativeDate } from "../lib/jobs.js";
 import { openedLabel } from "../lib/groups.js";
 import { withSource } from "../lib/outbound.js";
 
-// Rows scrolled into view (↑ / ↓, and the first row of a new page) stop below the
-// sticky header and filter toolbar rather than under them.
-export const BELOW_TOOLBAR = "scroll-mt-[calc(var(--header-height)+var(--toolbar-height,0px)+0.75rem)]";
-
 /** "(acquired by …)" after a company's name, for companies that have been sold. */
 export function AcquiredNote({ company }) {
   const by = acquirerOf(company);
@@ -52,7 +48,6 @@ export default function JobRow({ job, selected, onSelect, inGroup = false, opene
     <article
       className={cn(
         "job group/row relative flex cursor-pointer items-start gap-x-4 gap-y-1 transition-colors motion-reduce:transition-none",
-        BELOW_TOOLBAR,
         inGroup
           // A line in a company card: indented to the company's name, and the selected
           // one marked by a bar on its left edge.

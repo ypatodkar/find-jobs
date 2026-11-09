@@ -19,7 +19,7 @@ import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import Filters from "./components/Filters.jsx";
-import JobRow, { BELOW_TOOLBAR } from "./components/JobRow.jsx";
+import JobRow from "./components/JobRow.jsx";
 import CompanyCard from "./components/CompanyCard.jsx";
 import Pagination from "./components/Pagination.jsx";
 import DetailPane from "./components/DetailPane.jsx";
@@ -359,8 +359,9 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
 
   // While the filter toolbar is pinned (sticky, under the sticky site header), the pane
   // and the divider dock under it and rows scroll into view below it: its height is
-  // published as --toolbar-height (DOCK_TOP, BELOW_TOOLBAR). At any width, since the
-  // header is sticky at every width; a toolbar that is not sticky counts as 0.
+  // published as --toolbar-height (DOCK_TOP, and the page's scroll-padding-top in
+  // app.css, which keeps focused and scrolled-to rows clear of both bars). At any width,
+  // since the header is sticky at every width; a toolbar that is not sticky counts as 0.
   useEffect(() => {
     const controls = document.getElementById("job-controls");
     if (!controls) return;
@@ -437,7 +438,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
             ? "is-split grid-cols-[minmax(350px,var(--job-list-width,60fr))_1rem_minmax(440px,var(--job-detail-width,40fr))] gap-x-2"
             : "grid-cols-1")}>
           <div className="results-main min-w-0">
-            <div className={cn("results-bar mb-3 flex flex-col gap-2", BELOW_TOOLBAR)} id="job-results-bar" hidden={!jobs}>
+            <div className={"results-bar mb-3 flex flex-col gap-2"} id="job-results-bar" hidden={!jobs}>
               {/* Tabs and Sort share a line; useColumns keeps the list wide enough for
                   both, and wrapping is only the fallback. */}
               <div className="list-head flex flex-wrap items-center gap-x-4 gap-y-2" id="list-head">

@@ -184,6 +184,10 @@
   html {
     @apply font-sans;
     -webkit-text-size-adjust: 100%;
+    /* Tab and Shift+Tab scroll the focused element into view; without this it can land
+       under the sticky header and filter toolbar. --toolbar-height is published by
+       JobsWorkspace and is 0px while no toolbar is pinned. */
+    scroll-padding-top: calc(var(--header-height) + var(--toolbar-height, 0px) + 0.75rem);
   }
   body {
     @apply bg-background text-foreground antialiased;
