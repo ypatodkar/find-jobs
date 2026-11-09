@@ -28,11 +28,20 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode: this visit only */ } },
 };
 
-/** An icon-only button says what it does twice: to screen readers, and in a tooltip. */
-function Tip({ label, children }) {
+/**
+ * An icon-only button says what it does twice: to screen readers, and in a tooltip.
+ *
+ * Radix opens a tooltip whenever its trigger gains focus, and that includes a menu or
+ * popover handing focus back to the button that opened it (Escape, a choice, the
+ * feedback form closing itself): the label would then float over the page, and on a
+ * phone stay there. That return comes from nowhere (the focused element inside the
+ * overlay is already gone, so relatedTarget is null), while tabbing onto the button
+ * comes from the previous control, so only a focus with an origin opens the tooltip.
+ */
+export function Tip({ label, children }) {
   return (
     <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipTrigger asChild onFocus={(e) => { if (!e.relatedTarget) e.preventDefault(); }}>{children}</TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   );
@@ -80,7 +89,7 @@ export function Heart() {
     <span id="heart-slot" className="inline-flex">
       <Tip label={on ? "Thanks for the love" : "Like this site"}>
         <Button type="button" variant="ghost" size="icon-sm" data-liked={on || undefined}
-          className={cn("text-muted-foreground", on && "cursor-default text-foreground hover:bg-transparent")}
+          className={cn("text-muted-foreground", on && "cursor-default text-foreground hover:bg-transparent dark:hover:bg-transparent")}
           aria-pressed={on} aria-label={on ? "You liked this site" : "Like this site"} onClick={like}>
           <HeartIcon ref={icon} className={cn(on && "fill-current")} />
         </Button>
@@ -202,9 +211,11 @@ export function Feedback() {
             <>
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm leading-snug font-medium" id="fb-title">Tell me what would make this better</p>
-                <Button type="button" variant="ghost" size="icon-xs" className="-mt-0.5 -mr-1 text-muted-foreground" aria-label="Close feedback" onClick={close}>
-                  <XIcon />
-                </Button>
+                <Tip label="Close">
+                  <Button type="button" variant="ghost" size="icon-xs" className="-mt-0.5 -mr-1 text-muted-foreground" aria-label="Close feedback" onClick={close}>
+                    <XIcon />
+                  </Button>
+                </Tip>
               </div>
               <form className="flex flex-col gap-3" noValidate onSubmit={submit}>
                 <div className="flex flex-col gap-2">

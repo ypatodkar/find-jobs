@@ -6,11 +6,12 @@
 // (children) under it. `account` still decides whether the header shows the account
 // button, as it did, so the pages that never asked the server who the visitor is still
 // don't. `nav`, `extras` and `compact` are no longer used: the header's links are the
-// same on every page, the heart is in the footer and the click counter on About.
+// same on every page, the heart and LinkedIn are in the footer (PRIVACY_NOTE below
+// brings them along) and the click counter on About.
 import { cn } from "cn";
 import { CONTAINER } from "@/lib/layout.js";
 import SiteHeader from "./SiteHeader.jsx";
-import { PrivacyNote } from "./SiteFooter.jsx";
+import { FooterShared } from "./SiteFooter.jsx";
 
 function here() {
   const page = (location.pathname.split("/").pop() || "index.html").replace(/\.html$/, "");
@@ -31,5 +32,8 @@ export default function Masthead({ account = false, children }) {
   );
 }
 
-// OBSOLETE after the redesign: SiteFooter shows the note itself (PrivacyNote).
-export const PRIVACY_NOTE = <PrivacyNote />;
+// OBSOLETE after the redesign: SiteFooter shows the note itself. Until then, the pages
+// that put this in their own footer get the whole shared row (note, heart, LinkedIn),
+// since the header no longer carries the heart and LinkedIn. In the frame's gutter,
+// which the row's outdented icon buttons rely on.
+export const PRIVACY_NOTE = <div className={cn(CONTAINER, "py-6")}><FooterShared /></div>;

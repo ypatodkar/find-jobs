@@ -57,19 +57,26 @@ const BLOCKS = cn(
   "[&_a]:font-medium [&_a]:text-foreground [&_a]:underline [&_a]:underline-offset-4",
 );
 
+/** What every footer ends with: the privacy note, then the like heart and LinkedIn. */
+export function FooterShared({ className }) {
+  return (
+    <div className={cn("flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between", className)}>
+      <PrivacyNote />
+      <div className="-my-1 -ml-2 flex shrink-0 items-center gap-1 sm:-mr-2 sm:ml-0">
+        <Heart />
+        <LinkedIn />
+      </div>
+    </div>
+  );
+}
+
 export default function SiteFooter({ children }) {
   return (
     <footer data-slot="site-footer" className="mt-auto pt-16">
       <div className="border-t">
         <div className={cn(CONTAINER, "py-10")}>
           {children ? <div className={BLOCKS}>{children}</div> : null}
-          <div className={cn("flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between", children && "mt-10 border-t pt-6")}>
-            <PrivacyNote />
-            <div className="-my-1 -ml-2 flex shrink-0 items-center gap-1 sm:-mr-2 sm:ml-0">
-              <Heart />
-              <LinkedIn />
-            </div>
-          </div>
+          <FooterShared className={children ? "mt-10 border-t pt-6" : undefined} />
         </div>
       </div>
     </footer>

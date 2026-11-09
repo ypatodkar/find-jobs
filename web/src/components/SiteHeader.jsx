@@ -11,7 +11,8 @@
 //
 // Left: the logo (to the visitor's country list), the country switcher, and Jobs /
 // Investors / About. Right: Feedback, the theme toggle and the account. Under md the
-// three links fold into a menu at the right end and the switcher shortens to "US".
+// three links fold into a menu at the right end and the switcher shortens to "US";
+// below 380 px the logo drops its wordmark, so the row never scrolls the page sideways.
 import { CompassIcon, MenuIcon } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
@@ -22,12 +23,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CONTAINER } from "@/lib/layout.js";
 import { COUNTRIES, chosenCountry } from "@/lib/country.js";
 import { AccountSlot } from "./Account.jsx";
 import { CountrySwitcher } from "./Country.jsx";
-import { Feedback, ThemeToggle } from "./HeaderExtras.jsx";
+import { Feedback, ThemeToggle, Tip } from "./HeaderExtras.jsx";
 
 /** The list a visitor means by "Jobs": this page's country, else the one they chose. */
 function listHref(country) {
@@ -48,11 +48,15 @@ export default function SiteHeader({ active = null, country = null, account = tr
     <header data-slot="site-header"
       className="sticky top-0 z-40 h-(--header-height) shrink-0 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
       <div className={cn(CONTAINER, "flex h-full items-center gap-1")} data-active={active || undefined} data-country={country || undefined}>
+        {/* Below 380 px (a 360 px Android phone, a 375 px iPhone mini) the row cannot
+            hold the wordmark beside India, Feedback, theme, account and Menu without
+            pushing the page sideways, so the compass stands alone there; the words
+            stay as the link's name. */}
         <a href={jobs} className="-ml-1 mr-1 flex shrink-0 items-center gap-2 rounded-md px-1 py-1 text-sm font-semibold whitespace-nowrap outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
           <CompassIcon className="size-5" aria-hidden="true" />
-          Find Jobs
+          <span className="max-[379px]:sr-only">Find Jobs</span>
         </a>
-        <Separator orientation="vertical" className="mx-1 data-vertical:h-5 data-vertical:self-center" />
+        <Separator orientation="vertical" className="mx-0.5 data-vertical:h-5 data-vertical:self-center md:mx-1" />
         <CountrySwitcher country={country} />
 
         <nav aria-label="Site" className="ml-2 hidden items-center gap-0.5 md:flex">
@@ -69,16 +73,13 @@ export default function SiteHeader({ active = null, country = null, account = tr
           <ThemeToggle />
           {account ? <AccountSlot /> : null}
           <DropdownMenu>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="ghost" size="icon-sm" className="md:hidden" aria-label="Menu">
-                    <MenuIcon />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent>Menu</TooltipContent>
-            </Tooltip>
+            <Tip label="Menu">
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="ghost" size="icon-sm" className="md:hidden" aria-label="Menu">
+                  <MenuIcon />
+                </Button>
+              </DropdownMenuTrigger>
+            </Tip>
             <DropdownMenuContent align="end" collisionPadding={16} className="w-44">
               {nav.map((n) => (
                 <DropdownMenuItem key={n.key} asChild className="aria-[current=page]:bg-muted aria-[current=page]:font-medium">

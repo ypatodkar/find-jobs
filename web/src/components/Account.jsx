@@ -15,11 +15,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { closeResumeSignIn, onButtonThemeChange, renderGoogleButton, signOut, useAuth } from "../lib/auth.js";
+import { Tip } from "./HeaderExtras.jsx";
 
-/** Google's own button, drawn by GIS into a host element and redrawn when the theme changes. */
-export function GoogleButton({ className = "", options, id }) {
+/**
+ * Google's own button, drawn by GIS into a host element and redrawn when the theme changes.
+ * `quiet`: when GIS cannot load (a blocker, a strict browser), draw nothing rather than
+ * the reason. The header has no room for a sentence, and the sign-in popup, which
+ * isn't quiet, says why at the moment it matters.
+ */
+export function GoogleButton({ className = "", options, id, quiet = false }) {
   const host = useRef(null);
   const { enabled } = useAuth();
   const [failed, setFailed] = useState("");
@@ -38,7 +43,7 @@ export function GoogleButton({ className = "", options, id }) {
   const cls = cn(className, "google-signin scheme-only-light");
   const off = "auth-off text-sm text-muted-foreground";
   if (!enabled) return <div className={cls} id={id}><p className={off}>Sign-in isn't set up on this server yet.</p></div>;
-  if (failed) return <div className={cls} id={id}><p className={off}>{failed}</p></div>;
+  if (failed) return quiet ? null : <div className={cls} id={id}><p className={off}>{failed}</p></div>;
   return <div ref={host} className={cls} id={id}></div>;
 }
 
@@ -56,7 +61,8 @@ function Face({ account, className }) {
 /**
  * The header's #account-slot. Signed out: Google's round icon button, in a box the size
  * of the header's other icon buttons. Signed in: the face, opening a menu with the
- * account and Sign out. Without sign-in on this server (a static host), nothing.
+ * account and Sign out. Without sign-in on this server (a static host), or when
+ * Google's script cannot load, nothing.
  */
 export function AccountSlot() {
   const { enabled, account } = useAuth();
@@ -64,22 +70,19 @@ export function AccountSlot() {
   let body = null;
   if (enabled && !account) {
     body = (
-      <GoogleButton className="account-signin flex min-h-8 min-w-8 items-center justify-center [&_.auth-off]:max-w-40 [&_.auth-off]:text-xs [&_.auth-off]:leading-tight"
+      <GoogleButton quiet className="account-signin flex min-h-8 min-w-8 items-center justify-center"
         id="account-signin" options={{ type: "icon", shape: "circle", size: "medium" }} />
     );
   } else if (enabled && account) {
     body = (
       <DropdownMenu>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="ghost" size="icon-sm" className="account-face rounded-full" aria-label={`Account: ${account.email}`}>
-                <Face account={account} className="size-7" />
-              </Button>
-            </DropdownMenuTrigger>
-          </TooltipTrigger>
-          <TooltipContent>{account.email}</TooltipContent>
-        </Tooltip>
+        <Tip label={account.email}>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="ghost" size="icon-sm" className="account-face rounded-full" aria-label={`Account: ${account.email}`}>
+              <Face account={account} className="size-7" />
+            </Button>
+          </DropdownMenuTrigger>
+        </Tip>
         <DropdownMenuContent align="end" collisionPadding={16} className="account-panel w-72">
           <DropdownMenuLabel className="flex items-center gap-3 py-2 font-normal">
             <Face account={account} className="size-9" />
