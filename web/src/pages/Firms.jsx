@@ -227,7 +227,7 @@ export default function Firms() {
       <SiteFooter>
         <section>
           <h3 className={FOOT_H}>Reading this list</h3>
-          <ul className="list-disc space-y-1.5 pl-5 leading-6 marker:text-muted-foreground">
+          <ul className="list-disc space-y-1.5 pl-5 marker:text-muted-foreground">
             <li>Firms marked <span className="rounded-sm bg-muted px-1 py-0.5 text-xs text-foreground">no public board</span> still hire into portfolio companies — check the firm's own careers page or LinkedIn instead of a dedicated board.</li>
             <li>Most dedicated boards (Getro-powered) let you filter by role — search each one for “backend” / “software engineer” directly rather than browsing.</li>
             <li>The three signal dots show how central AI is to a firm's public investment thesis: more filled dots means a stronger AI focus, not more open jobs.</li>
