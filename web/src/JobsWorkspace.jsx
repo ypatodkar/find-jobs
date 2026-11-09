@@ -164,8 +164,14 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
   const openedCompanies = useMemo(() => new Set(openedByCompany.keys()), [openedByCompany]);
   const filterOpts = { seen, openedCompanies };
 
-  const results = useMemo(() => (jobs ? filterJobs(jobs, filters, dims, filterOpts) : []), [jobs, filters, dims, seen, openedCompanies]); // eslint-disable-line react-hooks/exhaustive-deps
-  const sorted = useMemo(() => sortJobs(results, filters.sort), [results, filters.sort]);
+  // Sorted once per order, then filtered: the sort (it parses dates on every comparison)
+  // was most of the work, and running it per keystroke blocked typing for 150-450 ms on
+  // a slow CPU. filter() keeps the order, so the result is the same, except for "Most
+  // roles", which ranks companies by their count among the matches and so still sorts
+  // after the filter.
+  const ordered = useMemo(() => (jobs && filters.sort !== "count" ? sortJobs(jobs, filters.sort) : jobs), [jobs, filters.sort]);
+  const results = useMemo(() => (ordered ? filterJobs(ordered, filters, dims, filterOpts) : []), [ordered, filters, dims, seen, openedCompanies]); // eslint-disable-line react-hooks/exhaustive-deps
+  const sorted = useMemo(() => (filters.sort === "count" ? sortJobs(results, "count") : results), [results, filters.sort]);
   const groups = useMemo(() => (view === "grouped" ? buildGroups(sorted, filters.sort) : []), [view, sorted, filters.sort]);
   const companyCount = useMemo(() => new Set(sorted.map((j) => j.company)).size, [sorted]);
 
