@@ -2,6 +2,9 @@
 // and use ←/→ (Shift for bigger steps), Home/End for the limits, Enter or double-click
 // to reset. The width is remembered (localStorage "find-jobs-column-ratio").
 //
+// This is the divider's behaviour; JobsWorkspace draws it (a hairline with a grip,
+// like shadcn's ResizableHandle) and sets the grid columns from `style`.
+//
 // The list never gets narrower than its header (tabs and Sort side by side) or 350px,
 // and the description never narrower than 440px. Below 560px the description is marked
 // is-narrow-column, which tightens its layout.
@@ -9,6 +12,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const KEY = "find-jobs-column-ratio";
 export const DEFAULT_RATIO = 0.6; // the list's share
+
+// On <html> while dragging: the whole page shows the resize cursor, whatever the pointer
+// crosses, and no text gets selected. Tailwind classes (`**:` reaches every element),
+// plus is-resizing-columns, which the divider's grip keys off.
+const RESIZING = ["is-resizing-columns", "cursor-col-resize!", "select-none!", "**:cursor-col-resize!", "**:select-none!"];
 
 function savedRatio() {
   try {
@@ -74,7 +82,7 @@ export function useColumns(splitRef, dividerRef, wide) {
     const d = drag.current;
     if (!d) return;
     drag.current = null;
-    document.documentElement.classList.remove("is-resizing-columns");
+    document.documentElement.classList.remove(...RESIZING);
     if (commit) set(ratioRef.current, true); else set(d.initial, true);
     if (dividerRef.current && dividerRef.current.hasPointerCapture(d.id)) dividerRef.current.releasePointerCapture(d.id);
   };
@@ -101,7 +109,7 @@ export function useColumns(splitRef, dividerRef, wide) {
       const rect = e.currentTarget.getBoundingClientRect();
       drag.current = { id: e.pointerId, initial: ratioRef.current, offset: e.clientX - rect.left - rect.width / 2 };
       e.currentTarget.setPointerCapture(e.pointerId);
-      document.documentElement.classList.add("is-resizing-columns");
+      document.documentElement.classList.add(...RESIZING);
     },
     onPointerMove(e) {
       const d = drag.current;
