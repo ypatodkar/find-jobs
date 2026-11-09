@@ -11,8 +11,8 @@ A second list, `in.html`, holds roles in India: the Indian openings of the same
 companies, two Indian firms' boards (Peak XV, 3one4), and the companies in 41 Indian
 investors' portfolios, read company by company.
 
-A US | India switch beside the title moves between the two lists and remembers the
-choice in the browser. The home page opens the remembered list. Without a choice, a
+The title names the list's country, "Find Jobs in the US ▾", and the country opens a
+menu that moves between the two lists and remembers the choice in the browser. The home page opens the remembered list. Without a choice, a
 first visit on India's time zone opens the India list (and remembers it), with a note
 saying why and a link back. A browser that has used the site before stays on the US
 list, with a note about India until it picks. Links with filters open as shared. The
