@@ -104,11 +104,11 @@ full-bleed sticky bar and applies `CONTAINER` inside itself, and so do the resul
 results: the country note and the featured company go there.
 
 The toolbar row, left to right: search, the main filters, More filters, Saved filters,
-Reset and Undo; at the far right View and "Companies you've opened" (a popover). The
-row stays one line: the opened button shortens itself (full name, "Opened", icon and
-count), and last of all View drops its word and the search narrows. View also holds
-what shows above the list (the result count and the keyboard hint, both off by
-default; `lib/viewPrefs.js`). `#job-count` stays in the page, visually hidden when off.
+Reset and Undo; at the far right "Companies you've opened" (a popover). The row stays
+one line: the opened button shortens itself (full name, "Opened", icon and count), and
+last of all the search narrows. There is no View menu: the Hide toggles are checkboxes
+on a line under the list head (`components/HideOpened.jsx`). The result count and the
+keyboard hint are not shown; `#job-count` stays in the page, visually hidden.
 Each page also has an `<h1>` (visually hidden on the jobs pages, which have no title row).
 It is the skip link's target (`id="content"`, `tabIndex={-1}`; `#firm-name` on an
 investor's page), since `<main>` starts with the site header.
@@ -157,8 +157,7 @@ mechanics and style the markup with the same tokens and classes the primitive us
   `a[data-track-open][data-job-id]` (Apply). Both keep `data-company`, `data-city`,
   `data-title` where they have them.
 - **History in the browser:** opened roles (`lib/seen.js`), saved jobs
-  (`lib/saved.js`), saved filters (`lib/presets.js`), theme, column ratio, country, View's Show
-  choices (`lib/viewPrefs.js`):
+  (`lib/saved.js`), saved filters (`lib/presets.js`), theme, column ratio, country:
   same storage keys.
 - **Country routing:** `lib/country.js` and the inline script in `index.html`.
 - **First paint:** the header, intro and `Skeleton` rows (and a toolbar skeleton the

@@ -594,15 +594,14 @@ async function main(){
       return {track:bg(tabs)!=='rgba(0, 0, 0, 0)',segmented:bg(flat)!==bg(grouped)&&grouped.getBoundingClientRect().left>=flat.getBoundingClientRect().right,sortApart:!tabs.contains(sort)&&(s.left-t.right>=8||s.top>=t.bottom)};
     });
     assert.deepEqual(segments,{track:true,segmented:true,sortApart:true},'Companies and Sort are each set apart from what precedes them');
-    // Toolbar: Sort and Saved left it; saving a filter sits with the Hide toggles. The
-    // redesign puts the Hide toggles in the View menu and saved filters in their own
-    // panel beside it, so the two triggers share the toolbar's row.
+    // Toolbar: Sort is not in it; Saved filters sits in the filter row, beside More
+    // filters. The Hide toggles are checkboxes under the list head, not in the toolbar.
     assert.equal(await page.locator('#job-controls #sort-select').count(),0,'Sort is not in the filter toolbar');
-    const tailRow=await page.evaluate(()=>{const c=(n)=>{const r=n.getBoundingClientRect();return r.top+r.height/2;};return Math.abs(c(document.querySelector('#job-controls #preset-picker'))-c(document.querySelector('#job-controls #view-options')));});
-    assert.ok(tailRow<6,'Saved filters sits in the row with the View (Hide) menu');
-    await page.locator('#view-options').click();
-    assert.equal(await page.getByRole('menuitemcheckbox',{name:/Hide roles I’ve opened/}).evaluate(el=>el.id),'hide-opened','the Hide toggles are in the View menu');
-    await page.keyboard.press('Escape');await page.locator('[data-slot="dropdown-menu-content"]').waitFor({state:'detached'});
+    const tailRow=await page.evaluate(()=>{const c=(n)=>{const r=n.getBoundingClientRect();return r.top+r.height/2;};return Math.abs(c(document.querySelector('#job-controls #preset-picker'))-c(document.querySelector('#job-controls #advanced-filters')));});
+    assert.ok(tailRow<6,'Saved filters sits in the row with More filters');
+    assert.equal(await page.locator('#view-options').count(),0,'there is no View menu');
+    assert.equal(await page.locator('#job-results-bar').getByRole('checkbox',{name:/Hide roles I’ve opened/}).evaluate(el=>el.id),'hide-opened','the Hide toggles are checkboxes under the list head');
+    assert.equal(await page.locator('#job-results-bar').getByRole('checkbox',{name:/Hide companies I’ve opened/}).count(),1);
     await page.locator('#preset-picker').click();
     assert.equal(await page.locator('#preset-save').isVisible(),true,'Save current filters is in the Saved filters panel');
     await page.keyboard.press('Escape');await page.locator('#preset-save').waitFor({state:'detached'});

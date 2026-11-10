@@ -10,12 +10,11 @@
 // 1100px the results are three grid columns, the list | the divider | the job pane,
 // and the pane docks under the header and toolbar while the list scrolls with the page.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { ArrowDownIcon, ArrowUpIcon, SearchXIcon } from "lucide-react";
+import { SearchXIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CONTAINER } from "@/lib/layout.js";
 import { tabsListVariants } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import Filters from "./components/Filters.jsx";
@@ -33,7 +32,7 @@ import { decode } from "./lib/presets.js";
 import { useFilterState } from "./lib/useFilterState.js";
 import { useColumns } from "./lib/useColumns.js";
 import { useSeen } from "./lib/seen.js";
-import { useViewPrefs } from "./lib/viewPrefs.js";
+import HideOpened from "./components/HideOpened.jsx";
 import { firmLabel } from "./data.js";
 
 const SORTS = [
@@ -156,8 +155,6 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
 
   // Opened roles (lib/seen.js): the Hide filters and the "N opened" notes.
   const seenMap = useSeen();
-  // What shows above the list (the View menu): the result count and the keyboard hint.
-  const show = useViewPrefs();
   const seen = useMemo(() => new Set(Object.keys(seenMap)), [seenMap]);
   const openedByCompany = useMemo(() => {
     const m = new Map();
@@ -526,16 +523,10 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
                   <SelectMenu id="sort-select" label="Sort roles" options={SORTS} value={filters.sort} onChange={(v) => setFilters({ ...filters, sort: v })} />
                 </div>
               </div>
-              {/* Both are off unless ticked in View. The count stays in the page for screen
-                  readers either way; with neither shown the row takes no room (contents). */}
-              <div className={(show.count || (show.keys && wide)) ? "flex flex-wrap items-center justify-between gap-x-4 gap-y-1" : "contents"}>
-                <p className={cn("results-meta tabular text-sm text-muted-foreground", !show.count && "sr-only")} id="job-count" data-total={total.toLocaleString()}>{countText}</p>
-                {/* Said only where the arrows work: beside the pane, with a keyboard. */}
-                <p className="results-hint flex items-center gap-1.5 text-xs text-muted-foreground" aria-hidden="true" hidden={!wide || !show.keys}>
-                  <KbdGroup><Kbd><ArrowUpIcon /></Kbd><Kbd><ArrowDownIcon /></Kbd></KbdGroup>
-                  to move between jobs
-                </p>
-              </div>
+              <HideOpened filters={filters} onChange={setFilters} />
+              {/* Not shown: the owner took it off the page. Kept, visually hidden, for
+                  screen-reader users browsing the page and for the browser test. */}
+              <p className="results-meta sr-only" id="job-count" data-total={total.toLocaleString()}>{countText}</p>
             </div>
             {!jobs ? (
               <>

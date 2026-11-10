@@ -1,7 +1,7 @@
 // The filter toolbar (#job-controls): the search, the main filters as faceted buttons,
 // More filters (the rest, in a panel), Saved filters, Reset and Undo, and at the right
-// the View menu (Hide roles / companies I've opened; what shows above the list) and
-// "Companies you've opened" (Viewed, from `history`). A full-width bar,
+// "Companies you've opened" (Viewed, from `history`). The Hide toggles are under the
+// list head (HideOpened), not here. A full-width bar,
 // sticky under the site header on desktop; JobsWorkspace reads its height into
 // --toolbar-height so the job pane docks below it.
 //
@@ -10,24 +10,18 @@
 // becomes a bottom sheet (role="dialog") holding every filter, stacked and opening in
 // place, with a footer that says how many roles they leave.
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
-import { ChevronDownIcon, SearchIcon, Settings2Icon, SlidersHorizontalIcon, Undo2Icon, XIcon } from "lucide-react";
+import { ChevronDownIcon, SearchIcon, SlidersHorizontalIcon, Undo2Icon, XIcon } from "lucide-react";
 import FilterPicker from "./FilterPicker.jsx";
 import SelectMenu from "./SelectMenu.jsx";
 import SavedFilters from "./SavedFilters.jsx";
 import Viewed from "./Viewed.jsx";
-import { setViewPref, useViewPrefs } from "../lib/viewPrefs.js";
 import { DATE_RANGES, SALARY_FLOORS, activeCount, advancedCount } from "../lib/filters.js";
 import { CONTAINER } from "@/lib/layout.js";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import {
-  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -40,11 +34,6 @@ function Tip({ label, children }) {
     </Tooltip>
   );
 }
-
-const HIDE = [
-  { key: "hideOpened", id: "hide-opened", label: "Hide roles I’ve opened", hint: "Roles you have already opened from this site" },
-  { key: "hideOpenedCompanies", id: "hide-opened-companies", label: "Hide companies I’ve opened", hint: "Leaves only companies you have never opened a role at" },
-];
 
 /**
  * More filters: every filter beyond the main row, plus Posted and Salary. On desktop a
@@ -106,87 +95,6 @@ function AdvancedFilters({ count, onReset, inline, children }) {
         </PopoverContent>
       </Popover>
     </div>
-  );
-}
-
-// What can show above the list (lib/viewPrefs.js). Off by default.
-const SHOW = [
-  { key: "count", id: "show-count", label: "Result count", hint: "“Showing 1–45 of … matching roles” above the list" },
-  { key: "keys", id: "show-keys", label: "Keyboard hint", hint: "“↑ ↓ to move between jobs”, beside the job pane" },
-];
-
-const MenuItemText = ({ label, hint }) => (
-  <span className="flex flex-col gap-0.5">
-    <span>{label}</span>
-    <span className="text-xs text-muted-foreground">{hint}</span>
-  </span>
-);
-
-/** The two Hide toggles and what shows above the list, in a menu on desktop. They
- *  stay open on a tick. */
-function ViewMenu({ filters, set, iconOnly = false }) {
-  const prefs = useViewPrefs();
-  const on = HIDE.filter((h) => filters[h.key]).length;
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" size="sm" id="view-options" aria-label={on ? `View, ${on} on` : "View"} title={iconOnly ? "View" : undefined}>
-          <Settings2Icon />{iconOnly ? null : "View"}
-          {on ? <Badge variant="secondary" className="rounded-sm px-1 font-normal tabular">{on}</Badge> : null}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72">
-        <DropdownMenuLabel>Hide what you’ve seen</DropdownMenuLabel>
-        {HIDE.map((h) => (
-          <DropdownMenuCheckboxItem key={h.id} id={h.id} title={h.hint} checked={filters[h.key]}
-            onCheckedChange={(c) => set({ [h.key]: c === true })} onSelect={(e) => e.preventDefault()}>
-            <MenuItemText label={h.label} hint={h.hint} />
-          </DropdownMenuCheckboxItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>Show above the list</DropdownMenuLabel>
-        {SHOW.map((v) => (
-          <DropdownMenuCheckboxItem key={v.id} id={v.id} checked={prefs[v.key]}
-            onCheckedChange={(c) => setViewPref(v.key, c === true)} onSelect={(e) => e.preventDefault()}>
-            <MenuItemText label={v.label} hint={v.hint} />
-          </DropdownMenuCheckboxItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-/** The same two toggles in the phone sheet, as checkboxes with their help text. */
-function ViewToggles({ filters, set }) {
-  return (
-    <section aria-labelledby="view-heading" className="flex flex-col gap-1">
-      <h3 id="view-heading" className="text-sm font-medium">View</h3>
-      {HIDE.map((h) => (
-        <Label key={h.id} htmlFor={h.id} title={h.hint} className="min-h-11 cursor-pointer gap-3 py-1.5 font-normal">
-          <Checkbox id={h.id} checked={filters[h.key]} onCheckedChange={(c) => set({ [h.key]: c === true })} />
-          <span className="flex flex-col gap-1 leading-snug">
-            <span>{h.label}</span>
-            <span className="text-xs text-muted-foreground">{h.hint}</span>
-          </span>
-        </Label>
-      ))}
-      <ShowCount />
-    </section>
-  );
-}
-
-/** The phone sheet's one Show toggle: there is no keyboard hint on a phone. */
-function ShowCount() {
-  const prefs = useViewPrefs();
-  const v = SHOW[0];
-  return (
-    <Label htmlFor={v.id} className="min-h-11 cursor-pointer gap-3 py-1.5 font-normal">
-      <Checkbox id={v.id} checked={prefs.count} onCheckedChange={(c) => setViewPref("count", c === true)} />
-      <span className="flex flex-col gap-1 leading-snug">
-        <span>Show the result count</span>
-        <span className="text-xs text-muted-foreground">“Showing 1–45 of … matching roles” above the list</span>
-      </span>
-    </Label>
   );
 }
 
@@ -267,9 +175,9 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
   const n = activeCount(filters, dims);
   const big = mobile ? "lg" : "sm"; // 44px touch targets in the sheet
 
-  // The right end of the desktop row (View and "Companies you've opened") stays on the
-  // row: if it wraps below the search, the opened button gives up words, full -> short
-  // -> icon, and last of all View drops its word and the search narrows ("tight").
+  // The right end of the desktop row ("Companies you've opened") stays on the row: if
+  // it wraps below the search, the button gives up words, full -> short -> icon, and
+  // last of all the search narrows ("tight").
   // All before the paint; back to full whenever the room may have grown.
   const FITS = ["full", "short", "icon", "tight"];
   const [fit, setFit] = useState(0);
@@ -393,7 +301,6 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
             <div className="flex flex-col gap-6 px-4 py-4">
               {primary}
               {advanced}
-              <ViewToggles filters={filters} set={set} />
               <div id="preset-slot"><SavedFilters filters={filters} onApply={onChange} naming={naming} inline /></div>
             </div>
             {/* The list is behind the sheet, so its footer says what the filters left. */}
@@ -415,7 +322,6 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
             </Button>
             {undo}
             <div ref={rowEnd} className="ml-auto flex items-center gap-2">
-              <ViewMenu filters={filters} set={set} iconOnly={FITS[fit] === "tight"} />
               {history ? <Viewed jobs={history.jobs} seen={history.seen} fit={FITS[fit] === "tight" ? "icon" : FITS[fit]} /> : null}
             </div>
           </div>
