@@ -185,8 +185,12 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
   useLayoutEffect(() => { setFit(0); }, [filters, mobile, history?.seen]);
   useLayoutEffect(() => {
     const end = rowEnd.current, first = document.getElementById("filter-primary");
-    if (!end || !first || mobile) return;
-    if (end.offsetTop > first.offsetTop + 4 && fit < FITS.length - 1) setFit(fit + 1);
+    // Nothing at the right end (no opened companies yet): nothing to fit. An empty slot
+    // still sits a little lower than the search (centred, no height), which read as
+    // wrapped and narrowed the search for every first-time visitor.
+    if (!end || !first || mobile || !end.firstElementChild) return;
+    const wrapped = end.getBoundingClientRect().top >= first.getBoundingClientRect().bottom - 1;
+    if (wrapped && fit < FITS.length - 1) setFit(fit + 1);
   });
   useEffect(() => {
     const grow = () => setFit(0);
