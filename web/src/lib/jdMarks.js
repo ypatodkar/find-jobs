@@ -52,10 +52,14 @@ export function locate(root, passage) {
   return candidates.length === 1 ? candidates[0] : null;
 }
 
+// How much of the pane's top the slim sticky bar covers once the job's header has
+// scrolled away (DetailPane #detail-bar). The header itself scrolls with the text.
+export const coveredHeight = (pane) => pane?.querySelector("#detail-bar")?.offsetHeight || 0;
+
 function revealInPane(el) {
   const pane = el.closest(".job-detail");
   if (!pane) return;
-  const covered = pane.querySelector(".detail-head")?.offsetHeight || 0;
+  const covered = coveredHeight(pane);
   const target = pane.scrollTop + el.getBoundingClientRect().top - pane.getBoundingClientRect().top - covered - 24;
   pane.scrollTo({ top: Math.max(0, target), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 }
@@ -129,7 +133,7 @@ export function preservePosition(pane, body, fn) {
   if (!pane || !body) { fn(); return; }
   const top = pane.scrollTop;
   const old = body.offsetTop;
-  const covered = pane.querySelector(".detail-head")?.offsetHeight || 0;
+  const covered = coveredHeight(pane);
   const reading = top >= old - covered;
   const visibleTop = pane.getBoundingClientRect().top + covered;
   const anchor = reading ? [...body.querySelectorAll("h3, h4, p, li")]

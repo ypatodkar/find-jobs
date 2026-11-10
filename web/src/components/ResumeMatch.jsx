@@ -6,39 +6,75 @@
 // keys it by job id), so every per-job state starts fresh; what outlives a job (the
 // resume list, the scores, today's allowance) is in lib/match.js.
 //
-// Below the card sits the description's header, with the Match highlights switch.
+// One shadcn Card (DESIGN.md): "Resume match" with the resume dropdown and Analyze, then,
+// once analyzed, the score, the three counts, two things to review, and the full
+// requirement breakdown in a modal. Green and amber (the success and warning tokens)
+// mark a requirement demonstrated or partly so; nothing else here is coloured.
+//
+// Below the card sits the description's header, with the Match highlights switch. The
+// marks that switch places in the description (lib/jdMarks.js) are styled in
+// styles/match.css, since they are DOM this component does not render.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  Check, ChevronDown, CircleAlert, CircleCheck, CircleHelp, Contrast, Info, ListChecks, Plus, RefreshCw,
+  Sparkles, TextSearch, ThumbsDown, ThumbsUp, Trash2, Upload, X,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
+import { toggleVariants } from "@/components/ui/toggle";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { requestResumeSignIn, useAuth } from "../lib/auth.js";
 import {
   Import, STATUS_LABEL, activeId, addResume, ago, cache, call, deleteResume, fetchStored, findings,
   insightSummary, json, key, loadList, ranked, setActive, untilReset,
 } from "../lib/match.js";
-import { annotate, clearMarks, jumpTo, locate, marksEnabled, preservePosition, setMarksEnabled } from "../lib/jdMarks.js";
+import { annotate, clearMarks, coveredHeight, jumpTo, locate, marksEnabled, preservePosition, setMarksEnabled } from "../lib/jdMarks.js";
+import "../styles/match.css";
 
-// The "sparkles" mark that has come to mean AI-assisted (Lucide, ISC licence), drawn in
-// currentColor so it takes the accent wherever it sits. Decorative: the words next to
-// it say what the control does.
-const SPARKLE = (
-  <svg className="ai-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-    <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
-    <path d="M20 3v4" /><path d="M22 5h-4" /><path d="M4 17v2" /><path d="M5 18H3" />
-  </svg>
-);
-const Icon = ({ children, style }) => (
-  <svg className="resume-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" style={style}>{children}</svg>
-);
-const CHEVRON = <Icon><path d="m6 9 6 6 6-6" /></Icon>;
-const PLUS = <Icon><path d="M12 5v14M5 12h14" /></Icon>;
-const TRASH = <Icon><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" /></Icon>;
-const THUMB = "M7 10v12M15 5.9 14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 8A2 2 0 0 1 17.5 22H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.8a2 2 0 0 0 1.8-1.1L13 2a3.1 3.1 0 0 1 2 3.9Z";
-const THUMB_UP = <Icon><path d={THUMB} /></Icon>;
-const THUMB_DOWN = <Icon style={{ transform: "rotate(180deg)" }}><path d={THUMB} /></Icon>;
+// shadcn's Spinner is a status region named "Loading". Here it sits beside words that
+// already say what is happening (inside a button, or a status line), so it is drawn
+// only, and those words are what a screen reader hears.
+const Busy = ({ className }) => <Spinner role={undefined} aria-label={undefined} aria-hidden="true" className={className} />;
 
-const Spinner = () => <span className="analysis-spinner" aria-hidden="true"></span>;
 const INSIGHT_LIMIT = 2;
 const ROW_STATUS = { shown: "Demonstrated", partial: "Partial", unclear: "Not found" };
 const GROUPS = [["required", "Required"], ["preferred", "Preferred"], ["duty", "Responsibilities"], ["other", "Other requirements"]];
 const inGroup = (kind, f) => (kind === "other" ? !["required", "preferred", "duty"].includes(f.kind) : f.kind === kind);
+
+// Each status's icon and colours, the same everywhere in the card. Amber is too light
+// for small text on white, so amber text is mixed a quarter of the way to the
+// foreground: darker in light mode, lighter in dark, readable in both.
+const STATUS_ICON = { shown: CircleCheck, partial: Contrast, unclear: CircleHelp };
+const TONE = {
+  shown: {
+    text: "text-success",
+    badge: "border-success/25 bg-success/10 text-success",
+  },
+  partial: {
+    text: "text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))]",
+    badge: "border-warning/30 bg-warning/10 text-[color-mix(in_oklch,var(--warning)_75%,var(--foreground))]",
+  },
+  unclear: {
+    text: "text-muted-foreground",
+    badge: "border-border bg-muted text-muted-foreground",
+  },
+};
+const StatusIcon = ({ status, className }) => {
+  const Icon = STATUS_ICON[status] || CircleHelp;
+  return <Icon aria-hidden="true" className={cn("size-4 shrink-0", status === "partial" && "[&_path]:fill-current", TONE[status]?.text, className)} />;
+};
+
+// A <summary> drawn as shadcn's Select trigger, and a <details> panel drawn as its
+// menu. The browser's disclosure triangle is hidden.
+const SUMMARY_RESET = "list-none [&::-webkit-details-marker]:hidden";
+const MENU_ITEM = "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none select-none hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground disabled:pointer-events-none disabled:opacity-50";
 
 // Arrow keys open the resume dropdown, then walk its rows, delete buttons included;
 // Escape closes it. Returns whether the key was the dropdown's.
@@ -67,8 +103,9 @@ function pickerKeydown(event) {
 }
 
 // One dropdown for everything about resumes: pick one, delete any from its own row, or
-// add another from the foot of the list. Drawn like the SelectMenu pickers, but by
-// hand, since a <select> cannot hold the buttons.
+// add another from the foot of the list. Drawn like shadcn's Select, but by hand on
+// <details>, since a Select cannot hold the delete buttons and the add action, and the
+// keyboard path above (and the browser test) rely on this structure.
 function ResumePicker({ selected, disabled, onChoose, onRemove, onAdd }) {
   const ref = useRef(null);
   const items = cache.items;
@@ -83,18 +120,37 @@ function ResumePicker({ selected, disabled, onChoose, onRemove, onAdd }) {
     (p.querySelector(".select-option.is-selected") || p.querySelector(".select-option, .resume-picker-add"))?.focus({ preventScroll: true });
   };
   return (
-    <details ref={ref} className={`company-picker select-picker resume-picker${disabled ? " is-disabled" : ""}`} onToggle={onToggle}>
-      <summary aria-haspopup="true" aria-label={`Resume: ${label}`} title={label} aria-disabled={disabled ? "true" : undefined}>{label}</summary>
-      <div className="company-panel select-panel resume-picker-panel" role="group" aria-label="Your resumes">
+    <details ref={ref} className={cn("company-picker select-picker resume-picker group/picker relative w-full", disabled && "is-disabled")} onToggle={onToggle}>
+      <summary aria-haspopup="true" aria-label={`Resume: ${label}`} title={label} aria-disabled={disabled ? "true" : undefined}
+        className={cn(SUMMARY_RESET, "flex h-8 w-full cursor-pointer items-center justify-between gap-1.5 rounded-md border border-input bg-transparent pr-2 pl-2.5 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none select-none hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring aria-disabled:pointer-events-none aria-disabled:opacity-50")}>
+        <span className="min-w-0 truncate">{label}</span>
+        <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted-foreground transition-transform group-open/picker:rotate-180 motion-reduce:transition-none" />
+      </summary>
+      <div className="company-panel select-panel resume-picker-panel absolute top-full left-0 z-30 mt-1 flex w-72 flex-col max-w-[calc(100vw-2rem)] gap-0.5 rounded-md bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-border"
+        role="group" aria-label="Your resumes">
         {items.map((r) => (
-          <div className="resume-picker-row" key={r.id}>
-            <button type="button" className={`select-option${r.id === selected ? " is-selected" : ""}`} data-act="choose" data-resume-id={r.id}
-              aria-pressed={r.id === selected} aria-label={r.label} title={r.label} disabled={disabled} onClick={() => { close(); onChoose(r.id); }}><span>{r.label}</span></button>
-            <button type="button" className="resume-picker-delete" data-act="remove" data-resume-id={r.id} aria-label={`Delete ${r.label}`} title="Delete resume"
-              disabled={disabled} onClick={() => onRemove(r.id)}>{TRASH}</button>
+          <div className="resume-picker-row flex items-center gap-1" key={r.id}>
+            <button type="button" className={cn("select-option relative", MENU_ITEM, "min-w-0 flex-1 pr-8", r.id === selected && "is-selected font-medium")}
+              data-act="choose" data-resume-id={r.id} aria-pressed={r.id === selected} aria-label={r.label} title={r.label} disabled={disabled}
+              onClick={() => { close(); onChoose(r.id); }}>
+              <span className="min-w-0 truncate">{r.label}</span>
+              {r.id === selected ? <Check aria-hidden="true" className="absolute right-2 size-4" /> : null}
+            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button type="button" variant="ghost" size="icon-sm" className="resume-picker-delete text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:bg-destructive/10 focus-visible:text-destructive dark:hover:bg-destructive/20"
+                  data-act="remove" data-resume-id={r.id} aria-label={`Delete ${r.label}`} disabled={disabled} onClick={() => onRemove(r.id)}>
+                  <Trash2 aria-hidden="true" className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Delete resume</TooltipContent>
+            </Tooltip>
           </div>
         ))}
-        <button type="button" className="resume-picker-add" data-act="upload" disabled={disabled} onClick={() => { close(); onAdd(); }}>{PLUS}Add resume</button>
+        {items.length ? <div className="-mx-1 my-0.5 h-px bg-border" aria-hidden="true"></div> : null}
+        <button type="button" className={cn("resume-picker-add", MENU_ITEM)} data-act="upload" disabled={disabled} onClick={() => { close(); onAdd(); }}>
+          <Plus aria-hidden="true" className="size-4 text-muted-foreground" />Add resume
+        </button>
       </div>
     </details>
   );
@@ -102,11 +158,12 @@ function ResumePicker({ selected, disabled, onChoose, onRemove, onAdd }) {
 
 // "Find in JD" for a requirement the description holds exactly once; otherwise the
 // fallback text beside it.
-function Locate({ text, mappable, onJump, children, fallback, label }) {
+function Locate({ text, mappable, onJump, children, fallback, label, className }) {
   const mapped = mappable.has(text);
   return (
     <>
-      <a className="requirement-locate" href="#detail-body" data-passage={text} aria-label={label} hidden={!mapped}
+      <a className={cn("requirement-locate rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring", className)} href="#detail-body"
+        data-passage={text} aria-label={label} hidden={!mapped}
         onClick={(e) => { e.preventDefault(); onJump(text); }}>{children}</a>
       <span hidden={mapped}>{fallback}</span>
     </>
@@ -119,7 +176,7 @@ function Notes({ result }) {
     limits.resumeShortened ? "Only the first part of the resume was assessed." : limits.resumeQuotesCapped ? "The resume was read in full; supporting quotes are limited to its first 100 lines." : "",
     limits.descriptionShortened ? "Only the first part of the description was read in full." : "",
     limits.requirementsCapped ? "Only the 30 most important extracted items were compared." : "",
-  ].filter(Boolean).map((n) => <p key={n} className="match-fine">{n}</p>);
+  ].filter(Boolean).map((n) => <p key={n} className="match-fine text-muted-foreground">{n}</p>);
 }
 
 function Insights({ rows, mappable, onJump }) {
@@ -128,15 +185,22 @@ function Insights({ rows, mappable, onJump }) {
     rows.find((f) => f !== chosen[0] && f.status === "partial") || rows[1];
   if (second) chosen.push(second);
   return (
-    <section className="analysis-insights-section" aria-labelledby="analysis-insights-title">
-      <h3 id="analysis-insights-title">Key things to review</h3>
-      <ul className="analysis-insights" aria-label="Prioritized insights">
+    <section className="analysis-insights-section grid gap-2" aria-labelledby="analysis-insights-title">
+      <h4 id="analysis-insights-title" className="text-sm font-medium">Key things to review</h4>
+      <ul className="analysis-insights grid gap-2" aria-label="Prioritized insights">
         {chosen.slice(0, INSIGHT_LIMIT).map((f, i) => {
           const text = insightSummary(f.text);
           const lead = { shown: "Supported", partial: "Clarify evidence", unclear: "Review evidence" }[f.status];
           return (
-            <li key={i} title={f.text}><span className="insight-lead">{lead}</span>
-              <div className="insight-copy"><Locate text={f.text} mappable={mappable} onJump={onJump} label={`Find in job description: ${f.text}`} fallback={text}>{text}</Locate></div>
+            <li key={i} title={f.text} className="flex gap-3 rounded-lg bg-muted px-3 py-2.5">
+              <StatusIcon status={f.status} className="mt-px" />
+              <div className="grid min-w-0 gap-0.5">
+                <span className="insight-lead text-xs font-medium text-muted-foreground">{lead}</span>
+                <div className="insight-copy text-sm leading-snug wrap-anywhere">
+                  <Locate text={f.text} mappable={mappable} onJump={onJump} label={`Find in job description: ${f.text}`} fallback={text}
+                    className="text-foreground underline decoration-muted-foreground underline-offset-4 hover:decoration-foreground">{text}</Locate>
+                </div>
+              </div>
             </li>
           );
         })}
@@ -144,6 +208,23 @@ function Insights({ rows, mappable, onJump }) {
     </section>
   );
 }
+
+// shadcn's Skeleton, whose pulse stops for anyone who asks for reduced motion.
+const Shape = ({ className }) => <Skeleton className={cn("motion-reduce:animate-none", className)} />;
+
+// Placeholder shapes while a score is on its way, roughly where the score, the three
+// counts and the two insights will land, so the card grows once rather than twice.
+function ResultSkeleton() {
+  return (
+    <div className="grid gap-3" aria-hidden="true">
+      <div className="flex items-center gap-4"><Shape className="h-8 w-20" /><div className="grid flex-1 gap-2"><Shape className="h-4 w-40" /><Shape className="h-1.5 w-full" /></div></div>
+      <div className="grid grid-cols-3 gap-2"><Shape className="h-14" /><Shape className="h-14" /><Shape className="h-14" /></div>
+      <Shape className="h-14 w-full" />
+    </div>
+  );
+}
+
+const LOADING_LINE = "analysis-loading flex items-center gap-2 text-sm text-muted-foreground";
 
 export default function ResumeMatch({ job, paneRef, description }) {
   const { ready, account } = useAuth();
@@ -171,6 +252,16 @@ export default function ResumeMatch({ job, paneRef, description }) {
   const [mappable, setMappable] = useState(() => new Set());
 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+
+  // The resume dropdown and "How scoring works" close on a click elsewhere, as the
+  // site's other menus do.
+  useEffect(() => {
+    const outside = (e) => {
+      host.current?.querySelectorAll(".resume-picker[open], .scoring-help[open]").forEach((d) => { if (!d.contains(e.target)) d.open = false; });
+    };
+    document.addEventListener("click", outside);
+    return () => document.removeEventListener("click", outside);
+  }, []);
 
   const hasDescription = description.ready ? description.hasText : null;
   const current = activeId();
@@ -312,12 +403,16 @@ export default function ResumeMatch({ job, paneRef, description }) {
       error: s.reviewErrors.has(id),
     };
   }
-  async function review(rating) {
+  async function review(rating, fromKeyboard = false) {
     const r = hitNow(), id = activeId(), identity = cache.accountVersion;
     if (!r || sRef.current.busy || !Number.isSafeInteger(r.checkedAt) || (r.feedback && r.feedback.rating === rating)) return;
     const k = reviewKey(r, id);
     if (sRef.current.pending.has(k)) return;
     const errors = new Map(sRef.current.reviewErrors); errors.delete(k);
+    // Both thumbs are disabled while saving, which drops focus to the page. Pressed from
+    // the keyboard, focus comes back to that thumb, as after a check. Not after a click:
+    // focusing it would open its tooltip with no pointer there to close it.
+    const restoreFocus = fromKeyboard && !!host.current && host.current.contains(document.activeElement);
     update({ pending: new Set(sRef.current.pending).add(k), reviewErrors: errors });
     try {
       const response = await call("/match/feedback", json("POST", { resume_id: id, job_id: job.job_id, checked_at: r.checkedAt, rating }));
@@ -328,6 +423,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
       if (identity === cache.accountVersion) update({ reviewErrors: new Map(sRef.current.reviewErrors).set(k, err.message || "Could not save feedback. Please try again.") });
     } finally {
       const pending = new Set(sRef.current.pending); pending.delete(k);
+      if (restoreFocus) focusAfter.current = { selector: `[data-act="review"][data-rating="${rating}"]`, onlyIfLost: true };
       update({ pending });
     }
   }
@@ -376,7 +472,7 @@ export default function ResumeMatch({ job, paneRef, description }) {
     const now = b.offsetTop, was = lastOffset.current;
     lastOffset.current = now;
     if (was === null || now === was) return;
-    const covered = pane.querySelector(".detail-head")?.offsetHeight || 0;
+    const covered = coveredHeight(pane);
     if (pane.scrollTop >= was - covered) pane.scrollTop = Math.max(0, pane.scrollTop + now - was);
   });
 
@@ -395,33 +491,52 @@ export default function ResumeMatch({ job, paneRef, description }) {
 
   // ---- drawing ----
   const busy = s.busy;
+  const checking = busy === "checking";
   const rows = ranked(findings(result));
   const hasBreakdown = !!(result && Array.isArray(result.findings));
   const canCheck = s.loaded && !s.signedOut && cache.items.length && hasDescription !== false && !busy;
   const picker = <ResumePicker selected={current} disabled={!!busy} onChoose={chooseResume} onRemove={remove} onAdd={addAnother} />;
+  // Analyze is the card's one primary action; once there is a score, Reanalyze steps
+  // back to an outline button beside the dropdown.
   const action = (
-    <button type="button" className={`match-run${result ? " analysis-reanalyze" : " analysis-primary"}${busy === "checking" ? " is-busy" : ""}`} data-act="run"
+    <Button type="button" variant={result ? "outline" : "default"} size={result ? "sm" : "default"}
+      className={cn("match-run", result ? "analysis-reanalyze" : "analysis-primary", checking && "is-busy")} data-act="run"
       disabled={!canCheck} onClick={run}>
-      {SPARKLE}<span>{busy === "checking" ? (result ? "Updating…" : "Analyzing resume…") : result ? "Reanalyze" : "Analyze resume"}</span>
-    </button>
+      {checking ? <Busy /> : result ? <RefreshCw aria-hidden="true" /> : <Sparkles aria-hidden="true" className="ai-icon" />}
+      <span>{checking ? (result ? "Updating…" : "Analyzing resume…") : result ? "Reanalyze" : "Analyze resume"}</span>
+    </Button>
   );
-  // Analyzed: the dropdown with when it was analyzed, and Reanalyze to the side. Not
-  // yet (a resume just switched to): no label, just Analyze under the dropdown.
+  const heading = (
+    <h3 className="flex items-center gap-2 text-sm leading-none font-semibold">
+      <Sparkles aria-hidden="true" className="ai-icon size-4 text-muted-foreground" />Resume match
+    </h3>
+  );
+  // Analyzed: the title, then the dropdown with when it was analyzed, and Reanalyze to
+  // the side. Not yet (a resume just switched to): no label, just Analyze under the
+  // dropdown.
   const toolbar = result ? (
-    <div className="analysis-header-toolbar">
-      <div className="analysis-source"><div className="analysis-header-picker">{picker}</div>
-        <span className="analysis-timestamp">{result.checkedAt ? `Analyzed ${ago(result.checkedAt)}` : "Analyzed"}</span></div>
-      <div className="analysis-tools">{action}</div>
+    <div className="analysis-header-toolbar grid grid-cols-[minmax(0,1fr)_max-content] items-start gap-x-3 gap-y-3">
+      <div className="col-span-2">{heading}</div>
+      <div className="analysis-source flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="analysis-header-picker min-w-0 flex-[1_1_9rem] sm:max-w-60">{picker}</div>
+        <span className="analysis-timestamp text-xs text-muted-foreground">{result.checkedAt ? `Analyzed ${ago(result.checkedAt)}` : "Analyzed"}</span>
+      </div>
+      <div className="analysis-tools flex items-center gap-2 self-start">{action}</div>
     </div>
   ) : (
-    <div className="analysis-header-toolbar is-pending"><div className="analysis-header-picker">{picker}</div>{action}</div>
+    <div className="analysis-header-toolbar is-pending grid justify-items-start gap-3">
+      {heading}
+      <div className="analysis-header-picker w-full max-w-60">{picker}</div>
+      {action}
+    </div>
   );
-  const heading = <h3>{SPARKLE} Resume match</h3>;
   const uploadButton = (
-    <button type="button" className="match-run analysis-primary" data-act="upload" disabled={!!busy && !s.signedOut} onClick={addAnother}>
-      {SPARKLE}{busy === "reading" ? "Reading resume…" : busy === "uploading" ? "Uploading resume…" : "Upload resume"}
-    </button>
+    <Button type="button" className="match-run analysis-primary" data-act="upload" disabled={!!busy && !s.signedOut} onClick={addAnother}>
+      {busy === "reading" || busy === "uploading" ? <Busy /> : <Upload aria-hidden="true" />}
+      {busy === "reading" ? "Reading resume…" : busy === "uploading" ? "Uploading resume…" : "Upload resume"}
+    </Button>
   );
+  const muted = "match-msg text-sm text-muted-foreground";
 
   let content;
   if (result) {
@@ -430,76 +545,119 @@ export default function ResumeMatch({ job, paneRef, description }) {
     const fb = feedbackState(result);
     const visible = rows.filter((f) => s.breakdownFilter === "all" || f.status === s.breakdownFilter).length;
     content = (
-      <div className="analysis-result">
+      <div className="analysis-result grid gap-4">
         {toolbar}
-        <div className="analysis-score-section">
-          <div className="analysis-score-head">
-            {score !== null ? <span className="analysis-score-number">{score}<small>/100</small></span> : null}
-            <h3>Resume evidence score</h3>
+        <div className="analysis-score-section grid gap-3 border-t pt-4">
+          <div className="analysis-score-head flex items-center gap-4">
+            {score !== null ? (
+              <span className="analysis-score-number shrink-0 text-3xl leading-none font-semibold tracking-tight tabular">{score}<small className="ml-0.5 text-sm font-normal tracking-normal text-muted-foreground">/100</small></span>
+            ) : null}
+            <div className="grid min-w-0 flex-1 gap-2">
+              <div className="relative flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <h4 className="text-sm font-medium">Resume evidence score</h4>
+                <details className="scoring-help">
+                  <summary className={cn(SUMMARY_RESET, "inline-flex cursor-pointer items-center gap-1 rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring")}>
+                    <Info aria-hidden="true" className="size-3.5" />How scoring works
+                  </summary>
+                  <div className="scoring-explanation absolute top-full right-0 z-30 mt-2 grid w-72 max-w-[calc(100vw-3rem)] gap-2 rounded-md bg-popover p-3 text-xs leading-relaxed text-popover-foreground shadow-md ring-1 ring-border">
+                    <p>The score measures resume evidence coverage of extracted requirements. Required items carry more weight than responsibilities or preferences, and partial evidence contributes to coverage. It is not a prediction of hiring outcomes.</p>
+                    <Notes result={result} />
+                  </div>
+                </details>
+              </div>
+              {score !== null ? (
+                <Progress className="analysis-progress" value={score} aria-valuenow={score} aria-valuetext={`${score}/100`} aria-label="Resume evidence score" />
+              ) : null}
+            </div>
           </div>
-          {score !== null ? <progress className="analysis-progress" value={score} max="100" aria-label="Resume evidence score">{score}/100</progress> : null}
           {hasBreakdown ? (
-            <ul className="analysis-metrics" aria-label="Requirement classifications">
-              <li><strong>{metric("shown")}</strong> Demonstrated</li><li><strong>{metric("partial")}</strong> Partial</li><li><strong>{metric("unclear")}</strong> Not evidenced</li>
+            <ul className="analysis-metrics grid grid-cols-3 gap-1.5 sm:gap-2" aria-label="Requirement classifications">
+              {[["shown", "Demonstrated"], ["partial", "Partial"], ["unclear", "Not evidenced"]].map(([status, label]) => (
+                <li key={status} className="grid content-start gap-1 rounded-lg border px-2.5 py-2 sm:px-3">
+                  <span className="flex items-center gap-1.5"><StatusIcon status={status} className="size-3.5" /><strong className="text-base leading-none font-semibold tabular">{metric(status)}</strong></span>
+                  <span className="text-xs leading-tight text-muted-foreground">{label}</span>
+                </li>
+              ))}
             </ul>
           ) : null}
-          {score !== null ? (
-            <div className="analysis-feedback" role="group" aria-label="Review this analysis">
-              <span className="analysis-feedback-label">Was this analysis helpful?</span>
-              <div className="analysis-feedback-buttons">
-                {[["up", "Helpful analysis", THUMB_UP], ["down", "Not helpful analysis", THUMB_DOWN]].map(([rating, label, svg]) => (
-                  <button key={rating} type="button" data-act="review" data-rating={rating} aria-label={label} title={label} aria-pressed={fb.rating === rating}
-                    disabled={fb.disabled} onClick={() => review(rating)}>{svg}</button>
-                ))}
-              </div>
-              <span className={`analysis-feedback-status${fb.error ? " is-error" : ""}`} role="status" aria-live="polite">{fb.message}</span>
-            </div>
-          ) : null}
         </div>
-        {busy === "checking" ? <p className="analysis-loading" role="status"><Spinner />Updating analysis… Previous result shown.</p> : null}
+        {checking ? <p className={LOADING_LINE} role="status"><Busy />Updating analysis… Previous result shown.</p> : null}
         {rows.length ? <Insights rows={rows} mappable={mappable} onJump={onJump} />
-          : <p className="match-msg">{hasBreakdown ? "No requirement findings were returned." : "The stored analysis has no requirement breakdown. Reanalyze for current details."}</p>}
-        <div className="analysis-links">
-          {rows.length ? (
-            <button type="button" className="breakdown-open" data-act="breakdown" aria-haspopup="dialog" aria-expanded={s.breakdownOpen} aria-controls="requirement-breakdown"
-              onClick={() => setBreakdownOpen(!sRef.current.breakdownOpen)}>Full requirement breakdown ({rows.length})</button>
-          ) : null}
-          <details className="scoring-help"><summary>How scoring works</summary>
-            <div className="scoring-explanation"><p>The score measures resume evidence coverage of extracted requirements. Required items carry more weight than responsibilities or preferences, and partial evidence contributes to coverage. It is not a prediction of hiring outcomes.</p><Notes result={result} /></div>
-          </details>
-        </div>
+          : <p className={muted}>{hasBreakdown ? "No requirement findings were returned." : "The stored analysis has no requirement breakdown. Reanalyze for current details."}</p>}
+        {rows.length || score !== null ? (
+          <div className="analysis-links flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-3">
+            {rows.length ? (
+              <Button type="button" variant="outline" size="sm" className="breakdown-open" data-act="breakdown" aria-haspopup="dialog" aria-expanded={s.breakdownOpen} aria-controls="requirement-breakdown"
+                onClick={() => setBreakdownOpen(!sRef.current.breakdownOpen)}><ListChecks aria-hidden="true" />Full requirement breakdown ({rows.length})</Button>
+            ) : null}
+            {score !== null ? (
+              <div className="analysis-feedback flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground" role="group" aria-label="Review this analysis">
+                <span className="analysis-feedback-label">Was this analysis helpful?</span>
+                <div className="analysis-feedback-buttons flex gap-1">
+                  {[["up", "Helpful analysis", ThumbsUp], ["down", "Not helpful analysis", ThumbsDown]].map(([rating, label, Thumb]) => (
+                    <Tooltip key={rating}>
+                      <TooltipTrigger asChild>
+                        <button type="button" data-act="review" data-rating={rating} aria-label={label} aria-pressed={fb.rating === rating}
+                          className={cn(toggleVariants({ variant: "outline", size: "sm" }), "size-8 px-0 text-muted-foreground aria-pressed:text-foreground aria-pressed:[&_svg]:fill-current")}
+                          disabled={fb.disabled} onClick={(e) => review(rating, e.detail === 0)}><Thumb aria-hidden="true" className="size-3.5" /></button>
+                      </TooltipTrigger>
+                      <TooltipContent>{label}</TooltipContent>
+                    </Tooltip>
+                  ))}
+                </div>
+                {/* Empty, it is visually hidden but stays a live region, so "Saving…" is
+                    announced when it appears. */}
+                <span className={cn("analysis-feedback-status empty:sr-only", fb.error && "is-error text-destructive")} role="status" aria-live="polite">{fb.message}</span>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         {rows.length ? (
-          <dialog ref={dialog} className="requirement-breakdown" id="requirement-breakdown" aria-labelledby="breakdown-title"
+          // A native modal, drawn with the classes of shadcn's DialogContent and, on
+          // ::backdrop, its DialogOverlay (the same scrim as the site's other dialogs).
+          <dialog ref={dialog} className="requirement-breakdown m-auto max-h-[min(760px,calc(100dvh-2rem))] w-[min(720px,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl bg-popover p-0 text-sm text-popover-foreground ring-1 ring-border backdrop:bg-black/10 supports-backdrop-filter:backdrop:backdrop-blur-xs open:flex"
+            id="requirement-breakdown" aria-labelledby="breakdown-title"
             onCancel={(e) => { e.preventDefault(); setBreakdownOpen(false); }}
             onClick={(e) => {
               if (e.target !== dialog.current) return;
               const b = dialog.current.getBoundingClientRect();
               if (e.clientX < b.left || e.clientX > b.right || e.clientY < b.top || e.clientY > b.bottom) setBreakdownOpen(false);
             }}>
-            <div className="breakdown-head"><h3 id="breakdown-title">Requirement breakdown</h3>
-              <button type="button" data-act="breakdown-close" aria-label="Close requirement breakdown" onClick={() => setBreakdownOpen(false)}>Close</button></div>
-            <div className="breakdown-filters" role="group" aria-label="Filter requirements by status">
-              {[["all", "All"], ["shown", "Demonstrated"], ["partial", "Partial"], ["unclear", "Not found"]].map(([status, label]) => (
-                <button key={status} type="button" data-act="filter-status" data-filter-status={status} aria-pressed={s.breakdownFilter === status}
-                  onClick={() => update({ breakdownFilter: status })}>{label} <span>{status === "all" ? rows.length : metric(status)}</span></button>
-              ))}
+            <div className="grid shrink-0 gap-3 px-4 pt-4 sm:px-6 sm:pt-5">
+              <div className="breakdown-head flex items-center justify-between gap-3">
+                <h3 id="breakdown-title" className="text-base font-semibold">Requirement breakdown</h3>
+                <Button type="button" variant="ghost" size="sm" className="-mr-2 text-muted-foreground" data-act="breakdown-close" aria-label="Close requirement breakdown" onClick={() => setBreakdownOpen(false)}>
+                  <X aria-hidden="true" />Close
+                </Button>
+              </div>
+              <p className="breakdown-note -mt-2 text-sm text-muted-foreground">Match status describes evidence in this resume. Open a row to explore available evidence.</p>
+              <div className="breakdown-filters flex flex-wrap gap-1.5" role="group" aria-label="Filter requirements by status">
+                {[["all", "All"], ["shown", "Demonstrated"], ["partial", "Partial"], ["unclear", "Not found"]].map(([status, label]) => (
+                  <button key={status} type="button" data-act="filter-status" data-filter-status={status} aria-pressed={s.breakdownFilter === status}
+                    className={cn(toggleVariants({ variant: "outline", size: "sm" }), "gap-1.5 aria-pressed:border-foreground aria-pressed:text-foreground")}
+                    onClick={() => update({ breakdownFilter: status })}>
+                    {status === "all" ? null : <StatusIcon status={status} className="size-3.5" />}
+                    {label} <span className="text-xs text-muted-foreground tabular">{status === "all" ? rows.length : metric(status)}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="breakdown-results pb-1 text-xs text-muted-foreground" role="status" aria-live="polite">{visible} of {rows.length} requirements</p>
             </div>
-            <p className="breakdown-results" role="status" aria-live="polite">{visible} of {rows.length} requirements</p>
-            <p className="breakdown-note">Match status describes evidence in this resume. Open a row to explore available evidence.</p>
-            <div className="breakdown-content">
+            <div className="breakdown-content min-h-0 flex-1 overflow-y-auto overscroll-contain border-t px-4 pb-3 [scrollbar-gutter:stable] sm:px-6">
               {GROUPS.map(([kind, title]) => {
                 const group = rows.filter((f) => inGroup(kind, f));
                 if (!group.length) return null;
                 const shown = group.filter((f) => s.breakdownFilter === "all" || f.status === s.breakdownFilter).length;
                 return (
-                  <section key={kind} className="requirement-group" hidden={shown === 0}>
-                    <h4>{title} <span data-group-count="">{s.breakdownFilter === "all" ? String(shown) : `${shown} / ${group.length}`}</span></h4>
+                  <section key={kind} className="requirement-group pt-4" hidden={shown === 0}>
+                    <h4 className="flex items-baseline gap-1.5 pb-1 text-sm font-semibold">{title} <span data-group-count="" className="text-xs font-normal text-muted-foreground tabular">{s.breakdownFilter === "all" ? String(shown) : `${shown} / ${group.length}`}</span></h4>
                     <ul className="requirement-rows">
                       {group.map((f) => {
                         const index = rows.indexOf(f);
                         return (
-                          <li key={index} data-status={f.status} hidden={s.breakdownFilter !== "all" && f.status !== s.breakdownFilter}>
-                            <details className="requirement-row" data-index={index} open={s.expanded.has(index)}
+                          <li key={index} data-status={f.status} hidden={s.breakdownFilter !== "all" && f.status !== s.breakdownFilter}
+                            className="border-b last:border-b-0 [&:not(:has(~li:not([hidden])))]:border-b-0">
+                            <details className="requirement-row group/row" data-index={index} open={s.expanded.has(index)}
                               onToggle={(e) => {
                                 const open = e.currentTarget.open;
                                 if (open === sRef.current.expanded.has(index)) return;
@@ -507,12 +665,23 @@ export default function ResumeMatch({ job, paneRef, description }) {
                                 if (open) next.add(index); else next.delete(index);
                                 update({ expanded: next });
                               }}>
-                              <summary><span className={`requirement-dot is-${f.status}`} aria-hidden="true"></span><span className="requirement-row-text">{f.text}</span>
-                                <span className={`requirement-row-status is-${f.status}`} title={STATUS_LABEL[f.status]}>{ROW_STATUS[f.status]}</span>{CHEVRON}</summary>
-                              <div className="requirement-evidence">
-                                {f.evidence ? <blockquote aria-label="Resume evidence">{f.evidence}</blockquote> : null}
+                              <summary className={cn(SUMMARY_RESET, "-mx-2 flex cursor-pointer items-start gap-3 rounded-md px-2 py-2.5 outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring")}>
+                                <StatusIcon status={f.status} className={`requirement-dot is-${f.status} mt-0.5`} />
+                                <span className="flex min-w-0 flex-1 flex-wrap items-start gap-x-3 gap-y-1">
+                                  <span className="requirement-row-text min-w-0 flex-[1_1_14rem] text-sm leading-5 wrap-anywhere">{f.text}</span>
+                                  <Badge variant="outline" className={cn(`requirement-row-status is-${f.status} mt-px`, TONE[f.status].badge)} title={STATUS_LABEL[f.status]}>{ROW_STATUS[f.status]}</Badge>
+                                </span>
+                                <ChevronDown aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-open/row:rotate-180 motion-reduce:transition-none" />
+                              </summary>
+                              <div className="requirement-evidence grid gap-2 pb-3 pl-7 text-sm leading-relaxed text-muted-foreground">
+                                {f.evidence ? <blockquote aria-label="Resume evidence" className="border-l-2 pl-3 text-foreground">{f.evidence}</blockquote> : null}
                                 {f.explanation ? <p>{f.explanation}</p> : null}
-                                <p className="requirement-navigation"><Locate text={f.text} mappable={mappable} onJump={onJump} fallback="Original wording shown above.">Find in JD</Locate></p>
+                                <p className="requirement-navigation">
+                                  <Locate text={f.text} mappable={mappable} onJump={onJump} fallback="Original wording shown above."
+                                    className="inline-flex items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline">
+                                    <TextSearch aria-hidden="true" className="size-3.5" />Find in JD
+                                  </Locate>
+                                </p>
                               </div>
                             </details>
                           </li>
@@ -522,39 +691,46 @@ export default function ResumeMatch({ job, paneRef, description }) {
                   </section>
                 );
               })}
-              <p className="breakdown-empty" hidden={visible !== 0}>No requirements match this status.</p>
+              <p className="breakdown-empty py-8 text-center text-sm text-muted-foreground" hidden={visible !== 0}>No requirements match this status.</p>
             </div>
-            <button type="button" className="breakdown-collapse" data-act="breakdown-close" onClick={() => setBreakdownOpen(false)}>Close breakdown</button>
+            <div className="flex shrink-0 justify-end border-t px-4 py-3 sm:px-6">
+              <Button type="button" variant="outline" size="sm" className="breakdown-collapse" data-act="breakdown-close" onClick={() => setBreakdownOpen(false)}>Close breakdown</Button>
+            </div>
           </dialog>
         ) : null}
       </div>
     );
   } else if (s.signedOut) {
-    content = <div className="analysis-entry analysis-entry-upload">{heading}{uploadButton}<p className="match-msg">Add a resume to analyse this job.</p></div>;
+    content = <div className="analysis-entry analysis-entry-upload grid justify-items-start gap-3">{heading}<p className={muted}>Add a resume to analyse this job.</p>{uploadButton}</div>;
   } else if (!s.loaded) {
-    content = <div className="analysis-entry">{heading}<p className="analysis-loading" role="status"><Spinner />Loading resume…</p></div>;
+    content = (
+      <div className="analysis-entry grid gap-3">{heading}
+        <p className={LOADING_LINE} role="status"><Busy />Loading resume…</p>
+        <div className="grid gap-3" aria-hidden="true"><Shape className="h-8 w-full max-w-60" /><Shape className="h-9 w-36" /></div>
+      </div>
+    );
   } else if (s.message && s.message.kind === "error" && !cache.listing) {
-    content = <div className="analysis-entry">{heading}<p className="match-msg">Analysis unavailable</p></div>;
+    content = <div className="analysis-entry grid gap-3">{heading}<p className={muted}>Analysis unavailable</p></div>;
   } else if (!cache.items.length) {
-    content = <div className="analysis-entry analysis-entry-upload">{heading}{uploadButton}<p className="match-msg">Add a resume to analyse this job.</p></div>;
+    content = <div className="analysis-entry analysis-entry-upload grid justify-items-start gap-3">{heading}<p className={muted}>Add a resume to analyse this job.</p>{uploadButton}</div>;
   } else if (s.showToolbar) {
     content = (
       <>
         {toolbar}
-        {busy === "checking" || busy === "loading"
-          ? <p className="analysis-loading" role="status"><Spinner />{busy === "checking" ? "Analyzing resume…" : "Loading saved analysis…"}</p>
-          : <p className="match-msg">Analyze this resume against the selected job.</p>}
+        {checking || busy === "loading"
+          ? <><p className={LOADING_LINE} role="status"><Busy />{checking ? "Analyzing resume…" : "Loading saved analysis…"}</p><ResultSkeleton /></>
+          : <p className={muted}>Analyze this resume against the selected job.</p>}
       </>
     );
   } else {
     content = (
       <>
-        <div className="analysis-entry analysis-entry-ready">{heading}
-          <div className="analysis-resume-controls"><div className="analysis-entry-picker">{picker}</div></div>
-          <div className="analysis-entry-actions">{action}</div>
+        <div className="analysis-entry analysis-entry-ready grid justify-items-start gap-3">{heading}
+          <div className="analysis-resume-controls w-full"><div className="analysis-entry-picker w-full max-w-60">{picker}</div></div>
+          <div className="analysis-entry-actions flex items-center gap-2">{action}</div>
         </div>
-        {busy === "checking" || busy === "loading"
-          ? <p className="analysis-loading" role="status"><Spinner />{busy === "checking" ? "Analyzing resume…" : "Loading analysis…"}</p> : null}
+        {checking || busy === "loading"
+          ? <><p className={LOADING_LINE} role="status"><Busy />{checking ? "Analyzing resume…" : "Loading analysis…"}</p><ResultSkeleton /></> : null}
       </>
     );
   }
@@ -565,7 +741,8 @@ export default function ResumeMatch({ job, paneRef, description }) {
 
   return (
     <>
-      <section ref={host} className={`detail-match${result ? " is-analyzed" : ""}`} id="detail-match" aria-label="Resume match"
+      <Card ref={host} size="sm" role="region" aria-label="Resume match" id="detail-match"
+        className={cn("detail-match mt-3 mb-6 overflow-visible", result && "is-analyzed")}
         onKeyDown={(e) => {
           if (pickerKeydown(e) || e.key !== "Escape") return;
           const menu = e.target.closest("details[open]");
@@ -574,44 +751,71 @@ export default function ResumeMatch({ job, paneRef, description }) {
           else return;
           e.preventDefault(); e.stopPropagation();
         }}>
-        <div className="analysis-shell" aria-busy={String(!!busy)}>
+        <CardContent className="analysis-shell gap-4" aria-busy={String(!!busy)}>
           {content}
           {limit && !limit.canUnlock ? (
-            <div className="limit-box" role="status"><p><strong>You've used all {limit.limit} resume checks for today.</strong> More open up {untilReset(limit.resetsAt)}. Saved results stay available.</p></div>
+            <Alert role="status" className="limit-box bg-muted">
+              <Info aria-hidden="true" />
+              <AlertDescription className="text-foreground"><p><strong className="font-medium">You've used all {limit.limit} resume checks for today.</strong> More open up {untilReset(limit.resetsAt)}. Saved results stay available.</p></AlertDescription>
+            </Alert>
           ) : null}
           {limit && limit.canUnlock ? (
-            <form className="limit-box limit-form" data-limit-form="" noValidate onSubmit={(e) => { e.preventDefault(); if (sRef.current.busy !== "unlocking") unlock(e.currentTarget); }}>
-              <p><strong>You've used today's {limit.limit} resume checks.</strong> Tell us how resume matching is working for you to unlock {limit.bonus} more today.</p>
-              <fieldset className="limit-rating"><legend>How useful has resume matching been?</legend>
-                {[1, 2, 3, 4, 5].map((n) => <label key={n}><input type="radio" name="limit-rating" value={n} required /><span>{n}</span></label>)}
-                <span className="limit-scale" aria-hidden="true">1 not useful · 5 very useful</span>
+            <form className="limit-box limit-form grid gap-4 rounded-lg border bg-muted p-4" data-limit-form="" noValidate
+              onSubmit={(e) => { e.preventDefault(); if (sRef.current.busy !== "unlocking") unlock(e.currentTarget); }}>
+              <p className="text-sm"><strong className="font-medium">You've used today's {limit.limit} resume checks.</strong> <span className="text-muted-foreground">Tell us how resume matching is working for you to unlock {limit.bonus} more today.</span></p>
+              <fieldset className="limit-rating grid gap-2">
+                <legend className="mb-2 text-sm font-medium">How useful has resume matching been?</legend>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <label key={n} className="relative">
+                      <input type="radio" name="limit-rating" value={n} required className="peer sr-only" />
+                      <span className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md border border-input bg-background text-sm font-medium shadow-xs transition-colors tabular hover:bg-muted peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:hover:bg-primary/90 peer-focus-visible:border-ring peer-focus-visible:ring-3 peer-focus-visible:ring-ring">{n}</span>
+                    </label>
+                  ))}
+                  <span className="limit-scale ml-1 text-xs text-muted-foreground" aria-hidden="true">1 not useful · 5 very useful</span>
+                </div>
               </fieldset>
-              <label className="limit-message"><span>What's working, and what should be better?</span>
-                <textarea name="limit-message" rows="3" minLength="20" maxLength="2000" required placeholder="At least 20 characters"></textarea></label>
-              {s.unlockError ? <p className="match-msg error" role="alert">{s.unlockError}</p> : null}
-              <button type="submit" className="match-run analysis-primary" disabled={busy === "unlocking"}>
-                {busy === "unlocking" ? "Sending…" : `Send feedback and unlock ${limit.bonus} check${limit.bonus === 1 ? "" : "s"}`}
-              </button>
+              <label className="limit-message grid gap-2"><span className="text-sm font-medium">What's working, and what should be better?</span>
+                <Textarea name="limit-message" rows="3" minLength="20" maxLength="2000" required placeholder="At least 20 characters" className="min-h-18 bg-background" /></label>
+              {s.unlockError ? <p className="match-msg error text-sm text-destructive" role="alert">{s.unlockError}</p> : null}
+              <Button type="submit" className="match-run analysis-primary justify-self-start" disabled={busy === "unlocking"}>
+                {busy === "unlocking" ? <><Busy />Sending…</> : `Send feedback and unlock ${limit.bonus} check${limit.bonus === 1 ? "" : "s"}`}
+              </Button>
             </form>
           ) : null}
           {!limit && cache.lastUsage && cache.lastUsage.remaining <= 5
-            ? <p className="match-fine limit-left">{cache.lastUsage.remaining} resume check{cache.lastUsage.remaining === 1 ? "" : "s"} left today</p> : null}
+            ? <p className="match-fine limit-left text-xs text-muted-foreground">{cache.lastUsage.remaining} resume check{cache.lastUsage.remaining === 1 ? "" : "s"} left today</p> : null}
           {message ? (
-            <p className={`match-msg ${message.kind}`} role="status">{message.text}
-              {!cache.items.length && !s.signedOut && !busy ? <button type="button" className="analysis-retry" data-act="retry" onClick={start}>Retry</button> : null}</p>
+            <Alert variant={message.kind === "error" ? "destructive" : "default"} role="status" className={`match-msg ${message.kind}`}>
+              <CircleAlert aria-hidden="true" />
+              <AlertDescription>{message.text}</AlertDescription>
+              {!cache.items.length && !s.signedOut && !busy ? (
+                <AlertAction><Button type="button" variant="outline" size="xs" className="analysis-retry" data-act="retry" onClick={start}>Retry</Button></AlertAction>
+              ) : null}
+            </Alert>
           ) : null}
-          {hasDescription === false ? <p className="match-msg">This job has no description to compare against.</p> : null}
-          {outdated && !result ? <p className="match-msg">{outdated === "description" ? "The job description has changed." : "The analysis has been updated."} Analyze your resume for current results.</p> : null}
-        </div>
+          {hasDescription === false ? (
+            <Alert role={undefined} className="match-msg bg-muted"><Info aria-hidden="true" /><AlertDescription>This job has no description to compare against.</AlertDescription></Alert>
+          ) : null}
+          {outdated && !result ? (
+            <Alert role={undefined} className="match-msg bg-muted"><Info aria-hidden="true" /><AlertDescription>{outdated === "description" ? "The job description has changed." : "The analysis has been updated."} Analyze your resume for current results.</AlertDescription></Alert>
+          ) : null}
+        </CardContent>
         <input ref={input} type="file" accept={Import.ACCEPT} hidden
           onChange={(e) => { const file = e.target.files && e.target.files[0]; e.target.value = ""; if (file) upload(file); }} />
-      </section>
-      <div className="description-controls" hidden={!result || !hasBreakdown || hasDescription !== true}>
-        <h3>Job description</h3>
-        <label className="description-highlights"><span>Match highlights</span>
+      </Card>
+      <div className="description-controls mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2" hidden={!result || !hasBreakdown || hasDescription !== true}>
+        <h3 className="text-base font-semibold">Job description</h3>
+        {/* A native checkbox (role="switch") drawn as shadcn's Switch: the test and
+            keyboard users toggle the real input, which lies invisibly over the track. */}
+        <label className="description-highlights group/hl relative inline-flex min-h-8 cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+          <span>Match highlights</span>
           <input type="checkbox" role="switch" aria-label="Match highlights" aria-controls="detail-body" checked={marksOn}
+            className="peer absolute top-1/2 right-0 m-0 h-[18.4px] w-8 -translate-y-1/2 cursor-pointer opacity-0"
             onChange={(e) => { setMarksEnabled(e.target.checked); setMarksOn(e.target.checked); }} />
-          <span className="highlight-switch" aria-hidden="true"></span>
+          <span className="highlight-switch pointer-events-none inline-flex h-[18.4px] w-8 shrink-0 items-center rounded-full border border-transparent bg-input shadow-xs transition-all motion-reduce:transition-none peer-checked:bg-primary peer-focus-visible:border-ring peer-focus-visible:ring-3 peer-focus-visible:ring-ring" aria-hidden="true">
+            <span className="block size-4 rounded-full bg-background transition-transform group-has-[:checked]/hl:translate-x-[calc(100%-2px)] motion-reduce:transition-none dark:bg-foreground dark:group-has-[:checked]/hl:bg-primary-foreground"></span>
+          </span>
         </label>
       </div>
     </>

@@ -22,20 +22,22 @@
   <meta name="twitter:description" content="Why this job list exists, who it is for, and what it does not claim to do." />
   <meta name="twitter:image" content="https://jobs.ypatodkar.com/og.png" />
 
-  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#111014" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#fdfcf9" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0f0d0b" media="(prefers-color-scheme: dark)" />
 
 
   <script>
-    try {
-      var t = localStorage.getItem("vc-directory-theme");
-      if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
-    } catch (e) {}
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem("vc-directory-theme"); } catch (e) {}
+      if (t !== "dark" && t !== "light") t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    })();
   </script>
 </head>
 <body>
-  <a class="skip-link" href="#main-content">Skip to content</a>
-  <main class="page" id="main-content"></main>
+  <a class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:bg-primary focus:px-3 focus:py-1.5 focus:text-sm focus:font-medium focus:text-primary-foreground focus:shadow-md focus:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" href="#content">Skip to content</a>
+  <main class="flex min-h-dvh flex-col" id="main-content"></main>
   <script type="module" src="/src/about.jsx"></script>
 </body>
 </html>

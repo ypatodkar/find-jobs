@@ -7,13 +7,16 @@
 // too, hence the wider fs.allow.
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const page = (name) => fileURLToPath(new URL(name, import.meta.url));
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
+  // "@/…" is src/, as shadcn's components import it (components.json, jsconfig.json).
+  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   // Relative: Pages and S3 serve the site from the root, but nothing here assumes it.
   base: "./",
   server: {

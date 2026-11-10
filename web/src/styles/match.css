@@ -1,0 +1,110 @@
+/* Resume match, inside the job description. lib/jdMarks.js adds these to HTML this
+   site does not write (the employer's description), so they cannot carry Tailwind
+   classes; ResumeMatch imports this file. See web/DESIGN.md.
+
+   - .jd-mark: the small ✓ / ◐ / ? button after a requirement the analysis found in
+     the text (is-shown, is-partial, is-unclear). It opens the evidence beneath it.
+   - .jd-note: that evidence, a small card under the bullet or paragraph.
+   The flash on a passage that "Find in JD" scrolled to (.desc-hit and
+   ::highlight(match-passage)) is the description's, in description.css.
+
+   Colours are the theme tokens only. Green and amber are the resume-match status
+   colours (DESIGN.md, "Status"); amber text is mixed a quarter of the way to the
+   foreground so it stays readable on white, and lighter still in dark mode. Scoped
+   under #detail-body so the description's own paragraph and list rules don't reach
+   into the note. */
+
+#detail-body .jd-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  /* The negative block margins pull the 24px target into the line, so a mark never
+     makes its line taller than the text around it. */
+  margin: -0.25rem 0 -0.25rem 0.375rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius) * 0.8);
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: baseline;
+  cursor: pointer;
+  transition: background-color 150ms, border-color 150ms, color 150ms, box-shadow 150ms;
+}
+#detail-body .jd-mark.is-shown { color: var(--success); }
+#detail-body .jd-mark.is-partial { color: color-mix(in oklch, var(--warning) 75%, var(--foreground)); }
+#detail-body .jd-mark.is-unclear { color: var(--muted-foreground); }
+
+/* Hover, and the mark whose note is open: a tint of its own status colour. */
+#detail-body .jd-mark:hover,
+#detail-body .jd-mark[aria-expanded="true"] {
+  background: var(--muted);
+  border-color: var(--border);
+}
+#detail-body .jd-mark.is-shown:hover,
+#detail-body .jd-mark.is-shown[aria-expanded="true"] {
+  background: color-mix(in oklch, var(--success) 12%, transparent);
+  border-color: color-mix(in oklch, var(--success) 30%, transparent);
+}
+#detail-body .jd-mark.is-partial:hover,
+#detail-body .jd-mark.is-partial[aria-expanded="true"] {
+  background: color-mix(in oklch, var(--warning) 14%, transparent);
+  border-color: color-mix(in oklch, var(--warning) 35%, transparent);
+}
+/* shadcn's focus ring: the ring colour at half strength, three pixels wide. */
+#detail-body .jd-mark:focus-visible {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+#detail-body .jd-note {
+  display: block;
+  margin: 0.625rem 0 0.875rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  /* The note sits inside a bullet: no marker indent or list styling of its own. */
+  list-style: none;
+}
+#detail-body .jd-note p {
+  margin: 0 0 0.5rem;
+  padding: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+#detail-body .jd-note > :last-child { margin-bottom: 0; }
+#detail-body .jd-note .requirement-status {
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+#detail-body .jd-note .requirement-status.is-shown { color: var(--success); }
+#detail-body .jd-note .requirement-status.is-partial { color: color-mix(in oklch, var(--warning) 75%, var(--foreground)); }
+#detail-body .jd-note .requirement-label {
+  margin: 0.75rem 0 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+#detail-body .jd-note .requirement-status + .requirement-label { margin-top: 0; }
+#detail-body .jd-note .requirement-label + p { color: var(--foreground); }
+#detail-body .jd-note blockquote {
+  margin: 0 0 0.5rem;
+  padding: 0 0 0 0.75rem;
+  border-left: 2px solid var(--border);
+  color: var(--foreground);
+  font-style: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #detail-body .jd-mark { transition: none; }
+}

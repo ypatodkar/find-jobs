@@ -26,24 +26,52 @@
 
   <!-- Colours the browser's own chrome — the address bar on mobile — to match the page
        it sits above, rather than leaving a white strip over a dark site. -->
-  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#111014" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#fdfcf9" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0f0d0b" media="(prefers-color-scheme: dark)" />
 
 
-  <!-- The OS preference is handled in CSS and needs no script. This applies only a
-       deliberate override, and has to run here, before the first paint: any later and
-       a visitor who chose light on a dark laptop would watch the page change under
-       them. Inline and blocking for the same reason. src/lib/theme.js owns the rest. -->
+  <!-- Puts the theme in effect on <html data-theme>: a stored override, else the OS.
+       It has to run here, before the first paint: any later and a visitor on a dark
+       laptop would watch the page change under them. Inline and blocking for the same
+       reason. src/lib/theme.js owns the rest. -->
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem("vc-directory-theme"); } catch (e) {}
+      if (t !== "dark" && t !== "light") t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+
+  <!-- Which country's list the home page opens, decided here, before anything loads, so
+       a visitor bound for the India list never sees the US one first. A choice made with
+       the switch wins. Without one, a first visit on India's clock goes to the India
+       list, and that becomes the choice; a browser that has used the site before (any
+       of these keys) stays on the US list, where lib/country.js tells it about India. A
+       link with filters or an anchor is a view someone shared, and opens as it is.
+       test/country.test.js runs this script as written. -->
   <script>
     try {
-      var t = localStorage.getItem("vc-directory-theme");
-      if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t);
+      if (!location.search && !location.hash) {
+        var c = localStorage.getItem("vc-directory-country");
+        if (!c && /^Asia\/(Kolkata|Calcutta)$/.test(Intl.DateTimeFormat().resolvedOptions().timeZone || "")) {
+          var used = ["vc-directory-visitor", "vc-directory-seen", "vc-directory-filters", "vc-directory-liked",
+            "vc-directory-theme", "find-jobs-saved", "find-jobs-column-ratio"].some(function (k) { return localStorage.getItem(k) != null; });
+          if (!used) {
+            localStorage.setItem("vc-directory-country", (c = "IN"));
+            sessionStorage.setItem("vc-directory-country-auto", "1");
+          }
+        }
+        if (c === "IN") location.replace("in.html");
+      }
     } catch (e) {}
   </script>
 </head>
 <body>
-  <a class="skip-link" href="#main-content">Skip to job listings</a>
-  <main class="page page-split" id="main-content"></main>
+  <!-- The skip link targets the page <h1> (id="content", tabindex=-1), which comes right
+       after the site header, so it really skips the header; <main> starts with it. -->
+  <a class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:bg-primary focus:px-3 focus:py-1.5 focus:text-sm focus:font-medium focus:text-primary-foreground focus:shadow-md focus:outline-none focus-visible:ring-3 focus-visible:ring-ring/50" href="#content">Skip to job listings</a>
+  <main class="flex min-h-dvh flex-col" id="main-content"></main>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

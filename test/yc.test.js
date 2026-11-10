@@ -47,6 +47,14 @@ test("converts YC's Markdown to the HTML the description cleaner keeps", () => {
     '<ol><li>First</li></ol><p>See <a href="https://x.dev">docs</a> &amp; more &lt;script&gt;</p>');
 });
 
+test("decodes the HTML entities YC leaves in its Markdown, escaping once", () => {
+  // As YC sends it: the apostrophe already encoded. It must not reach the page as "&#x27;".
+  const html = yc.markdownToHtml("We&#x27;re a small team &amp; growing.\n\n- You&#39;ll own **e2e&#x27;s cloud**");
+  assert.equal(html, "<p>We're a small team &amp; growing.</p><ul><li>You'll own <strong>e2e's cloud</strong></li></ul>");
+  // An encoded tag stays text, escaped once: decoded to "<b>", then shown, not obeyed.
+  assert.equal(yc.markdownToHtml("&lt;b&gt;not bold&lt;/b&gt;"), "<p>&lt;b&gt;not bold&lt;/b&gt;</p>");
+});
+
 test("packs batches into groups under the search index's page cap", () => {
   const groups = yc.batchGroups({ W24: 600, S24: 500, W25: 300, S25: 100 }, 1000);
   for (const g of groups) assert.ok(g.reduce((s, b) => s + ({ W24: 600, S24: 500, W25: 300, S25: 100 })[b], 0) <= 1000);

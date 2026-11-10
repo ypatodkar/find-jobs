@@ -22,6 +22,20 @@ export function loadDescription(id) {
   return shards.get(k).then((shard) => (shard ? shard[id] || "" : null));
 }
 
+// Text a source encoded twice ("We&amp;#x27;re", from YC's Markdown before the scraper
+// learned to decode it) still reads "We&#x27;re" after the browser's one decode. Text in
+// a job description never means a literal entity, so what is left is decoded here.
+const LEFTOVER = /&(#x[0-9a-f]+|#\d+|amp|quot|apos|lt|gt|nbsp);/gi;
+const NAMED = { amp: "&", quot: '"', apos: "'", lt: "<", gt: ">", nbsp: "\u00a0" };
+function undoubled(s) {
+  if (!s.includes("&")) return s;
+  return s.replace(LEFTOVER, (m, e) => {
+    if (e[0] !== "#") return NAMED[e.toLowerCase()] ?? m;
+    const n = /^#x/i.test(e) ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+    return Number.isFinite(n) && n > 0 && n < 0x110000 ? String.fromCodePoint(n) : m;
+  });
+}
+
 // What a description may contain on the page: an allowlist, rebuilt
 // from the stored HTML so nothing outside it reaches the DOM.
 const TAGS = new Set(["P", "BR", "UL", "OL", "LI", "H3", "H4", "STRONG", "EM", "A"]);
@@ -36,7 +50,7 @@ export function descriptionTree(html) {
   const walk = (node) => {
     const out = [];
     for (const n of node.childNodes) {
-      if (n.nodeType === 3) { out.push(n.nodeValue); continue; }
+      if (n.nodeType === 3) { out.push(undoubled(n.nodeValue)); continue; }
       if (n.nodeType !== 1) continue;
       if (!TAGS.has(n.tagName)) { out.push(...walk(n)); continue; }
       const props = {};

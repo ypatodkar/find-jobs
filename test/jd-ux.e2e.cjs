@@ -125,13 +125,16 @@ async function main(){
       });
       readingMeasurements.push(layout);
       await page.screenshot({path:path.join(artifactDir,`refined-${layout.width}.png`)});
+      // The job's header no longer sticks; once it scrolls away only the slim bar
+      // (#detail-bar, lib/jdMarks.js coveredHeight) covers the text.
       await page.locator('.job-detail').evaluate(pane=>{
         const description=pane.querySelector('.description-controls');
-        pane.scrollTop+=description.getBoundingClientRect().top-pane.getBoundingClientRect().top-pane.querySelector('.detail-head').offsetHeight-20;
+        pane.scrollTop+=description.getBoundingClientRect().top-pane.getBoundingClientRect().top-pane.querySelector('#detail-bar').offsetHeight-20;
       });
       await page.screenshot({path:path.join(artifactDir,`reading-${layout.width}.png`)});
       await page.locator('.job-detail').evaluate(el=>el.scrollTop=0);
-      assert.equal(layout.font,'12px');
+      // The redesign reads descriptions at 15px on a 28px line (styles/description.css), up from 12px.
+      assert.equal(layout.font,'15px');
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'the page fits the viewport');
       assert.ok(await page.locator('.job-detail').evaluate(el=>el.scrollWidth<=el.clientWidth),'the inspector has no horizontal overflow');
       const insightText=await page.locator('.analysis-insights [data-passage]').evaluateAll(links=>links.every(el=>el.textContent.length<=113 && el.dataset.passage.toLowerCase().includes(el.textContent.replace(/…$/,'').toLowerCase())));
@@ -216,11 +219,13 @@ async function main(){
       description:document.querySelector('#detail-body').getBoundingClientRect().top,
       viewport:innerHeight,
     }));
-    assert.ok(openingPosition.page>0,'opening a job scrolls past the landing header');
-    assert.ok(Math.abs(openingPosition.pane-openingPosition.dock)<2,'the pane aligns with its reading position');
+    // Choosing a job no longer scrolls the page (the owner's request, 2026-11-09: with the
+    // compact header and toolbar the pane is already in view, and the jump was jarring).
+    assert.equal(openingPosition.page,0,'opening a job leaves the page where it is');
+    assert.ok(openingPosition.pane<openingPosition.viewport/2,'the job pane is in view without scrolling');
     assert.ok(openingPosition.pane>=openingPosition.filters,'pinned filters do not cover the job header');
     assert.ok(openingPosition.description<openingPosition.viewport,'the job description starts within the viewport');
-    await page.screenshot({path:path.join(artifactDir,'job-open-autoscroll.png')});
+    await page.screenshot({path:path.join(artifactDir,'job-open.png')});
     assert.equal(postCalls,0,'cached assessments appear without calling the model');
     const up=page.getByRole('button',{name:'Helpful analysis',exact:true});
     const down=page.getByRole('button',{name:'Not helpful analysis',exact:true});
@@ -578,15 +583,28 @@ async function main(){
     await page.locator('#view-grouped').click();await page.goBack();
     await page.waitForFunction(()=>document.querySelector('#view-flat').getAttribute('aria-pressed')==='true');
     assert.equal(await page.locator('.cgroup').count(),0,'Back returns to All jobs');
-    // Two tabs and Sort, with a hairline between each.
+    // Two tabs and Sort, each set apart. The redesign draws the tabs as one segmented
+    // control (shadcn TabsList) in place of the hairlines: the pressed tab is a raised
+    // segment on a muted track, and Sort stands apart from the control.
     assert.equal(await page.locator('#saved-toggle').count(),0,'there is no Saved tab');
     assert.equal(await page.locator('#job-view-tabs .seg').count(),2);
-    const hairlines=await page.evaluate(()=>[document.querySelector('#view-grouped'),document.querySelector('#list-sort')].map(n=>{const b=getComputedStyle(n,'::before');return b.content!=='none'&&parseFloat(b.width)===1;}));
-    assert.deepEqual(hairlines,[true,true],'a hairline sits before Companies and before Sort');
-    // Toolbar: Sort and Saved left it; Save this filter joined the Hide checkboxes.
+    const segments=await page.evaluate(()=>{
+      const tabs=document.querySelector('#job-view-tabs'),flat=document.querySelector('#view-flat'),grouped=document.querySelector('#view-grouped'),sort=document.querySelector('#list-sort');
+      const bg=n=>getComputedStyle(n).backgroundColor,t=tabs.getBoundingClientRect(),s=sort.getBoundingClientRect();
+      return {track:bg(tabs)!=='rgba(0, 0, 0, 0)',segmented:bg(flat)!==bg(grouped)&&grouped.getBoundingClientRect().left>=flat.getBoundingClientRect().right,sortApart:!tabs.contains(sort)&&(s.left-t.right>=8||s.top>=t.bottom)};
+    });
+    assert.deepEqual(segments,{track:true,segmented:true,sortApart:true},'Companies and Sort are each set apart from what precedes them');
+    // Toolbar: Sort is not in it; Saved filters sits in the filter row, beside More
+    // filters. The Hide toggles are checkboxes under the list head, not in the toolbar.
     assert.equal(await page.locator('#job-controls #sort-select').count(),0,'Sort is not in the filter toolbar');
-    const tailRow=await page.evaluate(()=>{const c=(n)=>{const r=n.getBoundingClientRect();return r.top+r.height/2;};return Math.abs(c(document.querySelector('.preset-save'))-c(document.querySelector('#hide-opened').closest('label')));});
-    assert.ok(tailRow<6,'Save this filter sits in the row with the Hide checkboxes');
+    const tailRow=await page.evaluate(()=>{const c=(n)=>{const r=n.getBoundingClientRect();return r.top+r.height/2;};return Math.abs(c(document.querySelector('#job-controls #preset-picker'))-c(document.querySelector('#job-controls #advanced-filters')));});
+    assert.ok(tailRow<6,'Saved filters sits in the row with More filters');
+    assert.equal(await page.locator('#view-options').count(),0,'there is no View menu');
+    assert.equal(await page.locator('#job-results-bar').getByRole('checkbox',{name:/Hide roles I’ve opened/}).evaluate(el=>el.id),'hide-opened','the Hide toggles are checkboxes under the list head');
+    assert.equal(await page.locator('#job-results-bar').getByRole('checkbox',{name:/Hide companies I’ve opened/}).count(),1);
+    await page.locator('#preset-picker').click();
+    assert.equal(await page.locator('#preset-save').isVisible(),true,'Save current filters is in the Saved filters panel');
+    await page.keyboard.press('Escape');await page.locator('#preset-save').waitFor({state:'detached'});
     await page.setViewportSize({width:390,height:844});await page.goto(base+'/index.html');await page.locator('.job').first().waitFor();await page.waitForTimeout(400);
     assert.equal(await page.locator('#job-detail').evaluate(el=>el.classList.contains('is-open')),false,'on a phone nothing opens over the list by itself');
     for(const width of [800,390]){
@@ -718,65 +736,92 @@ async function main(){
     assert.equal(signInAttempts,2,'sign-in can be retried and then unlocks the real upload action');
     await signInPage.close();mode='normal';
     // Filter categories live in the controls; selection labels also survive reload.
+    // The redesign draws each filter as a shadcn faceted button: the trigger shows the
+    // filter's name with its choices as badges, so its one-line summary is read from
+    // data-summary (its aria-label says the same). "Advanced filters" is now More filters,
+    // a Radix Popover whose content (#sum-company, Posted, Salary) mounts only while it is
+    // open. Posted and Salary are Radix Selects, their options role=option in a portal.
     const filters=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});
     filters.setDefaultTimeout(8000);
     filters.on('pageerror',e=>errors.push(e.message));
     await filters.route('**/*',route=>route.request().url().startsWith(base)?route.continue():route.abort());
     await filters.goto(base);await filters.locator('.job').first().waitFor();
     assert.equal(await filters.locator('.picker-label').count(),0,'no duplicate labels above filters');
-    assert.equal(await filters.locator('#sum-role').textContent(),'Role');
-    assert.equal(await filters.locator('#sum-company').textContent(),'Company');
-    const menu=(id)=>filters.locator(`details#menu-${id}`);
-    const posted=menu('date-select').locator('> summary');
-    const salary=menu('salary-select').locator('> summary');
-    assert.equal(await posted.textContent(),'Posted');
-    assert.equal(await salary.textContent(),'Salary');
+    const summary=(key)=>filters.locator(`#sum-${key}`).getAttribute('data-summary');
+    assert.equal(await summary('role'),'Role');
+    const posted=filters.locator('#menu-date-select #date-select');
+    const salary=filters.locator('#menu-salary-select #salary-select');
     const companySummary=filters.locator('#sum-company');
-    const advancedToggle=filters.locator('#advanced-filters > summary');
+    const advancedToggle=filters.locator('#advanced-filters > button');
+    const advancedOpen=()=>filters.locator('#advanced-filters').evaluate(el=>el.dataset.state==='open');
+    // Radix overlays animate out (100-200ms) before they unmount.
+    const advancedClosed=()=>filters.locator('#advanced-panel').waitFor({state:'detached'});
+    // Radix overlays fade and zoom in (shadcn's classes, not gated by reduced motion);
+    // measure and photograph them once they have settled.
+    const settled=(locator)=>locator.evaluate(el=>Promise.all(el.getAnimations({subtree:true}).map(a=>a.finished)));
+    const focused=(locator,why)=>locator.evaluate(el=>new Promise(resolve=>{const t0=performance.now();const tick=()=>el===document.activeElement||performance.now()-t0>2000?resolve(el===document.activeElement):requestAnimationFrame(tick);tick();})).then(ok=>assert.ok(ok,why));
     assert.equal(await filters.locator('#primary-grid .picker-wrap').count(),4);
-    assert.equal(await filters.locator('#advanced-grid .picker-wrap').count(),6);
-    assert.equal(await filters.locator('#advanced-filters').evaluate(el=>el.open),false);
+    assert.equal(await advancedOpen(),false);
     const resultsTop=await filters.locator('#results-split').evaluate(el=>el.getBoundingClientRect().top);
     for(const width of [1440,1280]) {
       await filters.setViewportSize({width,height:900});
       const row=await filters.locator('#primary-grid > .picker-wrap, #advanced-filters').evaluateAll(items=>items.map(el=>Math.round(el.getBoundingClientRect().top)));
-      assert.ok(row.every(y=>Math.abs(y-row[0])<2),'four filters and Advanced share one row at '+width);
+      assert.ok(row.every(y=>Math.abs(y-row[0])<2),'four filters and More filters share one row at '+width);
       assert.ok(await filters.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     }
     await filters.setViewportSize({width:1440,height:900});
     await advancedToggle.click();
+    assert.equal(await advancedOpen(),true);
     assert.equal(await filters.locator('#results-split').evaluate(el=>el.getBoundingClientRect().top),resultsTop,'advanced popover does not shift results');
+    assert.equal(await filters.locator('#advanced-grid .picker-wrap').count(),6);
+    assert.equal(await summary('company'),'Company');
+    assert.equal(await posted.textContent(),'Posted');
+    assert.equal(await salary.textContent(),'Salary');
     await companySummary.click();
     await filters.locator('#list-company input[value="Telescope"]').check();
-    assert.equal(await companySummary.textContent(),'Telescope');
+    assert.equal(await summary('company'),'Telescope');
     assert.match(await companySummary.getAttribute('aria-label'),/^Company filter: Telescope$/);
     await filters.locator('#q-company').fill('Engineering');
     await filters.locator('#list-company input[value="Engineering Company"]').check();
-    assert.equal(await companySummary.textContent(),'(2) Companies');
-    await companySummary.press('Escape');
+    assert.equal(await summary('company'),'(2) Companies');
+    // Escape closes the company list (focus is in its search box) and leaves More filters open.
+    await filters.keyboard.press('Escape');
+    await filters.locator('#list-company').waitFor({state:'detached'});
+    await focused(companySummary,'Escape returns focus to the company filter');
+    assert.equal(await advancedOpen(),true);
     await filters.reload();await filters.locator('.job').first().waitFor();
-    assert.equal(await companySummary.textContent(),'(2) Companies','URL restoration keeps the count and category');
-    assert.equal(await filters.locator('#advanced-filter-label').textContent(),'Advanced filters (1)');
+    assert.equal(await filters.locator('#advanced-filter-label').textContent(),'More filters (1)');
     await filters.locator('#detail-match .resume-picker').waitFor();
     await filters.screenshot({path:path.join(artifactDir,'filters-primary-desktop.png')});
     await advancedToggle.click();
+    assert.equal(await summary('company'),'(2) Companies','URL restoration keeps the count and category');
+    await settled(filters.locator('#advanced-panel'));
     await filters.screenshot({path:path.join(artifactDir,'filters-compact-desktop.png')});
     await filters.locator('#advanced-filter-done').click();
-    assert.equal(await advancedToggle.evaluate(el=>el===document.activeElement),true,'Done restores focus');
-    assert.equal(await filters.locator('#advanced-filters').evaluate(el=>el.open),false);
+    await advancedClosed();
+    await focused(advancedToggle,'Done restores focus');
+    assert.equal(await advancedOpen(),false);
     await filters.locator('#reset-filters').click();
-    assert.equal(await companySummary.textContent(),'Company');
+    assert.equal(await filters.locator('#advanced-filter-label').textContent(),'More filters');
     await advancedToggle.click();
+    assert.equal(await summary('company'),'Company');
     await posted.focus();await posted.press('ArrowDown');
-    await menu('date-select').locator('[role="option"]').first().waitFor();
-    await filters.keyboard.press('ArrowDown');await filters.keyboard.press('Enter');
+    // Radix opens the list on ArrowDown and moves focus to the chosen option on a timeout.
+    const dateOptions=filters.getByRole('listbox',{name:'Filter by date posted'}).getByRole('option');
+    await dateOptions.first().waitFor();
+    await filters.waitForFunction(()=>document.activeElement?.getAttribute('role')==='option'&&document.activeElement.textContent==='Any time');
+    await filters.keyboard.press('ArrowDown');
+    await filters.waitForFunction(()=>document.activeElement?.textContent==='Last 7 days');
+    await filters.keyboard.press('Enter');
     assert.equal(await posted.textContent(),'Last 7 days','keyboard selection shows the selected date');
     assert.equal(new URL(filters.url()).searchParams.get('posted'),'7');
+    await focused(posted,'choosing a date returns focus to Posted');
+    assert.equal(await advancedOpen(),true,'choosing a date leaves More filters open');
     await salary.click();
-    await menu('salary-select').getByRole('option',{name:'$150k+',exact:true}).click();
+    await filters.getByRole('listbox',{name:'Filter by minimum salary'}).getByRole('option',{name:'$150k+',exact:true}).click();
     assert.equal(await salary.textContent(),'$150k+');
     await filters.locator('#advanced-filter-reset').click();
-    assert.equal(await filters.locator('#advanced-filter-label').textContent(),'Advanced filters');
+    assert.equal(await filters.locator('#advanced-filter-label').textContent(),'More filters');
     assert.equal(await posted.textContent(),'Posted');assert.equal(await salary.textContent(),'Salary');
     await filters.setViewportSize({width:390,height:844});
     await filters.goto(base+'/index.html');await filters.locator('.job').first().waitFor();
@@ -784,32 +829,35 @@ async function main(){
     await advancedToggle.click();
     await companySummary.click();
     await filters.locator('#list-company input[value="Telescope"]').check();
-    assert.equal(await companySummary.textContent(),'Telescope');
+    assert.equal(await summary('company'),'Telescope');
     await companySummary.click();
     await filters.screenshot({path:path.join(artifactDir,'filters-compact-mobile.png')});
     assert.ok(await filters.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'compact filters fit on mobile');
     await filters.locator('#advanced-filter-reset').click();
     await filters.locator('#filter-drawer-close').click();
-    assert.equal(await companySummary.textContent(),'Company','reset updates the closed mobile drawer');
+    assert.equal(await summary('company'),'Company','reset updates the closed mobile drawer');
     // Search and main filters stay visible; the inspector clears the pinned bar.
     for(const width of [1440,1280]) {
       await filters.setViewportSize({width,height:width===1440?900:800});
       await filters.goto(base);await filters.locator('#detail-title').waitFor();
       await filters.evaluate(()=>scrollTo(0,800));
-      await filters.waitForFunction(()=>Math.abs(document.querySelector('#job-controls').getBoundingClientRect().top)<1);
+      // The toolbar pins under the sticky site header now, not at the window's top.
+      await filters.waitForFunction(()=>Math.abs(document.querySelector('#job-controls').getBoundingClientRect().top-document.querySelector('[data-slot="site-header"]').getBoundingClientRect().bottom)<1);
       await filters.waitForFunction(()=>{
         const controls=document.querySelector('#job-controls').getBoundingClientRect();
         return document.querySelector('#job-detail').getBoundingClientRect().top>=controls.bottom;
       });
       assert.ok(await filters.locator('#job-search').isVisible());
-      await advancedToggle.click();
+      await advancedToggle.click();await settled(filters.locator('#advanced-panel'));
       const pinnedPanel=await filters.locator('#advanced-panel').boundingBox();
       assert.ok(pinnedPanel.y+pinnedPanel.height<=filters.viewportSize().height,'advanced popover fits below the pinned filters');
+      assert.ok(pinnedPanel.y>=(await advancedToggle.boundingBox()).y+(await advancedToggle.boundingBox()).height,'advanced popover opens below its button');
       await filters.screenshot({path:path.join(artifactDir,`sticky-filters-${width}.png`)});
-      await filters.locator('#advanced-filter-done').click();
+      await filters.locator('#advanced-filter-done').click();await advancedClosed();
       await filters.locator('#sum-role').click();
       await filters.locator('#list-role input').first().waitFor({state:'visible'});
       await filters.locator('#sum-role').click();
+      await filters.locator('#list-role').waitFor({state:'detached'});
       await filters.locator('#job-search').fill('Platform 7');
       await filters.waitForFunction(()=>document.querySelector('#job-count').textContent.includes('11 matching roles'));
       assert.equal(await filters.locator('#job-controls').evaluate(el=>getComputedStyle(el).position),'sticky');
