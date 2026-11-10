@@ -74,11 +74,12 @@
 
 /* The palette: four shades and a grey (DESIGN.md, "Palette"). Every colour token below
    is one of them, so a component never introduces a shade of its own.
-     paper  page, cards, menus, dialogs
-     wash   every fill: hover, selected, pressed, chips, skeletons, secondary buttons
-     line   borders, inputs, dividers; hover on something already in the wash
+     paper  cards, menus, dialogs, the header and filter bar, controls
+     wash   the page behind the cards; every fill and hover on paper
+     line   borders, inputs, dividers; every fill and hover on the page
      grey   secondary text, icons, focus rings
      ink    text, filled buttons, the outline of what is selected
+   The shades are Stone: a slightly warm grey, never yellow.
    Colour beyond these means something: red for errors and removal, green and amber for
    resume-match results. */
 :root {
@@ -87,12 +88,13 @@
   --header-height: 3.5rem;
   --radius: 0.625rem;
 
-  --paper: oklch(1 0 0);
-  --wash: oklch(0.97 0 0);
-  --line: oklch(0.922 0 0);
-  /* About 5:1 on paper and on the wash, so grey text and the focus ring read on both. */
-  --grey: oklch(0.51 0 0);
-  --ink: oklch(0.145 0 0);
+  --paper: oklch(0.99 0.004 85);
+  --wash: oklch(0.945 0.007 80);
+  --line: oklch(0.905 0.009 75);
+  /* 6.1:1 on paper, 5.3:1 on the wash, 4.7:1 on the line: grey text and the focus ring
+     read on every surface. */
+  --grey: oklch(0.49 0.014 60);
+  --ink: oklch(0.18 0.008 55);
 
   --success: oklch(0.527 0.154 150.069);
   --warning: oklch(0.666 0.179 58.318);
@@ -101,11 +103,11 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --paper: oklch(0.145 0 0);
-  --wash: oklch(0.225 0 0);
-  --line: oklch(0.3 0 0);
-  --grey: oklch(0.708 0 0);
-  --ink: oklch(0.985 0 0);
+  --paper: oklch(0.16 0.006 55);
+  --wash: oklch(0.25 0.008 55);
+  --line: oklch(0.33 0.009 55);
+  --grey: oklch(0.72 0.012 65);
+  --ink: oklch(0.97 0.005 85);
 
   --success: oklch(0.792 0.209 151.711);
   --warning: oklch(0.828 0.189 84.429);
@@ -145,8 +147,23 @@
        JobsWorkspace and is 0px while no toolbar is pinned. */
     scroll-padding-top: calc(var(--header-height) + var(--toolbar-height, 0px) + 0.75rem);
   }
+  /* Layered: the page is the wash and everything on it sits in paper. A fill or hover
+     is one step darker than the surface under it, so on the page itself (the view
+     switch, header-less buttons, key hints, toggles) the fills step to the line, and
+     inside anything paper they go back to the wash. */
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply text-foreground antialiased;
+    background-color: var(--wash);
+    --muted: var(--line);
+    --secondary: var(--line);
+    --accent: var(--line);
+  }
+  /* Any class that paints paper, with or without a variant (md:bg-card,
+     aria-pressed:bg-background). */
+  [class*="bg-background"], [class*="bg-card"], [class*="bg-popover"] {
+    --muted: var(--wash);
+    --secondary: var(--wash);
+    --accent: var(--wash);
   }
   /* Tabular figures wherever a count sits beside another. */
   .tabular { font-variant-numeric: tabular-nums; }

@@ -21,29 +21,38 @@ https://claude.ai/artifact/JrkT6vZ6c1tW1jYej8EYTa
 
 ## Look
 
-- **Palette:** four shades and a grey, defined once at the top of `src/styles/app.css`.
-  Every shadcn token points at one of them, in both themes:
+- **Palette:** four shades and a grey, defined once at the top of `src/styles/app.css`
+  (Stone: a slightly warm grey). Every shadcn token points at one of them, in both themes:
 
   | Shade | Tokens | Used for |
   |---|---|---|
-  | paper | `background`, `card`, `popover` | the page, cards, menus, dialogs |
-  | wash | `muted`, `secondary`, `accent` | every fill: hover, selected, pressed, chips, skeletons |
-  | line | `border`, `input` | borders, inputs, dividers; hover on something already washed |
+  | paper | `background`, `card`, `popover` | cards, menus, dialogs, the header and filter bar, controls |
+  | wash | `muted`, `secondary`, `accent` (on paper) | the page; fills and hover on paper |
+  | line | `border`, `input`; `muted` etc. on the page | borders, inputs, dividers; fills and hover on the page |
   | grey | `muted-foreground`, `ring` | secondary text, icons, the focus ring |
   | ink | `foreground`, `primary` | text, filled buttons, the outline of what is selected |
+
+  **Layered:** the page is the wash and everything on it sits in paper. A fill is one
+  step darker than the surface under it: `body` sets `muted`, `secondary` and `accent` to
+  the line, and any element with a `bg-background`, `bg-card` or `bg-popover` class
+  (with or without a variant) sets them back to the wash.
+  So `bg-muted` is always right; never pick the shade by hand. A new paper surface needs
+  one of those three classes, or its fills will be a step too dark.
 
   Rules that keep it to those five:
   - **No opacity on a neutral** (`bg-muted/50`, `ring-foreground/10`, `text-foreground/60`):
     each one is a new shade. Use the token itself. The one exception is a filled button's
     hover, `hover:bg-primary/90`.
   - **No `dark:` colour overrides.** Dark mode is the same tokens with dark values.
-  - **Hover:** paper goes to the wash; the wash goes to the line; ink goes to ink at 90%.
-  - **Selected / pressed / on:** the wash with an ink outline (`border-foreground` or
-    `ring-1 ring-foreground`). The selected job, toggles that are on, checked fields.
+  - **Hover:** a fill one step darker (`hover:bg-muted`); a job card on the page lifts
+    instead (`hover:shadow-md`); ink goes to ink at 90%.
+  - **Selected / pressed / on:** an ink outline (`border-foreground`, or
+    `ring-1 ring-foreground`), on the wash for rows and toggles, on paper for job cards.
   - **Focus:** `focus-visible:ring-3 focus-visible:ring-ring` (solid grey).
-  - Never a raw colour (`text-zinc-500`, `#fff`, `violet-600`). (Violet buttons and a violet
-    selected job were tried on 2026-11-09 and dropped the same day: the owner preferred
-    black and white with a few shared shades.)
+  - **Flags** are drawn in the shades too, each colour taking the shade nearest its
+    lightness (`components/Country.jsx`).
+  - Never a raw colour (`text-zinc-500`, `#fff`, `violet-600`). (On 2026-11-09 the owner
+    tried violet, then pure black and white, then chose Stone, layered.)
 - **Errors:** `destructive` (red), for errors and removing things only.
 - **Status:** `success` (green) and `warning` (amber), for resume-match results only
   (a requirement shown, partly shown). Everything else stays neutral.

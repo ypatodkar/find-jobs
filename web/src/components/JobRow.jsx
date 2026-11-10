@@ -3,7 +3,8 @@
 // Companies tab) a role is one line, title on the left and its facts on the right, under
 // the company's header, which already names the company (GroupRow).
 //
-// The selected row: the wash with an ink outline, the one selected style (DESIGN.md).
+// A card on the page: hover lifts it, and the selected one keeps its paper with an ink
+// outline (DESIGN.md).
 // A role this browser has opened before (lib/seen.js) keeps a muted title and an
 // "Opened" badge, so a second pass through the list skips what has been read.
 import { EyeIcon, MapPinIcon } from "lucide-react";
@@ -57,9 +58,9 @@ export default function JobRow({ job, selected, onSelect, inGroup = false, opene
   return (
     <article
       className={cn(
-        "job group/row relative flex cursor-pointer items-start gap-x-4 gap-y-1 rounded-lg border bg-card px-4 py-3 text-card-foreground transition-colors hover:bg-muted motion-reduce:transition-none",
+        "job group/row relative flex cursor-pointer items-start gap-x-4 gap-y-1 rounded-lg border bg-card px-4 py-3 text-card-foreground transition-shadow hover:shadow-md motion-reduce:transition-none",
         seen && "row-seen",
-        selected && "is-selected border-foreground bg-muted hover:bg-muted",
+        selected && "is-selected border-foreground ring-1 ring-foreground",
       )}
       data-job-id={job.job_id}
       onClick={onClick}
