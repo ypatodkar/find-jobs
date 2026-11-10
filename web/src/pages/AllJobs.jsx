@@ -63,13 +63,17 @@ export function Intro({ children }) {
 
 /**
  * "Companies you've opened", at the top of a jobs page: under the header, above the
- * filter toolbar, where it is the first thing a returning visitor sees. Takes no room
+ * filter toolbar, where it is the first thing a returning visitor sees. Paper, full
+ * width, like the header and the toolbar it sits between, so the three read as one top
+ * section rather than leaving a strip of the page colour between them. Takes no room
  * when there is nothing to show (Viewed renders an empty #viewed-slot).
  */
 export function OpenedTop({ jobs, seen }) {
   return (
-    <div className={`${CONTAINER} pt-3 has-[#viewed-slot:empty]:hidden`}>
-      <Viewed jobs={jobs} seen={seen} />
+    <div className="bg-background has-[#viewed-slot:empty]:hidden">
+      <div className={`${CONTAINER} pt-3`}>
+        <Viewed jobs={jobs} seen={seen} />
+      </div>
     </div>
   );
 }

@@ -92,6 +92,9 @@ export default function Firm() {
   return (
     <>
       <SiteHeader active="investors" country={null} />
+      {/* Paper, like the header above and the toolbar below it, so everything above the
+          list is one white section; ruled off when only a message follows. */}
+      <div className={showList ? "bg-background" : "border-b bg-background"}>
       <div className={CONTAINER}>
         <header className="pt-6 pb-5 md:pt-8">
           <nav aria-label="Breadcrumb">
@@ -115,6 +118,7 @@ export default function Firm() {
           </div>
         </header>
       </div>
+      </div>
       {showList ? (
         // Your opened roles at this firm's companies sit at the top, above its filters,
         // as on the jobs pages.
@@ -124,7 +128,7 @@ export default function Firm() {
         </>
       ) : null}
       {message ? (
-        <div className={CONTAINER}>
+        <div className={`${CONTAINER} pt-6 pb-8`}>
           <Empty id="firm-message" className="border">
             <EmptyHeader>
               <EmptyMedia variant="icon">{message.icon}</EmptyMedia>

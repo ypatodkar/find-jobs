@@ -49,8 +49,8 @@ https://claude.ai/artifact/JrkT6vZ6c1tW1jYej8EYTa
   - **Selected / pressed / on:** an ink outline (`border-foreground`, or
     `ring-1 ring-foreground`), on the wash for rows and toggles, on paper for job cards.
   - **Focus:** `focus-visible:ring-3 focus-visible:ring-ring` (solid grey).
-  - **Flags** are drawn in the shades too, each colour taking the shade nearest its
-    lightness (`components/Country.jsx`).
+  - **Flags** keep their real colours, the one exception (`components/Country.jsx`;
+    the owner wanted them in colour).
   - Never a raw colour (`text-zinc-500`, `#fff`, `violet-600`). (On 2026-11-09 the owner
     tried violet, then pure black and white, then chose Stone, layered.)
 - **Errors:** `destructive` (red), for errors and removing things only.

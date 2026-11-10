@@ -20,25 +20,24 @@ import { COUNTRIES, chooseCountry, chosenCountry, countryNote, forgetSent, settl
 /**
  * A small flag, drawn here so it looks the same on every system (emoji flags don't
  * render on Windows). Simplified to what reads at 14 px: seven stripes and a starred
- * canton for the US, three bands and the chakra for India. Drawn in the site's shades,
- * not the flags' colours: each colour takes the shade nearest its lightness (red and
- * saffron the grey, navy and green the ink, white the paper), so the shapes say which
- * country and dark mode inverts them like everything else.
+ * canton for the US, three bands and the chakra for India. Flag colours are the one
+ * place raw colours are allowed (DESIGN.md); they live in this SVG only, and stay in
+ * colour in both themes.
  */
 export function Flag({ code, className }) {
   const cls = cn("h-3.5 w-5 shrink-0 overflow-hidden rounded-[3px] ring-1 ring-border", className);
   if (code === "IN") {
     return (
       <svg viewBox="0 0 21 15" className={cls} aria-hidden="true" focusable="false">
-        <rect width="21" height="5" className="fill-muted-foreground" />
-        <rect y="5" width="21" height="5" className="fill-background" />
-        <rect y="10" width="21" height="5" className="fill-foreground" />
-        <circle cx="10.5" cy="7.5" r="1.85" fill="none" strokeWidth="0.5" className="stroke-foreground" />
-        <circle cx="10.5" cy="7.5" r="0.45" className="fill-foreground" />
+        <rect width="21" height="5" fill="#FF9933" />
+        <rect y="5" width="21" height="5" fill="#FFFFFF" />
+        <rect y="10" width="21" height="5" fill="#138808" />
+        <circle cx="10.5" cy="7.5" r="1.85" fill="none" stroke="#000080" strokeWidth="0.5" />
+        <circle cx="10.5" cy="7.5" r="0.45" fill="#000080" />
       </svg>
     );
   }
-  // US: grey and paper stripes, the ink canton over the top four.
+  // US: red and white stripes, the canton over the top four.
   const stripe = 15 / 7;
   const stars = [];
   for (let row = 0; row < 3; row++) {
@@ -46,10 +45,10 @@ export function Flag({ code, className }) {
   }
   return (
     <svg viewBox="0 0 21 15" className={cls} aria-hidden="true" focusable="false">
-      <rect width="21" height="15" className="fill-background" />
-      {[0, 2, 4, 6].map((i) => <rect key={i} y={i * stripe} width="21" height={stripe} className="fill-muted-foreground" />)}
-      <rect width="9.4" height={stripe * 4} className="fill-foreground" />
-      {stars.map(([cx, cy]) => <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="0.42" className="fill-background" />)}
+      <rect width="21" height="15" fill="#FFFFFF" />
+      {[0, 2, 4, 6].map((i) => <rect key={i} y={i * stripe} width="21" height={stripe} fill="#B22234" />)}
+      <rect width="9.4" height={stripe * 4} fill="#3C3B6E" />
+      {stars.map(([cx, cy]) => <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="0.42" fill="#FFFFFF" />)}
     </svg>
   );
 }
