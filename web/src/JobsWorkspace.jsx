@@ -33,6 +33,7 @@ import { decode } from "./lib/presets.js";
 import { useFilterState } from "./lib/useFilterState.js";
 import { useColumns } from "./lib/useColumns.js";
 import { useSeen } from "./lib/seen.js";
+import { useViewPrefs } from "./lib/viewPrefs.js";
 import { firmLabel } from "./data.js";
 
 const SORTS = [
@@ -155,6 +156,8 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
 
   // Opened roles (lib/seen.js): the Hide filters and the "N opened" notes.
   const seenMap = useSeen();
+  // What shows above the list (the View menu): the result count and the keyboard hint.
+  const show = useViewPrefs();
   const seen = useMemo(() => new Set(Object.keys(seenMap)), [seenMap]);
   const openedByCompany = useMemo(() => {
     const m = new Map();
@@ -463,7 +466,8 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
     <>
       {jobs ? (
         <Filters dims={dims} filters={filters} onChange={setFilters} onReset={reset} canUndo={canUndo} onUndo={undo}
-          total={sorted.length} naming={naming} countsFor={(d) => countsFor(jobs, filters, d, dims, filterOpts)} showSalary={country === "US"} />
+          total={sorted.length} naming={naming} countsFor={(d) => countsFor(jobs, filters, d, dims, filterOpts)} showSalary={country === "US"}
+          history={{ jobs, seen: seenMap }} />
       ) : (
         // The toolbar's place while the jobs load (its filters count them). It copies both
         // of Filters' layouts, switching at the same 720px and wrapping where the real bar
@@ -522,10 +526,12 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
                   <SelectMenu id="sort-select" label="Sort roles" options={SORTS} value={filters.sort} onChange={(v) => setFilters({ ...filters, sort: v })} />
                 </div>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-                <p className="results-meta tabular text-sm text-muted-foreground" id="job-count" data-total={total.toLocaleString()}>{countText}</p>
+              {/* Both are off unless ticked in View. The count stays in the page for screen
+                  readers either way; with neither shown the row takes no room (contents). */}
+              <div className={(show.count || (show.keys && wide)) ? "flex flex-wrap items-center justify-between gap-x-4 gap-y-1" : "contents"}>
+                <p className={cn("results-meta tabular text-sm text-muted-foreground", !show.count && "sr-only")} id="job-count" data-total={total.toLocaleString()}>{countText}</p>
                 {/* Said only where the arrows work: beside the pane, with a keyboard. */}
-                <p className="results-hint flex items-center gap-1.5 text-xs text-muted-foreground" aria-hidden="true" hidden={!wide}>
+                <p className="results-hint flex items-center gap-1.5 text-xs text-muted-foreground" aria-hidden="true" hidden={!wide || !show.keys}>
                   <KbdGroup><Kbd><ArrowUpIcon /></Kbd><Kbd><ArrowDownIcon /></Kbd></KbdGroup>
                   to move between jobs
                 </p>

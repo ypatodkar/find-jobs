@@ -2,14 +2,17 @@
 // most recent first. Joined against the job list already loaded, so it needs no
 // network call and works signed out. Nothing here is sent anywhere.
 //
-// It sits in the jobs pages' intro (between the filter toolbar and the results): a small
-// outline button with the count, which folds out a list of companies, each with up to
-// four of the roles you opened there and when you last opened one.
-import { Fragment, useMemo, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+// It sits at the right end of the filter toolbar (Filters' `history`): an outline button
+// with the count, opening a panel of companies, each with up to four of the roles you
+// opened there and when you last opened one. A popover, not a fold-out, so opening it
+// does not push the toolbar and the list down. `fit` is how much of the name the
+// toolbar has room for: "full" ("Companies you've opened"), "short" ("Opened") or
+// "icon" (the icon and the count); `compact` is the phone search bar's 40px button.
+import { Fragment, useMemo } from "react";
+import { ChevronDown, HistoryIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { withSource } from "../lib/outbound.js";
 
 function when(ts) {
@@ -39,11 +42,7 @@ function iso(ts) {
   return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
 }
 
-const reducedMotion = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-export default function Viewed({ jobs, seen }) {
-  const [open, setOpen] = useState(false);
-  const panel = useRef(null);
+export default function Viewed({ jobs, seen, compact = false, fit = "full" }) {
 
   const list = useMemo(() => {
     const by = new Map();
@@ -59,31 +58,31 @@ export default function Viewed({ jobs, seen }) {
     return [...by.values()].sort((a, b) => b.last - a.last || b.roles.length - a.roles.length);
   }, [jobs, seen]);
 
-  // Nothing opened yet: no button, rather than one that opens an empty box. The empty
-  // slot keeps its id but takes no room (empty:hidden).
-  if (!list.length) return <div id="viewed-slot" className="empty:hidden"></div>;
+  // Nothing opened yet: no button, rather than one that opens an empty box.
+  if (!list.length) return null;
   const roles = list.reduce((n, c) => n + c.roles.length, 0);
-  const onOpenChange = (next) => {
-    setOpen(next);
-    // Opening it can push the list below the fold; bring it into view.
-    if (next) requestAnimationFrame(() => panel.current?.scrollIntoView({ block: "nearest", behavior: reducedMotion() ? "auto" : "smooth" }));
-  };
+  const label = `Companies you've opened, ${list.length}`;
   return (
-    <div id="viewed-slot">
-      <Collapsible open={open} onOpenChange={onOpenChange}>
-        <CollapsibleTrigger asChild>
-          <Button type="button" variant="outline" size="sm" className="group/viewed">
-            Companies you've opened
-            <Badge variant="secondary" className="tabular h-5 min-w-5 px-1.5">{list.length}</Badge>
-            <ChevronDown data-icon="inline-end" aria-hidden="true"
-              className="text-muted-foreground transition-transform duration-150 group-data-[state=open]/viewed:rotate-180 motion-reduce:transition-none" />
-          </Button>
-        </CollapsibleTrigger>
-        {/* data-slot is renamed from "collapsible-content": JobsWorkspace treats any open
-            "*-content" slot as an overlay and pauses ↑/↓ list browsing while one is open,
-            and this panel is part of the page, not an overlay over it. */}
-        <CollapsibleContent ref={panel} data-slot="viewed-panel"
-          className="mt-2 max-h-80 max-w-3xl overflow-y-auto rounded-xl bg-card text-sm text-card-foreground shadow-xs ring-1 ring-border">
+    <div id="viewed-slot" className="shrink-0">
+      <Popover>
+        <PopoverTrigger asChild>
+          {compact ? (
+            <Button type="button" variant="outline" className="h-10 shrink-0 gap-1.5 px-3" aria-label={label} title="Companies you've opened">
+              <HistoryIcon aria-hidden="true" />
+              <span className="tabular">{list.length}</span>
+            </Button>
+          ) : (
+            <Button type="button" variant="outline" size="sm" className="group/viewed" aria-label={label} title={fit === "full" ? undefined : "Companies you've opened"}>
+              <HistoryIcon aria-hidden="true" />
+              {fit === "full" ? "Companies you've opened" : fit === "short" ? "Opened" : null}
+              <Badge variant="secondary" className="tabular h-5 min-w-5 px-1.5">{list.length}</Badge>
+              <ChevronDown data-icon="inline-end" aria-hidden="true"
+                className="text-muted-foreground transition-transform duration-150 group-data-[state=open]/viewed:rotate-180 motion-reduce:transition-none" />
+            </Button>
+          )}
+        </PopoverTrigger>
+        <PopoverContent align="end" collisionPadding={16} aria-label="Companies you've opened"
+          className="max-h-[min(26rem,70vh)] w-[min(46rem,calc(100vw-2rem))] gap-0 overflow-y-auto p-0">
           <p className="px-4 pt-3 pb-2 text-muted-foreground tabular">
             {roles} role{roles === 1 ? "" : "s"} across {list.length} compan{list.length === 1 ? "y" : "ies"}
           </p>
@@ -105,8 +104,8 @@ export default function Viewed({ jobs, seen }) {
               </li>
             ))}
           </ul>
-        </CollapsibleContent>
-      </Collapsible>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

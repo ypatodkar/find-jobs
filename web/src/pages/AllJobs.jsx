@@ -5,8 +5,8 @@
 // header names the page, and the <h1> is for screen readers and search engines only.
 // The description line that used to sit under the title opens the footer's "About this
 // list" instead.
-// "Companies you've opened" sits at the top, under the header (OpenedTop). Between the
-// filter toolbar and the results (JobsWorkspace's `intro`) sit the country note and the
+// "Companies you've opened" is at the right end of the filter toolbar (Filters). Between
+// the toolbar and the results (JobsWorkspace's `intro`) sit the country note and the
 // startup of the day.
 import { useEffect, useMemo, useState } from "react";
 import { CloudOff, Inbox } from "lucide-react";
@@ -14,12 +14,10 @@ import SiteHeader from "../components/SiteHeader.jsx";
 import SiteFooter from "../components/SiteFooter.jsx";
 import { CountryNote } from "../components/Country.jsx";
 import { Featured } from "../components/HeaderExtras.jsx";
-import Viewed from "../components/Viewed.jsx";
 import JobsWorkspace from "../JobsWorkspace.jsx";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { CONTAINER } from "../lib/layout.js";
 import { loadJobs } from "../lib/jobs.js";
-import { useSeen } from "../lib/seen.js";
 
 // The page's footer blocks: a heading and a paragraph each (SiteFooter adds the rest).
 const FOOT_H = "mb-2 text-sm font-medium text-foreground";
@@ -61,28 +59,10 @@ export function Intro({ children }) {
   return <div className="flex min-w-0 flex-col gap-3 empty:hidden [&>:empty]:hidden">{children}</div>;
 }
 
-/**
- * "Companies you've opened", at the top of a jobs page: under the header, above the
- * filter toolbar, where it is the first thing a returning visitor sees. Paper, full
- * width, like the header and the toolbar it sits between, so the three read as one top
- * section rather than leaving a strip of the page colour between them. Takes no room
- * when there is nothing to show (Viewed renders an empty #viewed-slot).
- */
-export function OpenedTop({ jobs, seen }) {
-  return (
-    <div className="bg-background has-[#viewed-slot:empty]:hidden">
-      <div className={`${CONTAINER} pt-3`}>
-        <Viewed jobs={jobs} seen={seen} />
-      </div>
-    </div>
-  );
-}
-
 export default function AllJobs() {
   const [jobs, setJobs] = useState(null);
   const [error, setError] = useState(null);
   useEffect(() => { loadJobs().then(setJobs, setError); }, []);
-  const seen = useSeen();
   const empty = !!error || (jobs && !jobs.length);
   const multi = useMemo(() => (jobs ? jobs.filter((j) => (j.firms || []).length > 1).length : 0), [jobs]);
 
@@ -99,7 +79,6 @@ export default function AllJobs() {
     <>
       <SiteHeader active="jobs" country="US" />
       <h1 id="content" tabIndex={-1} className="sr-only">Engineering jobs at VC-backed companies in the United States</h1>
-      <OpenedTop jobs={jobs} seen={seen} />
       {empty ? (
         <div className={`${CONTAINER} pt-4`}>
           {intro}

@@ -10,13 +10,11 @@ import { useEffect, useState } from "react";
 import { ArrowRight, ArrowUpRight, Ban, ChevronRight, CloudOff, Inbox, SearchX, TriangleAlert } from "lucide-react";
 import SiteHeader from "../components/SiteHeader.jsx";
 import SiteFooter from "../components/SiteFooter.jsx";
-import { OpenedTop } from "./AllJobs.jsx";
 import JobsWorkspace from "../JobsWorkspace.jsx";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { CONTAINER } from "../lib/layout.js";
 import { loadFirm } from "../lib/jobs.js";
-import { useSeen } from "../lib/seen.js";
 import { withSource } from "../lib/outbound.js";
 
 const UNAVAILABLE = "Listings for this investor are temporarily unavailable; its board will be checked again automatically.";
@@ -28,7 +26,6 @@ export default function Firm() {
   const firm = VC_FIRMS.find((f) => f.id === firmId);
   const meta = firm && TIER_META[firm.tier];
   const [data, setData] = useState(null); // the loaded file, or { failed: true }
-  const seen = useSeen();
 
   useEffect(() => {
     if (!firm) return;
@@ -120,12 +117,9 @@ export default function Firm() {
       </div>
       </div>
       {showList ? (
-        // Your opened roles at this firm's companies sit at the top, above its filters,
-        // as on the jobs pages.
-        <>
-          <OpenedTop jobs={jobs} seen={seen} />
-          <JobsWorkspace jobs={jobs} contextLabel={firm.short || firm.name} />
-        </>
+        // Your opened roles at this firm's companies are in the toolbar, as on the jobs
+        // pages.
+        <JobsWorkspace jobs={jobs} contextLabel={firm.short || firm.name} />
       ) : null}
       {message ? (
         <div className={`${CONTAINER} pt-6 pb-8`}>

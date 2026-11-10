@@ -101,7 +101,14 @@ page never ask who you are (lib/auth.js), as before the redesign.
 Pages render `JobsWorkspace` full width, outside `CONTAINER`: the toolbar is a
 full-bleed sticky bar and applies `CONTAINER` inside itself, and so do the results.
 `JobsWorkspace`'s `intro` prop (a React node) renders between the toolbar and the
-results: the country note, the featured company and "Companies you've opened" go there.
+results: the country note and the featured company go there.
+
+The toolbar row, left to right: search, the main filters, More filters, Saved filters,
+Reset and Undo; at the far right View and "Companies you've opened" (a popover). The
+row stays one line: the opened button shortens itself (full name, "Opened", icon and
+count), and last of all View drops its word and the search narrows. View also holds
+what shows above the list (the result count and the keyboard hint, both off by
+default; `lib/viewPrefs.js`). `#job-count` stays in the page, visually hidden when off.
 Each page also has an `<h1>` (visually hidden on the jobs pages, which have no title row).
 It is the skip link's target (`id="content"`, `tabIndex={-1}`; `#firm-name` on an
 investor's page), since `<main>` starts with the site header.
@@ -118,7 +125,7 @@ firm-count line under the title is dropped, since the tier toggles show the same
 | Multi-select filter with search and counts | `Popover` + `Command` (+ `Checkbox` look), trigger `Button variant="outline"` with a dashed border while empty; chosen values as `Badge`s on the trigger. shadcn's "faceted filter" pattern. |
 | Single choice (Sort, Posted, Salary) | `Select` (through `SelectMenu`). The resume picker keeps its own `<details>` menu, drawn like a Select, because its rows carry upload and delete actions. |
 | Menu of actions or toggles (View, account, country) | `DropdownMenu` (with `DropdownMenuCheckboxItem` for toggles) |
-| Panel of extra controls (More filters, Saved filters, feedback) | `Popover`. Saved filters has its own button beside View: naming a filter needs a text field, which a menu's type-ahead would swallow. |
+| Panel of extra controls (More filters, Saved filters, feedback) | `Popover`. Saved filters has its own button beside More filters: naming a filter needs a text field, which a menu's type-ahead would swallow. |
 | Phone filters, phone job view | a sheet: shadcn `Sheet`, or the existing custom sheet styled to match it where its behaviour (history, focus return) must be kept |
 | Blocking question (sign in to upload) | `Dialog` |
 | Tabs (All jobs / Companies) | `Tabs` (`TabsList`, `TabsTrigger`) |
@@ -150,7 +157,8 @@ mechanics and style the markup with the same tokens and classes the primitive us
   `a[data-track-open][data-job-id]` (Apply). Both keep `data-company`, `data-city`,
   `data-title` where they have them.
 - **History in the browser:** opened roles (`lib/seen.js`), saved jobs
-  (`lib/saved.js`), saved filters (`lib/presets.js`), theme, column ratio, country:
+  (`lib/saved.js`), saved filters (`lib/presets.js`), theme, column ratio, country, View's Show
+  choices (`lib/viewPrefs.js`):
   same storage keys.
 - **Country routing:** `lib/country.js` and the inline script in `index.html`.
 - **First paint:** the header, intro and `Skeleton` rows (and a toolbar skeleton the

@@ -1,6 +1,7 @@
 // The filter toolbar (#job-controls): the search, the main filters as faceted buttons,
-// More filters (the rest, in a panel), Reset and Undo, and at the right the saved
-// filters and the View menu (Hide roles / companies I've opened). A full-width bar,
+// More filters (the rest, in a panel), Saved filters, Reset and Undo, and at the right
+// the View menu (Hide roles / companies I've opened; what shows above the list) and
+// "Companies you've opened" (Viewed, from `history`). A full-width bar,
 // sticky under the site header on desktop; JobsWorkspace reads its height into
 // --toolbar-height so the job pane docks below it.
 //
@@ -8,11 +9,13 @@
 // pinned under the header), and #job-controls
 // becomes a bottom sheet (role="dialog") holding every filter, stacked and opening in
 // place, with a footer that says how many roles they leave.
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ChevronDownIcon, SearchIcon, Settings2Icon, SlidersHorizontalIcon, Undo2Icon, XIcon } from "lucide-react";
 import FilterPicker from "./FilterPicker.jsx";
 import SelectMenu from "./SelectMenu.jsx";
 import SavedFilters from "./SavedFilters.jsx";
+import Viewed from "./Viewed.jsx";
+import { setViewPref, useViewPrefs } from "../lib/viewPrefs.js";
 import { DATE_RANGES, SALARY_FLOORS, activeCount, advancedCount } from "../lib/filters.js";
 import { CONTAINER } from "@/lib/layout.js";
 import { cn } from "@/lib/utils";
@@ -21,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
@@ -106,14 +109,29 @@ function AdvancedFilters({ count, onReset, inline, children }) {
   );
 }
 
-/** The two Hide toggles, in a menu on desktop. They stay open on a tick. */
-function ViewMenu({ filters, set }) {
+// What can show above the list (lib/viewPrefs.js). Off by default.
+const SHOW = [
+  { key: "count", id: "show-count", label: "Result count", hint: "“Showing 1–45 of … matching roles” above the list" },
+  { key: "keys", id: "show-keys", label: "Keyboard hint", hint: "“↑ ↓ to move between jobs”, beside the job pane" },
+];
+
+const MenuItemText = ({ label, hint }) => (
+  <span className="flex flex-col gap-0.5">
+    <span>{label}</span>
+    <span className="text-xs text-muted-foreground">{hint}</span>
+  </span>
+);
+
+/** The two Hide toggles and what shows above the list, in a menu on desktop. They
+ *  stay open on a tick. */
+function ViewMenu({ filters, set, iconOnly = false }) {
+  const prefs = useViewPrefs();
   const on = HIDE.filter((h) => filters[h.key]).length;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" size="sm" id="view-options" aria-label={on ? `View, ${on} on` : "View"}>
-          <Settings2Icon />View
+        <Button type="button" variant="outline" size="sm" id="view-options" aria-label={on ? `View, ${on} on` : "View"} title={iconOnly ? "View" : undefined}>
+          <Settings2Icon />{iconOnly ? null : "View"}
           {on ? <Badge variant="secondary" className="rounded-sm px-1 font-normal tabular">{on}</Badge> : null}
         </Button>
       </DropdownMenuTrigger>
@@ -122,10 +140,15 @@ function ViewMenu({ filters, set }) {
         {HIDE.map((h) => (
           <DropdownMenuCheckboxItem key={h.id} id={h.id} title={h.hint} checked={filters[h.key]}
             onCheckedChange={(c) => set({ [h.key]: c === true })} onSelect={(e) => e.preventDefault()}>
-            <span className="flex flex-col gap-0.5">
-              <span>{h.label}</span>
-              <span className="text-xs text-muted-foreground">{h.hint}</span>
-            </span>
+            <MenuItemText label={h.label} hint={h.hint} />
+          </DropdownMenuCheckboxItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Show above the list</DropdownMenuLabel>
+        {SHOW.map((v) => (
+          <DropdownMenuCheckboxItem key={v.id} id={v.id} checked={prefs[v.key]}
+            onCheckedChange={(c) => setViewPref(v.key, c === true)} onSelect={(e) => e.preventDefault()}>
+            <MenuItemText label={v.label} hint={v.hint} />
           </DropdownMenuCheckboxItem>
         ))}
       </DropdownMenuContent>
@@ -147,7 +170,23 @@ function ViewToggles({ filters, set }) {
           </span>
         </Label>
       ))}
+      <ShowCount />
     </section>
+  );
+}
+
+/** The phone sheet's one Show toggle: there is no keyboard hint on a phone. */
+function ShowCount() {
+  const prefs = useViewPrefs();
+  const v = SHOW[0];
+  return (
+    <Label htmlFor={v.id} className="min-h-11 cursor-pointer gap-3 py-1.5 font-normal">
+      <Checkbox id={v.id} checked={prefs.count} onCheckedChange={(c) => setViewPref("count", c === true)} />
+      <span className="flex flex-col gap-1 leading-snug">
+        <span>Show the result count</span>
+        <span className="text-xs text-muted-foreground">“Showing 1–45 of … matching roles” above the list</span>
+      </span>
+    </Label>
   );
 }
 
@@ -208,7 +247,7 @@ function useDrawer(mobile, controls, toggle, closeBtn) {
 }
 
 // `showSalary`: the salary floors are in dollars, so the India list leaves them out.
-export default function Filters({ dims, filters, countsFor, onChange, onReset, canUndo, onUndo, total, naming, showSalary = true }) {
+export default function Filters({ dims, filters, countsFor, onChange, onReset, canUndo, onUndo, total, naming, showSalary = true, history = null }) {
   const mobile = useMobile();
   const controls = useRef(null), toggle = useRef(null), closeBtn = useRef(null), applyBtn = useRef(null), searchInput = useRef(null);
   const [drawerOpen, setDrawerOpen] = useDrawer(mobile, controls, toggle, closeBtn);
@@ -228,16 +267,35 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
   const n = activeCount(filters, dims);
   const big = mobile ? "lg" : "sm"; // 44px touch targets in the sheet
 
+  // The right end of the desktop row (View and "Companies you've opened") stays on the
+  // row: if it wraps below the search, the opened button gives up words, full -> short
+  // -> icon, and last of all View drops its word and the search narrows ("tight").
+  // All before the paint; back to full whenever the room may have grown.
+  const FITS = ["full", "short", "icon", "tight"];
+  const [fit, setFit] = useState(0);
+  const rowEnd = useRef(null);
+  useLayoutEffect(() => { setFit(0); }, [filters, mobile, history?.seen]);
+  useLayoutEffect(() => {
+    const end = rowEnd.current, first = document.getElementById("filter-primary");
+    if (!end || !first || mobile) return;
+    if (end.offsetTop > first.offsetTop + 4 && fit < FITS.length - 1) setFit(fit + 1);
+  });
+  useEffect(() => {
+    const grow = () => setFit(0);
+    addEventListener("resize", grow);
+    return () => removeEventListener("resize", grow);
+  }, []);
+
   const search = (
     // Fills the first line on mid widths, where the row wraps anyway; a set width on wide
     // ones, where the pickers (#primary-grid is display:contents there) wrap one by one
     // beside it rather than as a block below it.
-    <div id="filter-primary" className={mobile ? "min-w-0 flex-1" : "min-w-48 flex-1 lg:w-56 lg:flex-none"}>
+    <div id="filter-primary" className={mobile ? "min-w-0 flex-1" : cn("min-w-48 flex-1 lg:flex-none", FITS[fit] === "tight" ? "lg:w-48" : "lg:w-56")}>
       <InputGroup className={mobile ? "h-10" : "h-8"}>
         {/* type=search keeps Escape-to-clear; the browser's clear glyph gives way to ours.
             On a phone the box shares its line with Filters, so a shorter placeholder,
             which still fits at 320px. */}
-        <InputGroupInput ref={searchInput} id="job-search" type="search" placeholder={mobile ? "Title or company…" : "Search title or company…"} aria-label="Search roles" autoComplete="off"
+        <InputGroupInput ref={searchInput} id="job-search" type="search" placeholder={mobile || FITS[fit] === "tight" ? "Title or company…" : "Search title or company…"} aria-label="Search roles" autoComplete="off"
           className={cn("[&::-webkit-search-cancel-button]:appearance-none", mobile ? "h-10" : "h-8")}
           value={filters.query} onChange={(e) => set({ query: e.target.value })} />
         <InputGroupAddon><SearchIcon /></InputGroupAddon>
@@ -293,6 +351,7 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
           className="sticky top-(--header-height) z-30 border-b bg-background">
           <div className={cn(CONTAINER, "flex items-center gap-2 py-2")}>
             {search}
+            {history ? <Viewed jobs={history.jobs} seen={history.seen} compact /> : null}
             <Button ref={toggle} type="button" variant="outline" id="mobile-filter-toggle" className="h-10 shrink-0" aria-controls="job-controls"
               aria-expanded={drawerOpen} aria-label={`${drawerOpen ? "Hide" : "Show"} filters${n ? `, ${n} active` : ""}`}
               onClick={() => mobile && setDrawerOpen(!drawerOpen)}>
@@ -350,13 +409,14 @@ export default function Filters({ dims, filters, countsFor, onChange, onReset, c
             {search}
             {primary}
             {advanced}
+            <div id="preset-slot" className="contents"><SavedFilters filters={filters} onApply={onChange} naming={naming} /></div>
             <Button type="button" variant="ghost" size="sm" id="reset-filters" hidden={n === 0} onClick={onReset}>
               {resetLabel}<XIcon data-icon="inline-end" />
             </Button>
-            <div className="ml-auto flex items-center gap-2">
-              {undo}
-              <div id="preset-slot" className="contents"><SavedFilters filters={filters} onApply={onChange} naming={naming} /></div>
-              <ViewMenu filters={filters} set={set} />
+            {undo}
+            <div ref={rowEnd} className="ml-auto flex items-center gap-2">
+              <ViewMenu filters={filters} set={set} iconOnly={FITS[fit] === "tight"} />
+              {history ? <Viewed jobs={history.jobs} seen={history.seen} fit={FITS[fit] === "tight" ? "icon" : FITS[fit]} /> : null}
             </div>
           </div>
         )}

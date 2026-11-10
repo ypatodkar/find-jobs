@@ -8,10 +8,9 @@ import SiteHeader from "../components/SiteHeader.jsx";
 import SiteFooter from "../components/SiteFooter.jsx";
 import { CountryNote } from "../components/Country.jsx";
 import JobsWorkspace from "../JobsWorkspace.jsx";
-import { Intro, NoJobs, OpenedTop } from "./AllJobs.jsx";
+import { Intro, NoJobs } from "./AllJobs.jsx";
 import { CONTAINER } from "../lib/layout.js";
 import { loadJobs } from "../lib/jobs.js";
-import { useSeen } from "../lib/seen.js";
 
 const FOOT_H = "mb-2 text-sm font-medium text-foreground";
 const FOOT_P = "leading-6";
@@ -21,7 +20,6 @@ export default function IndiaJobs() {
   const [jobs, setJobs] = useState(null);
   const [error, setError] = useState(null);
   useEffect(() => { loadJobs("api/in/all-jobs.json").then(setJobs, setError); }, []);
-  const seen = useSeen();
   const empty = !!error || (jobs && !jobs.length);
   const companies = jobs ? new Set(jobs.map((j) => j.company)).size : 0;
 
@@ -36,7 +34,6 @@ export default function IndiaJobs() {
     <>
       <SiteHeader active="jobs" country="IN" />
       <h1 id="content" tabIndex={-1} className="sr-only">Engineering jobs at VC-backed companies in India</h1>
-      <OpenedTop jobs={jobs} seen={seen} />
       {empty ? (
         <div className={`${CONTAINER} pt-4`}>
           {intro}
