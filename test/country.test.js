@@ -72,6 +72,17 @@ test("a shared link with filters or an anchor opens as it is", () => {
   assert.deepEqual(openHome({ zone: "Asia/Kolkata", search: "?roles=backend" }).local, {}, "nor is a choice saved");
 });
 
+test("a link that only carries campaign tags is the home page, and keeps its tags", () => {
+  const r = openHome({ zone: "Asia/Kolkata", search: "?utm_source=linkedin&utm_medium=social" });
+  assert.equal(r.went, "in.html?utm_source=linkedin&utm_medium=social");
+  assert.equal(r.local["vc-directory-country"], "IN");
+  assert.equal(openHome({ zone: "Asia/Kolkata", search: "?fbclid=abc" }).went, "in.html?fbclid=abc");
+  assert.equal(openHome({ local: { "vc-directory-country": "IN" }, search: "?utm_source=x" }).went, "in.html?utm_source=x", "a saved choice too");
+  assert.equal(openHome({ zone: "America/Chicago", search: "?utm_source=linkedin" }).went, null);
+  assert.equal(openHome({ zone: "Asia/Kolkata", search: "?utm_source=linkedin&q=rust" }).went, null, "a tag beside a filter is still a shared view");
+  assert.equal(openHome({ zone: "Asia/Kolkata", search: "?utm_source=linkedin", hash: "#content" }).went, null);
+});
+
 test("no storage at all leaves the US list, without an error", () => {
   assert.equal(openHome({ zone: "Asia/Kolkata", broken: true }).went, null);
 });
