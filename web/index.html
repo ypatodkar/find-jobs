@@ -48,11 +48,16 @@
        the switch wins. Without one, a first visit on India's clock goes to the India
        list, and that becomes the choice; a browser that has used the site before (any
        of these keys) stays on the US list, where lib/country.js tells it about India. A
-       link with filters or an anchor is a view someone shared, and opens as it is.
+       link with filters or an anchor is a view someone shared, and opens as it is; a
+       link whose query is only campaign tags (utm_source from a LinkedIn post, a click
+       id) is still the home page, and is redirected with its tags kept.
        test/country.test.js runs this script as written. -->
   <script>
     try {
-      if (!location.search && !location.hash) {
+      var tagsOnly = location.search.slice(1).split("&").every(function (p) {
+        return !p || /^(utm_[a-z_]+|fbclid|gclid|gbraid|wbraid|msclkid|li_fat_id|igshid|mc_cid|mc_eid|ref|ref_src)(=|$)/i.test(p);
+      });
+      if (tagsOnly && !location.hash) {
         var c = localStorage.getItem("vc-directory-country");
         if (!c && /^Asia\/(Kolkata|Calcutta)$/.test(Intl.DateTimeFormat().resolvedOptions().timeZone || "")) {
           var used = ["vc-directory-visitor", "vc-directory-seen", "vc-directory-filters", "vc-directory-liked",
@@ -62,7 +67,7 @@
             sessionStorage.setItem("vc-directory-country-auto", "1");
           }
         }
-        if (c === "IN") location.replace("in.html");
+        if (c === "IN") location.replace("in.html" + location.search);
       }
     } catch (e) {}
   </script>

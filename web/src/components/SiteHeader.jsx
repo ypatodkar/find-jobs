@@ -1,6 +1,6 @@
 // The site header: one sticky row on every page.
 //
-// <SiteHeader active="jobs" | "investors" | "about" | null  country="US" | "IN" | null  account={true} />
+// <SiteHeader active="jobs" | "investors" | "about" | null  country="US" | "IN" | null  account={true}  counter={true} />
 //   active:  which nav item is the current page (marked aria-current="page").
 //   country: the country whose list this page shows (the jobs pages), or null on pages
 //            that are not a country's list; the switcher then shows the remembered
@@ -8,9 +8,12 @@
 //   account: the account button (Google sign-in, or the signed-in menu). On by default.
 //            Showing it is what makes a page ask the server who the visitor is
 //            (lib/auth.js), so a page that must not ask passes account={false}.
+//   counter: the live total of job clicks. On by default; About shows it in its lead
+//            instead, so passes counter={false}.
 //
 // Left: the logo (to the visitor's country list), the country switcher, and Jobs /
-// Investors / About. Right: Feedback, the theme toggle and the account. Under md the
+// Investors / About. Right: the job-click counter (from sm up; a phone's row has no
+// room for it), Feedback, the theme toggle and the account. Under md the
 // three links fold into a menu at the right end and the switcher shortens to "US";
 // below 380 px the logo drops its wordmark, so the row never scrolls the page sideways.
 import { CompassIcon, MenuIcon } from "lucide-react";
@@ -27,7 +30,7 @@ import { CONTAINER } from "@/lib/layout.js";
 import { COUNTRIES, chosenCountry } from "@/lib/country.js";
 import { AccountSlot } from "./Account.jsx";
 import { CountrySwitcher } from "./Country.jsx";
-import { Feedback, ThemeToggle, Tip } from "./HeaderExtras.jsx";
+import { Counter, Feedback, ThemeToggle, Tip } from "./HeaderExtras.jsx";
 
 /** The list a visitor means by "Jobs": this page's country, else the one they chose. */
 function listHref(country) {
@@ -35,7 +38,7 @@ function listHref(country) {
   return (COUNTRIES.find((c) => c.code === code) || COUNTRIES[0]).href;
 }
 
-export default function SiteHeader({ active = null, country = null, account = true }) {
+export default function SiteHeader({ active = null, country = null, account = true, counter = true }) {
   const jobs = listHref(country);
   const nav = [
     { key: "jobs", href: jobs, label: "Jobs" },
@@ -69,6 +72,7 @@ export default function SiteHeader({ active = null, country = null, account = tr
         </nav>
 
         <div className="ml-auto flex items-center gap-1">
+          {counter ? <Counter className="mr-2 hidden sm:inline-flex" /> : null}
           <Feedback />
           <ThemeToggle />
           {account ? <AccountSlot /> : null}

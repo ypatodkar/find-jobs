@@ -100,7 +100,7 @@ export function Heart() {
 
 // ---- total job clicks ----
 const MIN_TO_SHOW = 10; // below this it reads as "nobody is here"
-export function Counter() {
+export function Counter({ className }) {
   const [stats, setStats] = useState(null);
   useEffect(() => {
     let live = true;
@@ -113,7 +113,7 @@ export function Counter() {
   if (!stats) return null;
   // Quiet by design: ambient reassurance that the site is in use, not a headline.
   return (
-    <div id="counter-slot" className="inline-flex">
+    <div id="counter-slot" className={cn("inline-flex", className)}>
       <Tip label={`${Number(stats.jobs).toLocaleString()} different roles opened by ${Number(stats.users).toLocaleString()} people`}>
         <span tabIndex={0} className="inline-flex cursor-help items-center gap-2 rounded-md text-sm whitespace-nowrap text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring">
           <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground motion-safe:animate-pulse" aria-hidden="true"></span>

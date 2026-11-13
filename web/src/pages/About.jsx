@@ -23,7 +23,7 @@ const LINK = "rounded-sm underline decoration-muted-foreground underline-offset-
 export default function About() {
   return (
     <>
-      <SiteHeader active="about" country={null} account={false} />
+      <SiteHeader active="about" country={null} account={false} counter={false} />
       <div className={CONTAINER}>
         <article className={`mx-auto max-w-2xl pt-10 pb-4 md:pt-14 ${PROSE}`}>
           <header>
