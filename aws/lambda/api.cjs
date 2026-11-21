@@ -31,17 +31,27 @@ function response(statusCode, body, extra = {}) {
   return { statusCode, headers, ...(cookie ? { cookies: [cookie] } : {}), body: JSON.stringify(body) };
 }
 async function handle(event, context) {
+  const started = Date.now();
   if (context) context.callbackWaitsForEmptyEventLoop = false;
   const headers = Object.fromEntries(Object.entries(event.headers || {}).map(([key, value]) => [key.toLowerCase(), value]));
   if (event.cookies?.length) headers.cookie = event.cookies.join('; ');
   const req = Readable.from(event.body ? [Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'utf8')] : []);
   req.method = event.requestContext?.http?.method || 'GET';
   req.headers = headers;
+  req.requestId = context?.awsRequestId || null;
+  const route = event.rawPath.replace(/\.json$/, '');
+  const matchRequest = route === '/api/match';
+  const logMatch = (status, outcome) => {
+    if (!matchRequest) return;
+    console.info(JSON.stringify({ event: 'resume_match_request', requestId: req.requestId, method: req.method, status, outcome, durationMs: Date.now() - started }));
+  };
   const query = new URLSearchParams(event.rawQueryString || event.queryStringParameters || {});
   try {
-    const [status, body, outHeaders] = await api.handle(req, event.rawPath.replace(/\.json$/, ''), query);
+    const [status, body, outHeaders] = await api.handle(req, route, query);
+    logMatch(status, 'success');
     return response(status, body, outHeaders);
   } catch (error) {
+    logMatch(error.status || 500, 'error');
     // name and code too: a network failure can carry an empty message (an
     // AggregateError of every address tried), which once logged as a blank line.
     if (!error.status) console.error('account API:', error.name, error.code || '', error.message || '', (error.errors || []).map((e) => e.message).join('; '));

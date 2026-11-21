@@ -69,7 +69,7 @@ function createAccountApi({ getDescription, env = process.env }) {
     return account;
   }
 
-  async function handleMatch(account, body) {
+  async function handleMatch(account, body, requestId) {
     const resumeId = body?.resume_id;
     const jobId = typeof body?.job_id === "string" ? body.job_id : "";
     const title = typeof body?.title === "string" ? body.title.slice(0, 300) : "";
@@ -100,7 +100,7 @@ function createAccountApi({ getDescription, env = process.env }) {
     budget.used++;
     let assessment;
     try {
-      assessment = await jev.assess(resume, { job_id: jobId, title, html: job.html });
+      assessment = await jev.assess(resume, { job_id: jobId, title, html: job.html }, { requestId });
     } catch (err) {
       await usageStore().refund(account.id).catch(() => {});
       budget.used = Math.max(0, budget.used - 1);
@@ -188,7 +188,7 @@ function createAccountApi({ getDescription, env = process.env }) {
     if (route === "/api/match/feedback" && m === "POST") {
       return [200, { feedback: await matchStore().reviewMatch(account.id, await readBody(req)) }];
     }
-    if (route === "/api/match" && m === "POST") return [200, await handleMatch(account, await readBody(req))];
+    if (route === "/api/match" && m === "POST") return [200, await handleMatch(account, await readBody(req), req.requestId)];
     throw httpError(404, "Not found.");
   }
 
