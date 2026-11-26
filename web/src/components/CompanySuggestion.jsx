@@ -15,6 +15,7 @@ export default function CompanySuggestion({ firm = null, view = null, country })
   const panelId = useId();
   const trigger = useRef(null);
   const input = useRef(null);
+  const storageAvailable = useRef(true);
   const storageKey = `find-jobs:suggestion:${country}:${firm || ""}`;
   const [draft, setDraft] = useState(() => readDraft(storageKey));
   const open = draft !== null;
@@ -27,7 +28,10 @@ export default function CompanySuggestion({ firm = null, view = null, country })
   useEffect(() => {
     // Another Jobs document in this tab may have edited or cleared the same draft.
     function restore(event) {
-      if (event.persisted) setDraft(current => readDraft(storageKey, current));
+      if (!event.persisted || !storageAvailable.current) return;
+      setDraft(current => readDraft(storageKey, current));
+      setError("");
+      setStatus(current => current === "saving" ? current : "idle");
     }
     window.addEventListener("pageshow", restore);
     return () => window.removeEventListener("pageshow", restore);
@@ -35,10 +39,11 @@ export default function CompanySuggestion({ firm = null, view = null, country })
 
   function saveDraft(next) {
     setDraft(next);
+    if (!storageAvailable.current) return;
     try {
       if (next === null) sessionStorage.removeItem(storageKey);
       else sessionStorage.setItem(storageKey, JSON.stringify(next));
-    } catch { /* Keep the form usable when browser storage is unavailable. */ }
+    } catch { storageAvailable.current = false; }
   }
 
   async function submit(event) {
@@ -50,9 +55,11 @@ export default function CompanySuggestion({ firm = null, view = null, country })
       return;
     }
     const id = draft.id || crypto.randomUUID();
-    saveDraft({ message, id });
+    const submitted = { message, id };
+    saveDraft(submitted);
     setStatus("saving");
     setError("");
+    let failure = "";
     try {
       const result = await call("/company-suggestions", {
         ...json("POST", {
@@ -63,13 +70,26 @@ export default function CompanySuggestion({ firm = null, view = null, country })
         signal: AbortSignal.timeout(20000),
       });
       if (!result?.saved) throw new Error();
-      saveDraft(null);
-      setStatus("saved");
-      requestAnimationFrame(() => trigger.current?.focus());
     } catch (err) {
-      setError(err.status === 400 ? err.message : "We couldn’t confirm your suggestion was saved. Please try again.");
-      setStatus("idle");
+      failure = err.status === 400 ? err.message : "We couldn’t confirm your suggestion was saved. Please try again.";
     }
+
+    // A different Jobs document can replace or discard this draft while the request
+    // is pending. Its response belongs only to the attempt that sent it.
+    const latest = storageAvailable.current ? readDraft(storageKey, submitted) : submitted;
+    if (latest?.id !== id) {
+      setDraft(latest);
+      setStatus("idle");
+      return;
+    }
+    if (failure) {
+      setError(failure);
+      setStatus("idle");
+      return;
+    }
+    saveDraft(null);
+    setStatus("saved");
+    requestAnimationFrame(() => trigger.current?.focus());
   }
 
   return (
@@ -79,7 +99,7 @@ export default function CompanySuggestion({ firm = null, view = null, country })
           saveDraft(open ? null : { message: "" });
           setStatus("idle"); setError("");
         }}
-        className="border-[#A5B79F] bg-[#E2EBDD] text-[#304C36] hover:bg-[#D2E1CC] focus-visible:ring-[#648269] dark:border-[#586F56] dark:bg-[#2B3C2D] dark:text-[#DBEAD4] dark:hover:bg-[#364C39]">
+        className="border-suggestion-border bg-suggestion text-suggestion-foreground hover:bg-suggestion-hover">
         Suggest a company
       </Button>
       <div id={panelId} hidden={!open && status !== "saved"} className="order-last w-full min-w-0 text-left">

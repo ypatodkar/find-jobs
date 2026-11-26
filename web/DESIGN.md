@@ -55,7 +55,8 @@ https://claude.ai/artifact/JrkT6vZ6c1tW1jYej8EYTa
     tried violet, then pure black and white, then chose Stone, layered.)
 - **Errors:** `destructive` (red), for errors and removing things only.
 - **Status:** `success` (green) and `warning` (amber), for resume-match results only
-  (a requirement shown, partly shown). Everything else stays neutral.
+  (a requirement shown, partly shown).
+- **Suggest a company:** the suggestion button uses the sage `suggestion` palette in both themes and the standard keyboard focus ring.
 - **Dark mode:** automatic through the tokens. `<html data-theme>` always holds
   `light` or `dark`; the `dark:` variant keys off it. Reach for `dark:` only when a
   token can't express it.

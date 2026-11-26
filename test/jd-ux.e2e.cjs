@@ -147,6 +147,32 @@ async function main(){
     await suggest.waitFor();
     assert.equal(await suggest.getAttribute('aria-expanded'), 'false');
     await page.unroute('**/api/company-suggestions');
+    // Hold A's response while another document in this tab edits the same list's draft.
+    for (const response of [{ json: { saved: true } }, { status: 503, json: {} }]) {
+      await suggest.click();
+      await suggestion.fill('First company');
+      let intercept;
+      const pending = new Promise(resolve => { intercept = resolve; });
+      await page.route('**/api/company-suggestions', route => { intercept(route); });
+      await send.click();
+      const request = await pending;
+      const newer = 'Second company, still unsent';
+      await page.evaluate(message => {
+        sessionStorage.setItem('find-jobs:suggestion:US:', JSON.stringify({ message }));
+        window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+      }, newer);
+      await request.fulfill(response);
+      await send.waitFor();
+      assert.equal(await suggestion.inputValue(), newer);
+      assert.equal(await page.getByText('Thanks! Your suggestion was saved.').count(), 0);
+      assert.equal(await page.getByRole('alert').filter({ hasText: 'Please try again' }).count(), 0);
+      await page.reload();
+      await suggestion.waitFor();
+      assert.equal(await suggestion.inputValue(), newer);
+      await suggest.click();
+      await page.unroute('**/api/company-suggestions');
+    }
+
 
     const open=async()=>{
       await page.goto(base);await page.locator('.job[data-job-id="job_0"]').waitFor();
