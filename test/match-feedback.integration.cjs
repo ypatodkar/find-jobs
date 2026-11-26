@@ -60,6 +60,30 @@ async function main() {
       if (i === 99) throw new Error('Test app did not start: ' + output);
       await new Promise(resolve => setTimeout(resolve, 50));
     }
+    const suggestion = { id: crypto.randomUUID(), visitor_id: crypto.randomUUID(), submitted_url: 'example.com/jobs?team=eng',
+      notes: 'Especially the UK roles.', page: '/firm.html', firm: 'Fixture', list_country: 'IN', list_view: 'grouped', locale: 'en-GB', timezone: 'Europe/London' };
+    const sendSuggestion = (fields, headers = {}) => fetch(base + '/api/company-suggestions', {
+      method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(fields),
+    });
+    const guest = { ...suggestion, account_id: 'owner', country: 'US' };
+    const retries = await Promise.all([sendSuggestion(guest), sendSuggestion(guest)]);
+    for (const result of retries) assert.deepEqual(await result.json(), { saved: true });
+    const signed = { ...suggestion, id: crypto.randomUUID(), submitted_url: '', company_name: 'Example Labs' };
+    assert.equal((await sendSuggestion(signed, { cookie: 'fj_session=owner-feedback-test-session-token', 'cloudfront-viewer-country': 'GB' })).status, 200);
+    for (const invalid of [{ submitted_url: 'javascript:alert(1)' }, { submitted_url: '', company_name: ' ' }, { notes: 'x'.repeat(2001) }]) {
+      assert.equal((await sendSuggestion({ ...suggestion, ...invalid })).status, 400);
+    }
+    const suggestions = (await pool.query(fs.readFileSync(path.join(root, 'scripts/company-suggestions.sql'), 'utf8'))).rows;
+    assert.equal(suggestions.length, 2);
+    assert.equal(suggestions[0].account_email, 'owner@example.invalid');
+    assert.equal(suggestions[0].country, 'GB');
+    assert.equal(suggestions[0].company_name, 'Example Labs');
+    assert.equal(suggestions[1].account_id, null);
+    assert.equal(suggestions[1].country, null);
+    for (const key of ['id', 'submitted_url', 'notes', 'page', 'firm', 'list_country', 'list_view', 'visitor_id', 'timezone', 'locale']) {
+      assert.equal(suggestions[1][key], suggestion[key]);
+    }
+    assert.equal((await fetch(base + '/api/company-suggestions')).status, 405);
     const body = { resume_id: resume, job_id: 'fixture_job', checked_at: original.checkedAt, rating: 'up' };
     async function review(payload = body, account = 'owner', type = 'application/json') {
       const response = await fetch(base + '/api/match/feedback', { method: 'POST', headers: { 'content-type': type, ...(account ? { cookie: `fj_session=${account}-feedback-test-session-token` } : {}) }, body: JSON.stringify(payload) });

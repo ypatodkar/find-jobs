@@ -250,3 +250,25 @@ ALTER TABLE resumes ADD COLUMN IF NOT EXISTS deleted_at BIGINT;
 ALTER TABLE resumes ADD COLUMN IF NOT EXISTS file_key TEXT;
 ALTER TABLE resumes ADD COLUMN IF NOT EXISTS file_type TEXT;
 ALTER TABLE resumes ADD COLUMN IF NOT EXISTS file_size INTEGER;
+
+-- A visitor's original suggestion and the context at the time they submitted it.
+CREATE TABLE IF NOT EXISTS company_suggestions (
+  id UUID PRIMARY KEY,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  company_name TEXT,
+  submitted_url TEXT,
+  notes TEXT,
+  visitor_id TEXT NOT NULL,
+  visitor_name TEXT,
+  account_id TEXT REFERENCES accounts (id) ON DELETE SET NULL,
+  country TEXT,
+  page TEXT NOT NULL,
+  firm TEXT,
+  list_country TEXT,
+  list_view TEXT,
+  locale TEXT,
+  timezone TEXT,
+  user_agent TEXT,
+  CHECK (company_name IS NOT NULL OR submitted_url IS NOT NULL)
+);
+CREATE INDEX IF NOT EXISTS idx_company_suggestions_created ON company_suggestions (created_at DESC);

@@ -203,6 +203,20 @@ Clicks, likes, feedback and saved-filter reports go to the same Lambda's analyti
 routes and Postgres. `node scripts/stats.js` reports on them (it reads the database
 credentials from the Lambda's configuration, so it runs from an allowed IP).
 
+## Reviewing company suggestions
+
+Visitors can send a company name, a website or job posting link, and optional notes
+beside the All jobs / Companies tabs. Signed-out visitors can submit.
+With PostgreSQL connection settings for the portal, read the newest suggestions first:
+
+```sh
+psql -X -x -f scripts/company-suggestions.sql
+```
+
+The private report includes the original inputs, submission time, browser and page
+context, approximate country when supplied by the edge, and the account name and email
+for signed-in submissions. Review submissions before adding a company to the registry.
+
 ## Releasing the API
 
 The site deploys itself; the API is released by hand.

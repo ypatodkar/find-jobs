@@ -116,6 +116,12 @@ export default function About() {
               Clearing browser data removes local preferences, but does not delete server records.
               General feedback and daily-limit feedback are stored separately.
             </p>
+            <p>
+              Company suggestions are private to the portal team. We store what you send,
+              the submission time, page and list view, browser ID and saved browser name,
+              browser software, language, time zone, and approximate country when available.
+              If you’re signed in, the suggestion is linked to your account.
+            </p>
           </section>
         </article>
       </div>
@@ -123,7 +129,7 @@ export default function About() {
       <SiteFooter>
         <section>
           <h3 className={FOOT_H}>Something missing?</h3>
-          <p className="leading-6">If a company or an investor should be here and isn't, or a listing looks wrong, the Feedback button at the top of every page goes straight to me.</p>
+          <p className="leading-6">Use “Suggest a company” beside the Companies tab on either job list. For missing investors or incorrect listings, use the Feedback button.</p>
         </section>
         <section>
           <h3 className={FOOT_H}>Start looking</h3>

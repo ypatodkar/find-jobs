@@ -5,6 +5,7 @@
 // focus and counts), then the job workspace full width, as on the jobs pages. When there
 // is nothing to list (no such firm, a failed load, a board that can't be read, no
 // matching roles) a single message takes the workspace's place.
+import CompanySuggestion from "../components/CompanySuggestion.jsx";
 import { TIER_META, VC_FIRMS } from "../data.js";
 import { useEffect, useState } from "react";
 import { ArrowRight, ArrowUpRight, Ban, ChevronRight, CloudOff, Inbox, SearchX, TriangleAlert } from "lucide-react";
@@ -129,6 +130,7 @@ export default function Firm() {
               {message.title ? <EmptyTitle>{message.title}</EmptyTitle> : null}
               {message.body ? <EmptyDescription>{message.body}</EmptyDescription> : null}
             </EmptyHeader>
+            {firm && <CompanySuggestion firm={firm.short || firm.name} country="US" />}
             {message.action ? <EmptyContent>{message.action}</EmptyContent> : null}
           </Empty>
         </div>

@@ -8,6 +8,7 @@
 // "Companies you've opened" is at the right end of the filter toolbar (Filters). Between
 // the toolbar and the results (JobsWorkspace's `intro`) sit the country note and the
 // startup of the day.
+import CompanySuggestion from "../components/CompanySuggestion.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { CloudOff, Inbox } from "lucide-react";
 import SiteHeader from "../components/SiteHeader.jsx";
@@ -29,7 +30,7 @@ const FOOT_P_NEXT = "mt-2 leading-6";
  * What a jobs page shows instead of the list when there is nothing to list: the data
  * failed to load (`error`), or it loaded empty. Shared with the India list.
  */
-export function NoJobs({ error }) {
+export function NoJobs({ error, country = "US" }) {
   return (
     <Empty id="all-message" className="my-8 border md:my-12">
       <EmptyHeader>
@@ -46,6 +47,7 @@ export function NoJobs({ error }) {
           </>
         )}
       </EmptyHeader>
+      <CompanySuggestion country={country} />
     </Empty>
   );
 }

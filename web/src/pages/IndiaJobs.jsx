@@ -37,7 +37,7 @@ export default function IndiaJobs() {
       {empty ? (
         <div className={`${CONTAINER} pt-4`}>
           {intro}
-          <NoJobs error={!!error} />
+          <NoJobs country="IN" error={!!error} />
         </div>
       ) : (
         // `jobs` is null while they load; the workspace shows its own loading rows.

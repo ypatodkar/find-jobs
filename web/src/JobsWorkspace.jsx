@@ -9,6 +9,7 @@
 // the results each sit in CONTAINER, so their edges line up with the header's. From
 // 1100px the results are three grid columns, the list | the divider | the job pane,
 // and the pane docks under the header and toolbar while the list scrolls with the page.
+import CompanySuggestion from "./components/CompanySuggestion.jsx";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { SearchXIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -518,6 +519,7 @@ export default function JobsWorkspace({ jobs, showFirms = false, contextLabel = 
                     Companies<span className="seg-n tabular font-normal text-muted-foreground" id="count-grouped">{companyCount.toLocaleString()}</span>
                   </button>
                 </div>
+                <CompanySuggestion firm={contextLabel} view={view} country={country} />
                 <div className="sort-wrap list-sort flex items-center gap-2 sm:ml-auto" id="list-sort">
                   <span aria-hidden="true" className="text-sm text-muted-foreground">Sort</span>
                   <SelectMenu id="sort-select" label="Sort roles" options={SORTS} value={filters.sort} onChange={(v) => setFilters({ ...filters, sort: v })} />
