@@ -112,7 +112,13 @@ async function main(){
     await suggestion.waitFor();
     assert.equal(await suggestion.inputValue(), 'Add the Example Labs careers page');
     const edited = 'Example Labs has a new careers page';
-    await suggestion.fill(edited);
+    // Simulate returning to a frozen document after a newer one edited this draft.
+    // Browser automation can disable the back/forward cache, so exercise its event directly.
+    await page.evaluate(message => {
+      sessionStorage.setItem('find-jobs:suggestion:US:', JSON.stringify({message}));
+      window.dispatchEvent(new PageTransitionEvent('pageshow', {persisted:true}));
+    }, edited);
+    await page.waitForFunction(text => document.querySelector('textarea[id$="-message"]')?.value === text, edited);
     const attempts = [];
     await page.route('**/api/company-suggestions', async route => {
       attempts.push(route.request().postDataJSON());

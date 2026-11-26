@@ -6,9 +6,9 @@ import { visitorId, visitorName } from "../lib/visitor.js";
 
 // A draft lasts for this tab and list. Writing to session storage avoids changing
 // browser history on every keystroke and lets a retry reuse its original request ID.
-function readDraft(key) {
+function readDraft(key, fallback = null) {
   try { return JSON.parse(sessionStorage.getItem(key)); }
-  catch { return null; }
+  catch { return fallback; }
 }
 
 export default function CompanySuggestion({ firm = null, view = null, country }) {
@@ -23,6 +23,15 @@ export default function CompanySuggestion({ firm = null, view = null, country })
   const [error, setError] = useState("");
 
   useEffect(() => { if (open) input.current?.focus(); }, [open]);
+
+  useEffect(() => {
+    // Another Jobs document in this tab may have edited or cleared the same draft.
+    function restore(event) {
+      if (event.persisted) setDraft(current => readDraft(storageKey, current));
+    }
+    window.addEventListener("pageshow", restore);
+    return () => window.removeEventListener("pageshow", restore);
+  }, [storageKey]);
 
   function saveDraft(next) {
     setDraft(next);
