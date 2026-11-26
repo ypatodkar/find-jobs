@@ -111,7 +111,36 @@ async function main(){
     await page.goBack();
     await suggestion.waitFor();
     assert.equal(await suggestion.inputValue(), 'Add the Example Labs careers page');
+    const edited = 'Example Labs has a new careers page';
+    await suggestion.fill(edited);
+    const attempts = [];
+    await page.route('**/api/company-suggestions', async route => {
+      attempts.push(route.request().postDataJSON());
+      await route.fulfill(attempts.length === 1 ? { status: 503, json: {} } : { json: { saved: true } });
+    });
+    const send = page.getByRole('button', { name: 'Send suggestion' });
+    await send.click();
+    await page.getByRole('alert').filter({ hasText: 'Please try again' }).waitFor();
+    await page.getByRole('link', { name: 'Investors', exact: true }).first().click();
+    await page.waitForURL('**/firms.html');
+    await page.goBack();
+    await page.reload(); // also cover browsers that recreate the document
+    await suggestion.waitFor();
+    assert.equal(await suggestion.inputValue(), edited);
+    await send.click();
+    await page.getByText('Thanks! Your suggestion was saved.').waitFor();
+    assert.equal(attempts[1].id, attempts[0].id);
+    await page.reload();
+    await suggest.waitFor();
+    assert.equal(await suggest.getAttribute('aria-expanded'), 'false');
     await suggest.click();
+    assert.equal(await suggestion.inputValue(), '');
+    await suggestion.fill('Discard this draft');
+    await suggest.click();
+    await page.reload();
+    await suggest.waitFor();
+    assert.equal(await suggest.getAttribute('aria-expanded'), 'false');
+    await page.unroute('**/api/company-suggestions');
 
     const open=async()=>{
       await page.goto(base);await page.locator('.job[data-job-id="job_0"]').waitFor();

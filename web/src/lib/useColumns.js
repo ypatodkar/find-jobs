@@ -5,7 +5,7 @@
 // This is the divider's behaviour; JobsWorkspace draws it (a hairline with a grip,
 // like shadcn's ResizableHandle) and sets the grid columns from `style`.
 //
-// The list never gets narrower than its header (tabs and Sort side by side) or 350px,
+// The list never gets narrower than its header (its first-row controls side by side) or 350px,
 // and the description never narrower than 440px. Below 560px the description is marked
 // is-narrow-column, which tightens its layout.
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -27,7 +27,7 @@ function savedRatio() {
   }
 }
 
-// The list header at its natural width: tabs and Sort at their content size plus the gap.
+// The list header at its natural width: tabs, suggestion trigger, and Sort, with a gap between each.
 function listHeadWidth() {
   const head = document.getElementById("list-head");
   if (!head || !head.offsetParent) return 0;
@@ -40,8 +40,8 @@ function listHeadWidth() {
     return w;
   };
   const gap = parseFloat(getComputedStyle(head).columnGap) || 0;
-  const sort = document.getElementById("list-sort");
-  return natural(document.getElementById("job-view-tabs")) + (sort ? gap + natural(sort) : 0);
+  const controls = head.querySelectorAll(":scope > #job-view-tabs, :scope > button, :scope > #list-sort");
+  return Array.from(controls, natural).reduce((sum, width) => sum + width, 0) + Math.max(0, controls.length - 1) * gap;
 }
 
 export function useColumns(splitRef, dividerRef, wide) {
