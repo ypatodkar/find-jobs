@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+reviews:
+  profile: chill
+  high_level_summary_instructions: >-
+    Start with one or two plain-English sentences about what changes for a job
+    seeker or maintainer. Mention any required database migration or API release order.
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+  poem: false
+  in_progress_fortune: false
+  sequence_diagrams: false
+  slop_detection:
+    enabled: false
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+  path_instructions:
+    - path: "web/src/**"
+      instructions: >-
+        For forms, filters, and navigation changes, check what happens on mobile,
+        with the keyboard, after using Back, and after a failed save. Describe the
+        user action and the visible consequence when reporting a regression.
+    - path: "aws/lambda/**"
+      instructions: >-
+        For account and submission handlers, check which identity comes from the
+        server session, what a signed-out visitor can do, and whether retries can
+        duplicate writes. Check that private records stay out of public responses.
+    - path: "aws/**/*.sql"
+      instructions: >-
+        Check that schema changes work against existing rows as well as a fresh
+        database, and that re-running a migration preserves data.
+    - path: "scraper/**"
+      instructions: >-
+        Check how the change distinguishes a failed board fetch from a successful
+        fetch with zero openings. Check job identity and deduplication across
+        sources, and keep US and India listings in their intended feeds.
+
+knowledge_base:
+  code_guidelines:
+    filePatterns:
+      - "CONTRIBUTING.md"
+      - files: "web/DESIGN.md"
+        applyTo: "web/**"
