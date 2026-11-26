@@ -145,7 +145,9 @@ function createAccountApi({ getDescription, env = process.env }) {
       const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
       if (!uuid.test(id) || !uuid.test(visitor)) throw httpError(400, "Missing submission or browser ID.");
       const company = field("company_name", 200), url = field("submitted_url", 2048);
-      if (!company && !url) throw httpError(400, "Enter a company name or a link.");
+      const message = field("message", 4096);
+      const notes = message ?? field("notes", 2000);
+      if (!company && !url && !message) throw httpError(400, "Enter a company name, a link, or a short suggestion.");
       if (url) {
         let parsed;
         const link = url.trim();
@@ -161,7 +163,7 @@ function createAccountApi({ getDescription, env = process.env }) {
         `INSERT INTO company_suggestions (id, company_name, submitted_url, notes, visitor_id, visitor_name,
            account_id, country, page, firm, list_view, locale, timezone, user_agent, list_country)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) ON CONFLICT (id) DO NOTHING`,
-        [id, company, url, field("notes", 2000), visitor, field("visitor_name", 80), account?.id || null,
+        [id, company, url, notes, visitor, field("visitor_name", 80), account?.id || null,
           country, field("page", 128) || "/", field("firm", 160), field("list_view", 20), field("locale", 80),
           field("timezone", 100), req.headers["user-agent"]?.slice(0, 512) || null, ["US", "IN"].includes(b.list_country) ? b.list_country : null]
       );

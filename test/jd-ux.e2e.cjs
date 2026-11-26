@@ -101,6 +101,18 @@ async function main(){
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/*',route=>route.request().url().startsWith(base)?route.continue():route.abort());
     const waitScore=async(score)=>{await page.waitForFunction(n=>document.querySelector('.analysis-score-number')?.textContent===`${n}/100`,score);await page.getByRole('button',{name:'Reanalyze',exact:true}).waitFor();};
+    await page.goto(base);
+    const suggest = page.getByRole('button', { name: 'Suggest a company' });
+    const suggestion = page.getByRole('textbox', { name: 'Which company’s jobs would you like to see?' });
+    await suggest.click();
+    await suggestion.fill('Add the Example Labs careers page');
+    await page.getByRole('link', { name: 'How your data is used' }).click();
+    await page.waitForURL('**/about.html');
+    await page.goBack();
+    await suggestion.waitFor();
+    assert.equal(await suggestion.inputValue(), 'Add the Example Labs careers page');
+    await suggest.click();
+
     const open=async()=>{
       await page.goto(base);await page.locator('.job[data-job-id="job_0"]').waitFor();
       if(page.viewportSize().width<1100&&await page.locator('#job-detail').isVisible()){

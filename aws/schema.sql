@@ -268,7 +268,13 @@ CREATE TABLE IF NOT EXISTS company_suggestions (
   list_view TEXT,
   locale TEXT,
   timezone TEXT,
-  user_agent TEXT,
-  CHECK (company_name IS NOT NULL OR submitted_url IS NOT NULL)
+  user_agent TEXT
 );
+-- The original form required a name or a URL. The single-field form stores its
+-- verbatim message in notes, alongside submissions made with the older form.
+ALTER TABLE company_suggestions
+  DROP CONSTRAINT IF EXISTS company_suggestions_check,
+  ADD CONSTRAINT company_suggestions_check CHECK (
+    company_name IS NOT NULL OR submitted_url IS NOT NULL OR NULLIF(btrim(notes), '') IS NOT NULL
+  );
 CREATE INDEX IF NOT EXISTS idx_company_suggestions_created ON company_suggestions (created_at DESC);

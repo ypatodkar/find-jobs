@@ -205,7 +205,7 @@ credentials from the Lambda's configuration, so it runs from an allowed IP).
 
 ## Reviewing company suggestions
 
-Visitors can send a company name, a website or job posting link, and optional notes
+Visitors can write a suggestion in one field, including a company name, website, or careers link
 beside the All jobs / Companies tabs. Signed-out visitors can submit.
 With PostgreSQL connection settings for the portal, read the newest suggestions first:
 

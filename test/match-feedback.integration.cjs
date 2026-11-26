@@ -68,16 +68,16 @@ async function main() {
     const guest = { ...suggestion, account_id: 'owner', country: 'US' };
     const retries = await Promise.all([sendSuggestion(guest), sendSuggestion(guest)]);
     for (const result of retries) assert.deepEqual(await result.json(), { saved: true });
-    const signed = { ...suggestion, id: crypto.randomUUID(), submitted_url: '', company_name: 'Example Labs' };
+    const signed = { ...suggestion, id: crypto.randomUUID(), submitted_url: '', notes: '', message: 'Please add Example Labs.\nhttps://example.org/careers' };
     assert.equal((await sendSuggestion(signed, { cookie: 'fj_session=owner-feedback-test-session-token', 'cloudfront-viewer-country': 'GB' })).status, 200);
-    for (const invalid of [{ submitted_url: 'javascript:alert(1)' }, { submitted_url: '', company_name: ' ' }, { notes: 'x'.repeat(2001) }]) {
+    for (const invalid of [{ submitted_url: '', message: '   ' }, { message: 'x'.repeat(4097) }, { submitted_url: 'javascript:alert(1)' }, { submitted_url: '', company_name: ' ' }, { notes: 'x'.repeat(2001) }]) {
       assert.equal((await sendSuggestion({ ...suggestion, ...invalid })).status, 400);
     }
     const suggestions = (await pool.query(fs.readFileSync(path.join(root, 'scripts/company-suggestions.sql'), 'utf8'))).rows;
     assert.equal(suggestions.length, 2);
     assert.equal(suggestions[0].account_email, 'owner@example.invalid');
     assert.equal(suggestions[0].country, 'GB');
-    assert.equal(suggestions[0].company_name, 'Example Labs');
+    assert.equal(suggestions[0].suggestion, signed.message);
     assert.equal(suggestions[1].account_id, null);
     assert.equal(suggestions[1].country, null);
     for (const key of ['id', 'submitted_url', 'notes', 'page', 'firm', 'list_country', 'list_view', 'visitor_id', 'timezone', 'locale']) {
