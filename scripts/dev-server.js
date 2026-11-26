@@ -179,7 +179,7 @@ const server = http.createServer(async (req, res) => {
     return shard ? sendJson(res, 200, shard) : sendJson(res, 404, { error: "No descriptions in that shard" });
   }
 
-  if (/^\/api\/(auth|sync|resumes|match)(\/|$)/.test(route)) {
+  if (/^\/api\/(auth|sync|resumes|match|company-suggestions)(\/|$)/.test(route)) {
     try {
       const [status, body, headers] = await handleAccountApi(req, route, new URL(req.url, "http://localhost").searchParams);
       const s = JSON.stringify(body);

@@ -4,9 +4,13 @@ const API_ORIGIN = 'https://v7ogkcujy5bcq6hhyygjrs6v5y0xygut.lambda-url.us-east-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (!/^\/api\/(auth|sync|resumes|match)(\/|$)/.test(url.pathname)) return env.ASSETS.fetch(request);
+    if (!/^\/api\/(auth|sync|resumes|match|company-suggestions)(\/|$)/.test(url.pathname)) return env.ASSETS.fetch(request);
     const headers = new Headers(request.headers);
     headers.delete('host');
+    if (url.pathname === '/api/company-suggestions') {
+      headers.delete('cloudfront-viewer-country');
+      if (request.cf?.country) headers.set('cloudfront-viewer-country', request.cf.country);
+    }
     headers.set('x-forwarded-proto', 'https');
     try {
       const target = new URL(url.pathname + url.search, API_ORIGIN);

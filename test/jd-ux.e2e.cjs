@@ -101,6 +101,79 @@ async function main(){
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/*',route=>route.request().url().startsWith(base)?route.continue():route.abort());
     const waitScore=async(score)=>{await page.waitForFunction(n=>document.querySelector('.analysis-score-number')?.textContent===`${n}/100`,score);await page.getByRole('button',{name:'Reanalyze',exact:true}).waitFor();};
+    await page.goto(base);
+    const suggest = page.getByRole('button', { name: 'Suggest a company' });
+    const suggestion = page.getByRole('textbox', { name: 'Which company’s jobs would you like to see?' });
+    await suggest.click();
+    await suggestion.fill('Add the Example Labs careers page');
+    await page.getByRole('link', { name: 'How your data is used' }).click();
+    await page.waitForURL('**/about.html');
+    await page.goBack();
+    await suggestion.waitFor();
+    assert.equal(await suggestion.inputValue(), 'Add the Example Labs careers page');
+    const edited = 'Example Labs has a new careers page';
+    // Simulate returning to a frozen document after a newer one edited this draft.
+    // Browser automation can disable the back/forward cache, so exercise its event directly.
+    await page.evaluate(message => {
+      sessionStorage.setItem('find-jobs:suggestion:US:', JSON.stringify({message}));
+      window.dispatchEvent(new PageTransitionEvent('pageshow', {persisted:true}));
+    }, edited);
+    await page.waitForFunction(text => document.querySelector('textarea[id$="-message"]')?.value === text, edited);
+    const attempts = [];
+    await page.route('**/api/company-suggestions', async route => {
+      attempts.push(route.request().postDataJSON());
+      await route.fulfill(attempts.length === 1 ? { status: 503, json: {} } : { json: { saved: true } });
+    });
+    const send = page.getByRole('button', { name: 'Send suggestion' });
+    await send.click();
+    await page.getByRole('alert').filter({ hasText: 'Please try again' }).waitFor();
+    await page.getByRole('link', { name: 'Investors', exact: true }).first().click();
+    await page.waitForURL('**/firms.html');
+    await page.goBack();
+    await page.reload(); // also cover browsers that recreate the document
+    await suggestion.waitFor();
+    assert.equal(await suggestion.inputValue(), edited);
+    await send.click();
+    await page.getByText('Thanks! Your suggestion was saved.').waitFor();
+    assert.equal(attempts[1].id, attempts[0].id);
+    await page.reload();
+    await suggest.waitFor();
+    assert.equal(await suggest.getAttribute('aria-expanded'), 'false');
+    await suggest.click();
+    assert.equal(await suggestion.inputValue(), '');
+    await suggestion.fill('Discard this draft');
+    await suggest.click();
+    await page.reload();
+    await suggest.waitFor();
+    assert.equal(await suggest.getAttribute('aria-expanded'), 'false');
+    await page.unroute('**/api/company-suggestions');
+    // Hold A's response while another document in this tab edits the same list's draft.
+    for (const response of [{ json: { saved: true } }, { status: 503, json: {} }]) {
+      await suggest.click();
+      await suggestion.fill('First company');
+      let intercept;
+      const pending = new Promise(resolve => { intercept = resolve; });
+      await page.route('**/api/company-suggestions', route => { intercept(route); });
+      await send.click();
+      const request = await pending;
+      const newer = 'Second company, still unsent';
+      await page.evaluate(message => {
+        sessionStorage.setItem('find-jobs:suggestion:US:', JSON.stringify({ message }));
+        window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+      }, newer);
+      await request.fulfill(response);
+      await send.waitFor();
+      assert.equal(await suggestion.inputValue(), newer);
+      assert.equal(await page.getByText('Thanks! Your suggestion was saved.').count(), 0);
+      assert.equal(await page.getByRole('alert').filter({ hasText: 'Please try again' }).count(), 0);
+      await page.reload();
+      await suggestion.waitFor();
+      assert.equal(await suggestion.inputValue(), newer);
+      await suggest.click();
+      await page.unroute('**/api/company-suggestions');
+    }
+
+
     const open=async()=>{
       await page.goto(base);await page.locator('.job[data-job-id="job_0"]').waitFor();
       if(page.viewportSize().width<1100&&await page.locator('#job-detail').isVisible()){

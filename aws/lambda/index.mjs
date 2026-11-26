@@ -152,7 +152,7 @@ async function sendFeedbackEmail(payload) {
 
 export const handler = async (event, context) => {
   if (!event.requestContext && event.releaseAction) return accountApi.releaseAction(event, context);
-  if (/^\/api\/(auth|sync|resumes|match)(\/|$)/.test(event.rawPath || '')) return accountApi.handle(event, context);
+  if (/^\/api\/(auth|sync|resumes|match|company-suggestions)(\/|$)/.test(event.rawPath || '')) return accountApi.handle(event, context);
   const method = event.requestContext?.http?.method || "GET";
   const path = event.rawPath || "/";
   const headers = event.headers || {};

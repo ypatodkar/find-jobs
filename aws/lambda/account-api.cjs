@@ -130,6 +130,46 @@ function createAccountApi({ getDescription, env = process.env }) {
       return [200, { ok: true }, { "set-cookie": sessionCookie(req, null) }];
     }
 
+    if (route === "/api/company-suggestions") {
+      if (m !== "POST") return [405, { error: "Use POST to send a suggestion." }, { allow: "POST" }];
+      const b = await readBody(req, 32 * 1024);
+      const field = (key, limit) => {
+        const value = b?.[key];
+        if (value == null || value === "") return null;
+        if (typeof value !== "string" || value.length > limit || value.includes("\0")) {
+          throw httpError(400, `Invalid ${key.replaceAll("_", " ")}.`);
+        }
+        return value.trim() ? value : null;
+      };
+      const id = field("id", 36), visitor = field("visitor_id", 36);
+      const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+      if (!uuid.test(id) || !uuid.test(visitor)) throw httpError(400, "Missing submission or browser ID.");
+      const company = field("company_name", 200), url = field("submitted_url", 2048);
+      const message = field("message", 4096);
+      const notes = message ?? field("notes", 2000);
+      if (!company && !url && !message) throw httpError(400, "Enter a company name, a link, or a short suggestion.");
+      if (url) {
+        let parsed;
+        const link = url.trim();
+        try { parsed = new URL(/^[\w+.-]+:/.test(link) ? link : "https://" + link); } catch { /* invalid */ }
+        if (!parsed || !["http:", "https:"].includes(parsed.protocol) || !parsed.hostname.includes(".") || parsed.username || parsed.password || /\s/.test(link)) {
+          throw httpError(400, "Enter a website, careers page, or job posting link.");
+        }
+      }
+      const rawCountry = req.headers["cloudfront-viewer-country"];
+      const country = /^[A-Z]{2}$/.test(rawCountry) && rawCountry !== "XX" ? rawCountry : null;
+      const account = await accountStore().fromSession(sessionToken(req));
+      await db().query(
+        `INSERT INTO company_suggestions (id, company_name, submitted_url, notes, visitor_id, visitor_name,
+           account_id, country, page, firm, list_view, locale, timezone, user_agent, list_country)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) ON CONFLICT (id) DO NOTHING`,
+        [id, company, url, notes, visitor, field("visitor_name", 80), account?.id || null,
+          country, field("page", 128) || "/", field("firm", 160), field("list_view", 20), field("locale", 80),
+          field("timezone", 100), req.headers["user-agent"]?.slice(0, 512) || null, ["US", "IN"].includes(b.list_country) ? b.list_country : null]
+      );
+      return [200, { saved: true }];
+    }
+
     const account = await requireAccount(req);
 
     if (route === "/api/match/usage" && m === "GET") return [200, { usage: await usageStore().usage(account.id, Date.now(), { unlimited: isUnlimited(account, env) }) }];

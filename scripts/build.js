@@ -66,7 +66,7 @@ async function main() {
 
   // Same-origin dynamic account routes on the production Cloudflare Pages host.
   await fsp.copyFile(path.join(ROOT, 'deploy/pages-worker.mjs'), path.join(DIST, '_worker.js'));
-  await writeJson('_routes.json', { version: 1, include: ['/api/auth/*', '/api/sync', '/api/sync/*', '/api/resumes', '/api/resumes/*', '/api/match', '/api/match/*'], exclude: [] });
+  await writeJson('_routes.json', { version: 1, include: ['/api/company-suggestions', '/api/auth/*', '/api/sync', '/api/sync/*', '/api/resumes', '/api/resumes/*', '/api/match', '/api/match/*'], exclude: [] });
 
   // --- data ---
   // Which jobs have a description, so the job lists can mark them (see pipeline.js).

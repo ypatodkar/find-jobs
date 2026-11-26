@@ -22,6 +22,13 @@ test('production proxy keeps static description shards on Pages and forwards aut
     assert.equal(await new Response(forwarded.init.body).text(), '{"items":[]}');
     assert.ok(response.headers.get('set-cookie').includes('HttpOnly'));
     assert.equal(response.headers.get('cache-control'), 'no-store');
+    const suggestion = new Request('https://jobs.ypatodkar.com/api/company-suggestions', {
+      method: 'POST', headers: { 'cloudfront-viewer-country': 'XX' }, body: '{}',
+    });
+    suggestion.cf = { country: 'IN' };
+    await worker.fetch(suggestion, env);
+    assert.ok(forwarded.url.endsWith('/api/company-suggestions'));
+    assert.equal(forwarded.init.headers.get('cloudfront-viewer-country'), 'IN');
     global.fetch = async () => { throw new Error('upstream unavailable'); };
     assert.equal((await worker.fetch(new Request('https://jobs.ypatodkar.com/api/resumes'), env)).status, 503);
   } finally { global.fetch = originalFetch; }
