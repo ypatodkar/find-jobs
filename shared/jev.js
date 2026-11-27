@@ -21,6 +21,7 @@
 
 const { extractRequirements } = require("./requirements");
 const { toPlainText } = require("./description");
+const { randomUUID } = require("node:crypto");
 
 const MODEL = "jev-1.13.0";
 // v1 three overall scores; v2 added a strength line; v3 per-requirement findings;
@@ -208,12 +209,36 @@ function parseAssessment(result, request) {
   };
 }
 
+// Only explicitly selected operational metadata goes into logs. Never pass request
+// bodies, answers, headers, resume/job text, or provider error messages here.
+function trace(options) {
+  const callId = options.callId || randomUUID();
+  const requestId = /^[a-zA-Z0-9-]{1,100}$/.test(options.requestId || "") ? options.requestId : null;
+  return { callId, emit(event, fields = {}) {
+    try { (options.log || console.info)(JSON.stringify({ event, callId, requestId, ...fields })); }
+    catch { /* telemetry must never change the request's result */ }
+  } };
+}
+
 async function assess(resume, job, options = {}) {
-  const key = options.apiKey || process.env.TYPESAFE_API_KEY;
-  if (!key) throw fail(503, "Resume matching is not configured on this server.");
-  const request = requestFor(resume, job, options.model || MODEL);
-  if (!request.items.length) throw fail(422, "No requirements could be found in this job's description to compare against.");
-  return parseAssessment(await post(request.body, { ...options, apiKey: key }), request);
+  const started = Date.now();
+  const { callId, emit } = trace({ ...options, callId: randomUUID() });
+  emit("jev_assessment_started");
+  let category = "request_preparation";
+  try {
+    const key = options.apiKey || process.env.TYPESAFE_API_KEY;
+    if (!key) { category = "not_configured"; throw fail(503, "Resume matching is not configured on this server."); }
+    const request = requestFor(resume, job, options.model || MODEL);
+    if (!request.items.length) { category = "no_requirements"; throw fail(422, "No requirements could be found in this job's description to compare against."); }
+    const result = await post(request.body, { ...options, apiKey: key, callId });
+    category = "invalid_assessment";
+    const assessment = parseAssessment(result, request);
+    emit("jev_assessment_completed", { durationMs: Date.now() - started });
+    return assessment;
+  } catch (error) {
+    emit("jev_assessment_failed", { durationMs: Date.now() - started, category: error.jevCategory || category, status: error.status || 500 });
+    throw error;
+  }
 }
 
 /**
@@ -223,37 +248,57 @@ async function assess(resume, job, options = {}) {
 async function post(body, options = {}) {
   const key = options.apiKey || process.env.TYPESAFE_API_KEY;
   const fetcher = options.fetch || fetch;
-  let response;
-  // One retry, and only for rate limiting or overload, which are the two answers that
-  // say "the same request will work shortly".
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      response = await fetcher(ENDPOINT, {
-        method: "POST",
-        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(options.timeoutMs || 30000),
-        redirect: "error",
-      });
-    } catch (error) {
-      const timedOut = error && (error.name === "TimeoutError" || error.name === "AbortError");
-      throw fail(502, timedOut ? "The matching service did not respond in time. Please try again." : "The server could not reach the matching service. Please try again.");
-    }
-    if (![429, 529].includes(response.status) || attempt === 1) break;
-    const delay = Math.min(2000, Math.max(500, Number(response.headers.get("retry-after")) * 1000 || 500));
-    if (response.body) await response.body.cancel();
-    await new Promise((resolve) => setTimeout(resolve, delay));
-  }
-  if (!response.ok) {
-    if ([401, 403].includes(response.status)) throw fail(503, "The matching service rejected the server's key.");
-    if (response.status === 429) throw fail(429, "The matching service is rate limiting. Please try again shortly.");
-    if (response.status === 529) throw fail(503, "The matching service is overloaded. Please try again shortly.");
-    throw fail(502, "The matching service is unavailable. Please try again shortly.");
-  }
+  const { emit } = trace(options);
+  const started = Date.now();
+  let response, attempts = 0, category = "unexpected";
   try {
-    return await response.json();
-  } catch {
-    throw fail(502, "The matching service returned an unreadable response.");
+    // One retry, and only for rate limiting or overload, which are the two answers that
+    // say "the same request will work shortly".
+    for (let attempt = 0; attempt < 2; attempt++) {
+      attempts = attempt + 1;
+      const attemptStarted = Date.now();
+      emit("jev_attempt_started", { attempt: attempts });
+      response = undefined;
+      try {
+        response = await fetcher(ENDPOINT, {
+          method: "POST",
+          headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(options.timeoutMs || 30000),
+          redirect: "error",
+        });
+      } catch (error) {
+        const timedOut = error && (error.name === "TimeoutError" || error.name === "AbortError");
+        category = timedOut ? "timeout" : "network";
+        throw fail(502, timedOut ? "The matching service did not respond in time. Please try again." : "The server could not reach the matching service. Please try again.");
+      }
+      emit("jev_attempt_completed", { attempt: attempts, httpStatus: response.status, durationMs: Date.now() - attemptStarted });
+      if (![429, 529].includes(response.status) || attempt === 1) break;
+      const delay = Math.min(2000, Math.max(500, Number(response.headers.get("retry-after")) * 1000 || 500));
+      emit("jev_retry", { attempt: attempts, httpStatus: response.status, delayMs: delay });
+      if (response.body) await response.body.cancel();
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+    if (!response.ok) {
+      category = [401, 403].includes(response.status) ? "authentication" : response.status === 429 ? "rate_limit" : response.status === 529 ? "overloaded" : "provider_http";
+      if ([401, 403].includes(response.status)) throw fail(503, "The matching service rejected the server's key.");
+      if (response.status === 429) throw fail(429, "The matching service is rate limiting. Please try again shortly.");
+      if (response.status === 529) throw fail(503, "The matching service is overloaded. Please try again shortly.");
+      throw fail(502, "The matching service is unavailable. Please try again shortly.");
+    }
+    let result;
+    try {
+      result = await response.json();
+    } catch {
+      category = "invalid_json";
+      throw fail(502, "The matching service returned an unreadable response.");
+    }
+    emit("jev_request_completed", { attempts, httpStatus: response.status, durationMs: Date.now() - started });
+    return result;
+  } catch (error) {
+    emit("jev_request_failed", { attempts, httpStatus: response?.status || null, durationMs: Date.now() - started, category });
+    error.jevCategory = category;
+    throw error;
   }
 }
 
