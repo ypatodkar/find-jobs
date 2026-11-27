@@ -129,6 +129,9 @@ a filtered list can be shared; saved filters can be shared as a `?f=` link.
    are fetched directly on every scheduled run. A successful empty response removes
    old jobs but retains the company. Failed or malformed responses retain jobs and
    descriptions with their original `lastVerifiedAt` and `stale: true`.
+   When a board provides an ETag, the next refresh sends it back. A 304 response
+   verifies the saved listings without downloading the feed again. Each board gets
+   a full download at least weekly, and sooner if the parser or its inputs change.
 3. **Careers resolution and repair** (`scraper/careers.js`): new unresolved companies
    follow website/careers links to supported boards. After three consecutive ATS
    failures, a replacement is tried and must return a valid API response before it

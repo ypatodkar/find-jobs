@@ -308,3 +308,76 @@ test("discovery retains parallel platform lanes and deterministic company naming
   assert.equal(state.companies["ashby:acme"].company, "Canonical");
   assert.deepEqual(state.companies["ashby:acme"].firms, ["first", "second", "yc"]);
 });
+
+test("conditional refresh verifies saved rows, handles failures, then accepts a changed or empty board", async (t) => {
+  const state = seeded();
+  const co = state.companies["ashby:acme"];
+  const posting = { id: "job-1", title: "Software Engineer", location: "San Francisco, CA", descriptionPlain: "Original description" };
+  let response, tag;
+  t.mock.method(global, "fetch", async (_url, init) => {
+    tag = init.headers["if-none-match"];
+    return response.clone();
+  });
+  const run = (date) => refreshRegistry(state, () => {}, options({ jobsOnly: true, now: date, fetchAll: undefined }));
+  response = Response.json({ jobs: [posting] }, { headers: { etag: '"v1"' } });
+  await run(now);
+  assert.equal(tag, undefined);
+  const snapshot = structuredClone(co.lastJobs);
+  assert.equal(snapshot.length, 1);
+
+  response = new Response(null, { status: 404 });
+  const failed = await run("2026-10-03");
+  assert.equal(tag, '"v1"');
+  assert.equal(failed.firms.vc.jobs[0].stale, true);
+  assert.equal(co.lastSuccessAt, now);
+
+  response = new Response(null, { status: 304 });
+  const verified = await run("2026-10-04");
+  assert.equal(tag, '"v1"');
+  assert.equal(verified.enrichment.unchanged, 1);
+  assert.equal(verified.firms.vc.jobs[0].stale, false);
+  assert.equal(co.lastSuccessAt, "2026-10-04");
+  assert.deepEqual(co.lastJobs, snapshot);
+  assert.equal(co.atsCache.fetchedAt, now);
+
+  response = Response.json({ jobs: [] }, { headers: { etag: '"v2"' } });
+  const changed = await run("2026-10-05");
+  assert.equal(tag, '"v1"');
+  assert.equal(changed.enrichment.unchanged, 0);
+  assert.deepEqual(co.lastJobs, []);
+  assert.equal(co.atsCache.etag, '"v2"');
+
+  response = new Response(null, { status: 304 });
+  const empty = await run("2026-10-06");
+  assert.equal(tag, '"v2"');
+  assert.equal(empty.enrichment.unchanged, 1);
+  assert.deepEqual(co.lastJobs, []);
+});
+
+test("full downloads follow a week, board or parser changes, or a change in the countries listed", async (t) => {
+  let tag;
+  t.mock.method(global, "fetch", async (_url, init) => {
+    tag = init.headers["if-none-match"];
+    return Response.json({ jobs: [] }, { headers: { etag: '"same"' } });
+  });
+  const state = seeded();
+  const run = (snapshot, opts = {}) => refreshRegistry(snapshot, () => {}, options({ jobsOnly: true, fetchAll: undefined, ...opts }));
+  await run(state);
+  for (const change of [
+    (_co, opts) => { opts.now = "2026-10-09T00:00:00.000Z"; },
+    (co) => { co.atsCache.version = "old-parser"; },
+    (co) => { co.key = "ashby:new"; co.slug = "new"; },
+    (_co, opts) => { opts.boards = { vc: { ...boards.vc, countries: ["IN"] } }; },
+  ]) {
+    const copy = structuredClone(state), opts = {};
+    change(copy.companies["ashby:acme"], opts);
+    await run(copy, opts);
+    assert.equal(tag, undefined);
+  }
+});
+
+test("a 304 without a saved validator cannot verify a board", async (t) => {
+  t.mock.method(global, "fetch", async () => new Response(null, { status: 304 }));
+  const result = await fetchCompany({ ats: "greenhouse", slug: "acme", company: "Acme", meta: {} });
+  assert.equal(result.ok, false);
+});

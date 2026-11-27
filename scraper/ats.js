@@ -102,6 +102,7 @@ async function getOnce(url, init = {}) {
       headers: { "user-agent": UA, accept: "application/json", ...(init.headers || {}) },
       signal: ctrl.signal,
     });
+    if (res.status === 304 && init.headers?.["if-none-match"]) return { notModified: true };
     if (res.status === 404) {
       const e = new Error("board not found");
       e.permanent = true; // slug is wrong or the company left this ATS — retrying won't help
@@ -109,14 +110,14 @@ async function getOnce(url, init = {}) {
     }
     if (res.status === 429) throw new Error("rate limited");
     if (!res.ok) throw new Error("HTTP " + res.status);
-    return await res.json();
+    return { data: await res.json(), etag: res.headers?.get?.("etag") ?? null };
   } finally {
     clearTimeout(timer);
   }
 }
 
 // Retries transient failures (timeouts, 429s, 5xx) once; never retries a 404.
-async function getJson(url, init) {
+async function getFeed(url, init) {
   let lastErr;
   for (let attempt = 0; attempt <= RETRIES; attempt++) {
     try {
@@ -128,6 +129,21 @@ async function getJson(url, init) {
     }
   }
   throw lastErr;
+}
+
+async function getJson(url, init) {
+  return (await getFeed(url, init)).data;
+}
+
+// Only an endpoint that returns the entire board in one response can validate
+// the whole saved listing with a single ETag.
+function singleResponseBoard(urlFor, parse) {
+  return async (slug, etag) => {
+    const headers = etag ? { "if-none-match": etag } : {};
+    const feed = await getFeed(urlFor(encodeURIComponent(slug)), { headers });
+    if (feed.notModified) return feed;
+    return { jobs: parse(feed.data), etag: feed.etag };
+  };
 }
 
 // A careers page as text, for the one system (Keka) whose job feed is named in it.
@@ -160,9 +176,8 @@ function postalPlace(address) {
   return a.addressRegion ? `${a.addressLocality}, ${a.addressRegion}` : a.addressLocality;
 }
 
-const ADAPTERS = {
-  async ashby(slug) {
-    const data = await getJson(`https://api.ashbyhq.com/posting-api/job-board/${encodeURIComponent(slug)}`);
+const SINGLE_RESPONSE_BOARDS = {
+  ashby: singleResponseBoard((slug) => `https://api.ashbyhq.com/posting-api/job-board/${slug}`, (data) => {
     if (!Array.isArray(data?.jobs)) throw new Error("invalid Ashby jobs response");
     return data.jobs.filter((j) => j.isListed !== false).map((j) => ({
       id: j.id || null,
@@ -189,10 +204,9 @@ const ADAPTERS = {
       // The HTML for display: it keeps the paragraphs and lists the plain text loses.
       displayDescription: j.descriptionHtml || j.descriptionPlain || "",
     }));
-  },
+  }),
 
-  async greenhouse(slug) {
-    const data = await getJson(`https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(slug)}/jobs?content=true`);
+  greenhouse: singleResponseBoard((slug) => `https://boards-api.greenhouse.io/v1/boards/${slug}/jobs?content=true`, (data) => {
     if (!Array.isArray(data?.jobs)) throw new Error("invalid Greenhouse jobs response");
     return data.jobs.map((j) => ({
       id: j.id != null ? String(j.id) : null,
@@ -204,10 +218,9 @@ const ADAPTERS = {
       salary: null,
       description: j.content || "",
     }));
-  },
+  }),
 
-  async lever(slug) {
-    const data = await getJson(`https://api.lever.co/v0/postings/${encodeURIComponent(slug)}?mode=json`);
+  lever: singleResponseBoard((slug) => `https://api.lever.co/v0/postings/${slug}?mode=json`, (data) => {
     if (!Array.isArray(data)) throw new Error("invalid Lever jobs response");
     return data.map((j) => {
       const c = j.categories || {};
@@ -235,8 +248,10 @@ const ADAPTERS = {
         ].filter(Boolean).join(""),
       };
     });
-  },
+  }),
 };
+
+const ADAPTERS = {};
 
 // Keka publishes each company's openings through the widget its careers page embeds.
 // The page names the company's portal id (in /ats/documents/{id}/), and the widget's
@@ -342,7 +357,7 @@ ADAPTERS.bamboohr = async function bamboohr(slug) {
   }));
 };
 
-const SUPPORTED = Object.keys(ADAPTERS);
+const SUPPORTED = [...Object.keys(SINGLE_RESPONSE_BOARDS), ...Object.keys(ADAPTERS)];
 const isSupported = (ats) => SUPPORTED.includes(ats);
 
 // Every company is read for both lists: a US company's Bengaluru roles belong in the
@@ -351,10 +366,12 @@ const COUNTRIES = ["US", "IN"];
 
 /** Fetch one company's live openings, filtered to target cities and engineering roles. */
 async function fetchCompany(entry) {
-  const adapter = ADAPTERS[entry.ats];
-  if (!adapter) return { ...entry, ok: false, reason: "unsupported ATS", jobs: [] };
+  if (!isSupported(entry.ats)) return { ...entry, ok: false, reason: "unsupported ATS", jobs: [] };
   try {
-    const raw = await adapter(entry.slug);
+    const single = SINGLE_RESPONSE_BOARDS[entry.ats];
+    const feed = single ? await single(entry.slug, entry.etag) : { jobs: await ADAPTERS[entry.ats](entry.slug) };
+    if (feed.notModified) return { ...entry, ok: true, notModified: true, jobs: null };
+    const raw = feed.jobs;
     const jobs = [];
     for (const j of raw) {
       const locations = (j.locations || []).filter(Boolean);
@@ -399,7 +416,7 @@ async function fetchCompany(entry) {
     // Where every opening is, engineering or not: what tells where the company is
     // based (registry-pipeline.js).
     const mix = countryMix(raw.map((j) => (j.locations || []).filter(Boolean)));
-    return { ...entry, ok: true, jobs, scanned: raw.length, mix };
+    return { ...entry, ok: true, jobs, scanned: raw.length, mix, etag: feed.etag ?? null };
   } catch (err) {
     return { ...entry, ok: false, reason: err.message, jobs: [] };
   }
@@ -417,7 +434,7 @@ async function fetchAll(entries, onProgress) {
       const res = await fetchCompany(entry);
       out.set(entry.key, res);
       done++;
-      if (onProgress) onProgress({ done, total: entries.length, company: entry.company, ok: res.ok, count: res.jobs.length });
+      if (onProgress) onProgress({ done, total: entries.length, company: entry.company, ok: res.ok, count: res.jobs?.length ?? null, notModified: !!res.notModified });
     }
   }
 
