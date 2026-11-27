@@ -376,6 +376,40 @@ test("full downloads follow a week, board or parser changes, or a change in the 
   }
 });
 
+test("redeployment refetches listings if a rollback rewrote the saved board snapshot", async (t) => {
+  const posting = { id: "job-1", title: "Software Engineer", location: "San Francisco, CA" };
+  const etag = '"board-v1"';
+  let sentTag;
+  t.mock.method(global, "fetch", async (_url, init) => {
+    sentTag = init.headers["if-none-match"];
+    if (sentTag === etag) return new Response(null, { status: 304 });
+    return Response.json({ jobs: [posting] }, { headers: { etag } });
+  });
+  const refresh = (state, date) => refreshRegistry(state, () => {}, options({ now: date, jobsOnly: true, fetchAll: undefined }));
+  const original = seeded();
+  await refresh(original, now);
+  const expected = original.companies["ashby:acme"];
+  assert.equal(expected.lastJobs.length, 1);
+
+  for (const rewrite of [
+    (co) => { co.lastJobs[0].title = "Listing written by the older scraper"; },
+    (co) => { co.locationMix.IN += 1; },
+    (co) => { delete co.atsCache.snapshotHash; },
+  ]) {
+    const state = JSON.parse(JSON.stringify(original));
+    const co = state.companies["ashby:acme"];
+    rewrite(co);
+    const repaired = await refresh(state, "2026-10-03");
+    assert.equal(sentTag, undefined, "the first run after redeployment must download the feed");
+    assert.equal(repaired.enrichment.unchanged, 0);
+    assert.deepEqual(co.lastJobs, expected.lastJobs);
+    assert.deepEqual(co.locationMix, expected.locationMix);
+    const verified = await refresh(state, "2026-10-04");
+    assert.equal(sentTag, etag);
+    assert.equal(verified.enrichment.unchanged, 1);
+  }
+});
+
 test("a 304 without a saved validator cannot verify a board", async (t) => {
   t.mock.method(global, "fetch", async () => new Response(null, { status: 304 }));
   const result = await fetchCompany({ ats: "greenhouse", slug: "acme", company: "Acme", meta: {} });

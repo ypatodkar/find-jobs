@@ -17,6 +17,11 @@ for (const file of ["./ats", "./match", "./boards", "./id", "./sponsorship", "..
 }
 const parserVersion = parserHash.digest("hex");
 
+// An older scraper can replace these fields while preserving an unknown atsCache.
+function snapshotHash(co) {
+  return createHash("sha256").update(JSON.stringify([co.lastJobs, co.locationMix])).digest("hex");
+}
+
 function boardRequest(co, boards, now, fallbackJobs) {
   const countries = indianOnly(co, boards) ? ["IN"] : undefined;
   // VC snapshots can supply pay for rows whose ATS posting omits it.
@@ -26,7 +31,8 @@ function boardRequest(co, boards, now, fallbackJobs) {
     .digest("hex");
   const cache = co.atsCache;
   const age = Date.parse(now) - Date.parse(cache?.fetchedAt);
-  const etag = cache?.version === cacheVersion && age >= 0 && age < 7 * DAY ? cache.etag : null;
+  const eligible = cache?.version === cacheVersion && age >= 0 && age < 7 * DAY;
+  const etag = eligible && cache.snapshotHash === snapshotHash(co) ? cache.etag : null;
   return { ...atsEntry(co), countries, cacheVersion, etag };
 }
 
@@ -68,7 +74,9 @@ function recordSuccess(co, result, now, previousJobs = co.lastJobs) {
   });
   if (result.mix) co.locationMix = result.mix;
   // Repair and manual imports also replace the saved rows and invalidate prior tags.
-  co.atsCache = result.etag && result.cacheVersion ? { version: result.cacheVersion, etag: result.etag, fetchedAt: now } : null;
+  co.atsCache = result.etag && result.cacheVersion ? {
+    version: result.cacheVersion, etag: result.etag, fetchedAt: now, snapshotHash: snapshotHash(co),
+  } : null;
   markVerified(co, now);
 }
 
