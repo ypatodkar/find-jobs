@@ -7,6 +7,35 @@ const { DAY, DISCOVERY_INTERVAL, REPAIR_INTERVAL, due, ingestBoard, findCompany,
 const { INDIA_PORTFOLIOS, isIndianFirm } = require("./india");
 const { discoverPortfolios } = require("./portfolio");
 
+const { createHash } = require("node:crypto");
+const { readFileSync } = require("node:fs");
+
+// Saved rows depend on local parsing and filtering as well as the upstream feed.
+const parserHash = createHash("sha256");
+for (const file of ["./ats", "./match", "./boards", "./id", "./sponsorship", "../shared/description", "./registry-pipeline"]) {
+  parserHash.update(readFileSync(require.resolve(file))).update("\0");
+}
+const parserVersion = parserHash.digest("hex");
+
+// An older scraper can replace these fields while preserving an unknown atsCache.
+function snapshotHash(co) {
+  return createHash("sha256").update(JSON.stringify([co.lastJobs, co.locationMix])).digest("hex");
+}
+
+function boardRequest(co, boards, now, fallbackJobs) {
+  const countries = indianOnly(co, boards) ? ["IN"] : undefined;
+  // VC snapshots can supply pay for rows whose ATS posting omits it.
+  const pay = fallbackJobs.map((j) => [j.title, j.city, j.salaryMin, j.salaryMax, j.salary]);
+  const cacheVersion = createHash("sha256")
+    .update(JSON.stringify([parserVersion, co.key, co.company, countries, co.meta, pay]))
+    .digest("hex");
+  const cache = co.atsCache;
+  const age = Date.parse(now) - Date.parse(cache?.fetchedAt);
+  const eligible = cache?.version === cacheVersion && age >= 0 && age < 7 * DAY;
+  const etag = eligible && cache.snapshotHash === snapshotHash(co) ? cache.etag : null;
+  return { ...atsEntry(co), countries, cacheVersion, etag };
+}
+
 async function bounded(items, concurrency, work) {
   let next = 0;
   await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, async () => {
@@ -44,6 +73,14 @@ function recordSuccess(co, result, now, previousJobs = co.lastJobs) {
       : job;
   });
   if (result.mix) co.locationMix = result.mix;
+  // Repair and manual imports also replace the saved rows and invalidate prior tags.
+  co.atsCache = result.etag && result.cacheVersion ? {
+    version: result.cacheVersion, etag: result.etag, fetchedAt: now, snapshotHash: snapshotHash(co),
+  } : null;
+  markVerified(co, now);
+}
+
+function markVerified(co, now) {
   co.lastSuccessAt = now;
   co.lastAtsSuccessAt = now;
   co.lastAttemptAt = now;
@@ -133,16 +170,20 @@ async function refreshRegistry(state, onEvent = () => {}, options = {}) {
     }
   }
 
+  let unchanged = 0;
   const repair = { attempted: 0, resolved: 0, errors: [] };
   if (!options.discoveryOnly) {
     const companies = Object.values(state.companies).filter(eligible);
-    const entries = companies.filter((co) => co.key).map((co) => ({ ...atsEntry(co), countries: indianOnly(co, boards) ? ["IN"] : undefined }));
+    const entries = companies.filter((co) => co.key).map((co) => boardRequest(co, boards, now, fallback.get(co.id) || []));
     onEvent("phase", { phase: "ats", companies: entries.length });
     const fetched = await fetchBoards(entries, (p) => onEvent("progress", { phase: "ats", ...p }));
     for (const co of companies.filter((c) => c.key)) {
       const result = fetched.get(co.key);
       co.lastAttemptAt = now;
-      if (result?.ok && Array.isArray(result.jobs)) recordSuccess(co, result, now, [...co.lastJobs, ...(fallback.get(co.id) || [])]);
+      if (result?.ok && result.notModified && result.etag && result.etag === co.atsCache?.etag && result.cacheVersion === co.atsCache.version) {
+        markVerified(co, now);
+        unchanged++;
+      } else if (result?.ok && Array.isArray(result.jobs)) recordSuccess(co, result, now, [...co.lastJobs, ...(fallback.get(co.id) || [])]);
       else {
         co.consecutiveFailures = (co.consecutiveFailures || 0) + 1;
         co.lastError = result?.reason || "No valid ATS response";
@@ -236,7 +277,7 @@ async function refreshRegistry(state, onEvent = () => {}, options = {}) {
   results.enrichment = {
     companies: active.filter((c) => c.key).length,
     reached: active.filter((c) => c.key && c.lastSuccessAt === now).length,
-    fromAts: atsJobs, fromBoard: boardJobs, retained,
+    fromAts: atsJobs, fromBoard: boardJobs, retained, unchanged,
     countries: { US: 0, IN: 0 },
     failures: active.filter((c) => c.key && c.lastError).map((c) => ({ company: c.company, ats: c.ats, slug: c.slug, reason: c.lastError })),
   };

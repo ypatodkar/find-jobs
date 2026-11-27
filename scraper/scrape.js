@@ -112,7 +112,7 @@ async function refresh(state, args) {
       const e = data.enrichment;
       console.log(
         `\nDone in ${Math.round((Date.now() - started) / 1000)}s — ` +
-          `${e.reached}/${e.companies} company boards refreshed; ${e.fromAts} ATS roles, ${e.fromBoard} from VC snapshots, ${e.retained} retained after failures.`
+          `${e.reached}/${e.companies} company boards refreshed (${e.unchanged} unchanged); ${e.fromAts} ATS roles, ${e.fromBoard} from VC snapshots, ${e.retained} retained after failures.`
       );
       if (e.failures.length) console.log(`${e.failures.length} company boards unreachable.`);
       console.log(`Countries: ${e.countries.US} US roles, ${e.countries.IN} India roles.`);
